@@ -166,24 +166,11 @@
         // 강제 로그아웃 함수
         function forceLogout() {
             if (confirm('로그아웃하시겠습니까?')) {
-                // POST 요청으로 로그아웃
-                fetch('/logout', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                    },
-                    credentials: 'same-origin'
-                }).then(response => {
-                    // 세션 스토리지와 로컬 스토리지 클리어
-                    sessionStorage.clear();
-                    localStorage.clear();
-                    // 강제로 로그인 페이지로 이동
-                    window.location.href = '/login';
-                }).catch(error => {
-                    console.error('로그아웃 에러:', error);
-                    // 에러가 나도 강제로 로그인 페이지로 이동
-                    window.location.href = '/login';
-                });
+                // 세션 스토리지와 로컬 스토리지 클리어
+                sessionStorage.clear();
+                localStorage.clear();
+                // 직접 로그아웃 페이지로 이동
+                window.location.href = '/logout';
             }
         }
         

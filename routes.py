@@ -49,44 +49,12 @@ def login():
 def logout():
     """로그아웃"""
     try:
-        if current_user.is_authenticated:
-            logout_user()
-        
-        # 세션 완전 초기화
+        logout_user()
         session.clear()
-        
-        # 응답 생성 - 직접 HTML 리다이렉트
-        html = '''
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="UTF-8">
-            <script>
-                // 스토리지 완전 클리어
-                if(typeof(Storage) !== "undefined") {
-                    localStorage.clear();
-                    sessionStorage.clear();
-                }
-                // 강제 리다이렉트
-                window.location.replace('/login');
-            </script>
-        </head>
-        <body>
-            <p>로그아웃 중...</p>
-        </body>
-        </html>
-        '''
-        
-        response = make_response(html)
-        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-        response.headers['Pragma'] = 'no-cache' 
-        response.headers['Expires'] = '0'
-        response.headers['Content-Type'] = 'text/html; charset=utf-8'
-        
-        return response
-        
+        flash('로그아웃되었습니다.', 'success')
+        return redirect(url_for('login'))
     except Exception as e:
-        # 에러가 나도 강제로 로그인 페이지로
+        session.clear()
         return redirect(url_for('login'))
 
 @app.route('/profile', methods=['GET', 'POST'])
