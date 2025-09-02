@@ -10,6 +10,7 @@ import re
 
 # 인증 라우트들
 @app.route('/login', methods=['GET', 'POST'])
+@app.route('/fresh-login', methods=['GET', 'POST'])
 def login():
     """로그인"""
     if current_user.is_authenticated:
