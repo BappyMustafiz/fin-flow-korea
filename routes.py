@@ -45,11 +45,11 @@ def login():
     return render_template('auth/login.html')
 
 @app.route('/logout')
-@login_required
 def logout():
     """로그아웃"""
-    logout_user()
-    flash('성공적으로 로그아웃되었습니다.', 'info')
+    if current_user.is_authenticated:
+        logout_user()
+        flash('성공적으로 로그아웃되었습니다.', 'info')
     return redirect(url_for('login'))
 
 @app.route('/register', methods=['GET', 'POST'])
