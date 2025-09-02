@@ -108,6 +108,14 @@ def alert_type_filter(alert_type):
     }
     return type_map.get(alert_type, alert_type)
 
+@app.after_request
+def after_request(response):
+    """Add cache-busting headers for development"""
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
+
 @login_manager.user_loader
 def load_user(user_id):
     from models import User
