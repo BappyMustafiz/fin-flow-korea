@@ -67,7 +67,7 @@
                             <i data-feather="bell" class="me-1"></i>알림
                         </a>
                     </li>
-                    {% if current_user.is_admin() %}
+                    {% if current_user.is_authenticated and current_user.role == 'admin' %}
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('users') }}">
                             <i data-feather="users" class="me-1"></i>사용자 관리
@@ -81,7 +81,7 @@
                         <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
                             <i data-feather="user" class="me-1"></i>
                             {{ current_user.name }}
-                            {% if current_user.is_admin() %}
+                            {% if current_user.is_authenticated and current_user.role == 'admin' %}
                                 <span class="badge bg-warning ms-1">관리자</span>
                             {% endif %}
                         </a>
@@ -89,7 +89,7 @@
                             <li><a class="dropdown-item" href="#">
                                 <i data-feather="user" class="me-2"></i>프로필
                             </a></li>
-                            {% if current_user.is_admin() %}
+                            {% if current_user.is_authenticated and current_user.role == 'admin' %}
                             <li><a class="dropdown-item" href="{{ url_for('audit') }}">
                                 <i data-feather="eye" class="me-2"></i>감사 로그
                             </a></li>
