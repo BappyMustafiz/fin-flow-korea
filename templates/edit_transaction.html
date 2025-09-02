@@ -1,0 +1,256 @@
+{% extends "layout.html" %}
+
+{% block title %}거래 수정 - 한국형 오픈뱅킹 회계시스템{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}">대시보드</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('transactions') }}">거래 내역</a></li>
+                <li class="breadcrumb-item active">거래 수정</li>
+            </ol>
+        </nav>
+        <h1 class="h3 mb-0">거래 수정</h1>
+        <p class="text-muted">거래 정보를 수정하고 분류를 변경할 수 있습니다.</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i data-feather="edit-3" class="me-2"></i>
+                    거래 정보 수정
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">거래일시</label>
+                            <input type="datetime-local" 
+                                   class="form-control" 
+                                   name="transaction_date"
+                                   value="{{ transaction.transaction_date.strftime('%Y-%m-%dT%H:%M') }}"
+                                   required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">금액</label>
+                            <div class="input-group">
+                                <span class="input-group-text">₩</span>
+                                <input type="number" 
+                                       class="form-control" 
+                                       name="amount"
+                                       value="{{ transaction.amount }}"
+                                       step="0.01"
+                                       required>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">거래 설명</label>
+                        <input type="text" 
+                               class="form-control" 
+                               name="description"
+                               value="{{ transaction.description }}"
+                               required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">거래처</label>
+                        <input type="text" 
+                               class="form-control" 
+                               name="counterparty"
+                               value="{{ transaction.counterparty or '' }}">
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label">분류</label>
+                            <select class="form-select" name="category_id">
+                                <option value="">분류 선택</option>
+                                {% for category in categories %}
+                                <option value="{{ category.id }}" 
+                                        {% if transaction.category_id == category.id %}selected{% endif %}>
+                                    {{ category.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">부서</label>
+                            <select class="form-select" name="department_id">
+                                <option value="">부서 선택</option>
+                                {% for department in departments %}
+                                <option value="{{ department.id }}" 
+                                        {% if transaction.department_id == department.id %}selected{% endif %}>
+                                    {{ department.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">거래처</label>
+                            <select class="form-select" name="vendor_id">
+                                <option value="">거래처 선택</option>
+                                {% for vendor in vendors %}
+                                <option value="{{ vendor.id }}" 
+                                        {% if transaction.vendor_id == vendor.id %}selected{% endif %}>
+                                    {{ vendor.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">분류 상태</label>
+                        <select class="form-select" name="classification_status">
+                            <option value="pending" {% if transaction.classification_status == 'pending' %}selected{% endif %}>미분류</option>
+                            <option value="classified" {% if transaction.classification_status == 'classified' %}selected{% endif %}>분류완료</option>
+                            <option value="manual" {% if transaction.classification_status == 'manual' %}selected{% endif %}>수동분류</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">메모</label>
+                        <textarea class="form-control" 
+                                  name="memo" 
+                                  rows="3">{{ transaction.memo or '' }}</textarea>
+                    </div>
+                    
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i data-feather="save" class="me-1"></i>
+                            저장
+                        </button>
+                        <a href="{{ url_for('transactions') }}" class="btn btn-secondary">
+                            <i data-feather="x" class="me-1"></i>
+                            취소
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i data-feather="info" class="me-2"></i>
+                    거래 정보
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label text-muted">계좌</label>
+                    <div class="fw-bold">{{ transaction.account.account_name }}</div>
+                    <small class="text-muted">{{ transaction.account.institution.name }}</small>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label text-muted">거래 유형</label>
+                    <div class="fw-bold">
+                        {% if transaction.amount > 0 %}
+                            <span class="text-success">입금</span>
+                        {% else %}
+                            <span class="text-danger">출금</span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label text-muted">현재 분류 상태</label>
+                    <div>
+                        <span class="badge badge-status-{{ transaction.classification_status }}">
+                            {{ transaction.classification_status | classification_status }}
+                        </span>
+                    </div>
+                </div>
+                
+                {% if transaction.created_at %}
+                <div class="mb-3">
+                    <label class="form-label text-muted">등록일시</label>
+                    <div class="small">{{ transaction.created_at | datetime }}</div>
+                </div>
+                {% endif %}
+                
+                {% if transaction.updated_at %}
+                <div class="mb-3">
+                    <label class="form-label text-muted">수정일시</label>
+                    <div class="small">{{ transaction.updated_at | datetime }}</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i data-feather="activity" class="me-2"></i>
+                    빠른 분류
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted small">자주 사용하는 분류로 빠르게 설정</p>
+                <div class="d-grid gap-2">
+                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="quickClassify('office', '사무용품')">
+                        사무용품
+                    </button>
+                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="quickClassify('meal', '식사')">
+                        식사비
+                    </button>
+                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="quickClassify('transport', '교통비')">
+                        교통비
+                    </button>
+                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="quickClassify('marketing', '마케팅')">
+                        마케팅
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function quickClassify(type, name) {
+    // 빠른 분류 매핑
+    const classifications = {
+        'office': { category: '1', department: '1' },
+        'meal': { category: '3', department: '2' },
+        'transport': { category: '4', department: '2' },
+        'marketing': { category: '5', department: '3' }
+    };
+    
+    if (classifications[type]) {
+        const config = classifications[type];
+        if (config.category) {
+            document.querySelector('select[name="category_id"]').value = config.category;
+        }
+        if (config.department) {
+            document.querySelector('select[name="department_id"]').value = config.department;
+        }
+        document.querySelector('select[name="classification_status"]').value = 'manual';
+    }
+}
+
+// 폼 검증
+document.querySelector('form').addEventListener('submit', function(e) {
+    const amount = document.querySelector('input[name="amount"]').value;
+    const description = document.querySelector('input[name="description"]').value;
+    
+    if (!amount || !description) {
+        e.preventDefault();
+        alert('필수 필드를 모두 입력해주세요.');
+        return false;
+    }
+});
+</script>
+{% endblock %}

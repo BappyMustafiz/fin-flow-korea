@@ -169,15 +169,36 @@ def edit_transaction(transaction_id):
     transaction = Transaction.query.get_or_404(transaction_id)
     
     if request.method == 'POST':
-        transaction.category_id = request.form.get('category_id') or None
-        transaction.department_id = request.form.get('department_id') or None
-        transaction.vendor_id = request.form.get('vendor_id') or None
-        transaction.description = request.form.get('description', transaction.description)
-        transaction.classification_status = 'manual'
-        
-        db.session.commit()
-        flash('거래 내역이 수정되었습니다.', 'success')
-        return redirect(url_for('transactions'))
+        try:
+            # 기본 정보 업데이트
+            if request.form.get('description'):
+                transaction.description = request.form.get('description')
+            if request.form.get('counterparty'):
+                transaction.counterparty = request.form.get('counterparty')
+            if request.form.get('amount'):
+                transaction.amount = float(request.form.get('amount'))
+            if request.form.get('transaction_date'):
+                from datetime import datetime
+                transaction.transaction_date = datetime.fromisoformat(request.form.get('transaction_date'))
+            
+            # 분류 정보 업데이트
+            transaction.category_id = request.form.get('category_id') or None
+            transaction.department_id = request.form.get('department_id') or None
+            transaction.vendor_id = request.form.get('vendor_id') or None
+            transaction.classification_status = request.form.get('classification_status', 'manual')
+            transaction.memo = request.form.get('memo') or None
+            
+            # 수정일시 업데이트
+            from datetime import datetime
+            transaction.updated_at = datetime.utcnow()
+            
+            db.session.commit()
+            flash('거래 내역이 수정되었습니다.', 'success')
+            return redirect(url_for('transactions'))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f'수정 중 오류가 발생했습니다: {str(e)}', 'error')
     
     categories = Category.query.all()
     departments = Department.query.all()
@@ -345,22 +366,34 @@ def api_dashboard_chart_data():
     end_date = date.today()
     start_date = end_date - timedelta(days=6)
     
-    daily_flow = db.session.query(
-        func.date(Transaction.transaction_date).label('date'),
-        func.sum(func.case((Transaction.amount > 0, Transaction.amount), else_=0)).label('income'),
-        func.sum(func.case((Transaction.amount < 0, func.abs(Transaction.amount)), else_=0)).label('expense')
-    ).filter(
+    # 간단하게 모든 거래를 가져와서 처리
+    transactions = Transaction.query.filter(
         func.date(Transaction.transaction_date) >= start_date
-    ).group_by(func.date(Transaction.transaction_date)).order_by('date').all()
+    ).all()
+    
+    # 날짜별로 데이터 집계
+    daily_data = {}
+    current_date = start_date
+    while current_date <= end_date:
+        daily_data[current_date] = {'income': 0, 'expense': 0}
+        current_date += timedelta(days=1)
+    
+    for transaction in transactions:
+        trans_date = transaction.transaction_date.date()
+        if trans_date in daily_data:
+            if transaction.amount > 0:
+                daily_data[trans_date]['income'] += float(transaction.amount)
+            else:
+                daily_data[trans_date]['expense'] += float(abs(transaction.amount))
     
     dates = []
     income_data = []
     expense_data = []
     
-    for flow in daily_flow:
-        dates.append(flow.date.strftime('%m/%d'))
-        income_data.append(float(flow.income))
-        expense_data.append(float(flow.expense))
+    for date_key in sorted(daily_data.keys()):
+        dates.append(date_key.strftime('%m/%d'))
+        income_data.append(daily_data[date_key]['income'])
+        expense_data.append(daily_data[date_key]['expense'])
     
     return jsonify({
         'dates': dates,
