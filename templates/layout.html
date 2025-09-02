@@ -73,8 +73,16 @@
                         </a>
                         <ul class="dropdown-menu">
                             <li><a class="dropdown-item" href="#">프로필</a></li>
-                            <li><a class="dropdown-item" href="#">로그아웃</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-danger" href="{{ url_for('logout') }}">
+                                <i data-feather="log-out" class="me-2"></i>로그아웃
+                            </a></li>
                         </ul>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link text-danger fw-bold" href="{{ url_for('logout') }}">
+                            <i data-feather="log-out" class="me-1"></i>로그아웃
+                        </a>
                     </li>
                 </ul>
             </div>
