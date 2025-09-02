@@ -74,6 +74,17 @@
                         <ul class="dropdown-menu">
                             <li><a class="dropdown-item" href="#">프로필</a></li>
                             <li><hr class="dropdown-divider"></li>
+                            <li><h6 class="dropdown-header">관리자 메뉴</h6></li>
+                            <li><a class="dropdown-item" href="{{ url_for('users') }}">
+                                <i data-feather="users" class="me-2"></i>계정 관리
+                            </a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('audit') }}">
+                                <i data-feather="eye" class="me-2"></i>감사 로그
+                            </a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('init_data') }}">
+                                <i data-feather="database" class="me-2"></i>샘플 데이터
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item text-danger" href="{{ url_for('logout') }}">
                                 <i data-feather="log-out" class="me-2"></i>로그아웃
                             </a></li>

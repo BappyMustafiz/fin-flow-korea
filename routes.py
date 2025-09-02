@@ -615,6 +615,56 @@ def change_user_department(user_id):
     
     return redirect(url_for('users'))
 
+@app.route('/user/add', methods=['POST'])
+@login_required
+def add_user():
+    """새 사용자 추가 (관리자 전용)"""
+    if not current_user.is_admin():
+        flash('관리자만 접근할 수 있습니다.', 'error')
+        return redirect(url_for('dashboard'))
+    
+    # 이메일 중복 확인
+    email = request.form.get('email')
+    if User.query.filter_by(email=email).first():
+        flash('이미 존재하는 이메일입니다.', 'error')
+        return redirect(url_for('users'))
+    
+    # 새 사용자 생성
+    user = User()
+    user.name = request.form.get('name')
+    user.email = email
+    user.set_password(request.form.get('password'))
+    user.role = request.form.get('role', 'user')
+    user.department_id = request.form.get('department_id') or None
+    
+    db.session.add(user)
+    db.session.commit()
+    
+    flash(f'{user.name} 사용자가 추가되었습니다.', 'success')
+    return redirect(url_for('users'))
+
+@app.route('/user/<int:user_id>/delete', methods=['POST'])
+@login_required
+def delete_user(user_id):
+    """사용자 삭제 (관리자 전용)"""
+    if not current_user.is_admin():
+        flash('관리자만 접근할 수 있습니다.', 'error')
+        return redirect(url_for('dashboard'))
+    
+    user = User.query.get_or_404(user_id)
+    
+    # 자기 자신은 삭제할 수 없음
+    if user.id == current_user.id:
+        flash('자기 자신의 계정은 삭제할 수 없습니다.', 'error')
+        return redirect(url_for('users'))
+    
+    user_name = user.name
+    db.session.delete(user)
+    db.session.commit()
+    
+    flash(f'{user_name} 사용자가 삭제되었습니다.', 'success')
+    return redirect(url_for('users'))
+
 @app.route('/api/dashboard/chart-data')
 @login_required
 def api_dashboard_chart_data():
