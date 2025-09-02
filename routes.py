@@ -1,4 +1,4 @@
-from flask import render_template, request, redirect, url_for, flash, jsonify
+from flask import render_template, request, redirect, url_for, flash, jsonify, session, make_response
 from flask_login import login_user, logout_user, login_required, current_user
 from datetime import datetime, timedelta, date
 from sqlalchemy import func, desc, extract
@@ -50,7 +50,16 @@ def logout():
     if current_user.is_authenticated:
         logout_user()
         flash('성공적으로 로그아웃되었습니다.', 'info')
-    return redirect(url_for('login'))
+    
+    # 세션 완전 초기화
+    session.clear()
+    
+    # 응답에 캐시 방지 헤더 추가
+    response = make_response(redirect(url_for('login')))
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
