@@ -97,7 +97,7 @@
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
                             <li><h6 class="dropdown-header">{{ current_user.name }}</h6></li>
-                            <li><a class="dropdown-item" href="#">
+                            <li><a class="dropdown-item" href="{{ url_for('profile') }}">
                                 <i data-feather="user" class="me-2"></i>프로필
                             </a></li>
                             {% if current_user.role == 'admin' %}

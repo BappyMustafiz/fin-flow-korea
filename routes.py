@@ -88,6 +88,60 @@ def logout():
         # 에러가 나도 강제로 로그인 페이지로
         return redirect(url_for('login'))
 
+@app.route('/profile', methods=['GET', 'POST'])
+@login_required
+def profile():
+    """프로필 설정"""
+    if request.method == 'POST':
+        name = request.form.get('name')
+        email = request.form.get('email')
+        current_password = request.form.get('current_password')
+        new_password = request.form.get('new_password')
+        confirm_password = request.form.get('confirm_password')
+        
+        # 입력 검증
+        if not name:
+            flash('이름은 필수 입력 항목입니다.', 'error')
+            return render_template('profile.html', departments=Department.query.all())
+        
+        # 이메일 중복 확인 (자신 제외)
+        existing_user = User.query.filter(User.email == email, User.id != current_user.id).first()
+        if existing_user:
+            flash('이미 사용중인 이메일입니다.', 'error')
+            return render_template('profile.html', departments=Department.query.all())
+        
+        # 비밀번호 변경 요청이 있는 경우
+        if new_password:
+            if not current_password:
+                flash('현재 비밀번호를 입력해주세요.', 'error')
+                return render_template('profile.html', departments=Department.query.all())
+            
+            if not current_user.check_password(current_password):
+                flash('현재 비밀번호가 올바르지 않습니다.', 'error')
+                return render_template('profile.html', departments=Department.query.all())
+            
+            if new_password != confirm_password:
+                flash('새 비밀번호가 일치하지 않습니다.', 'error')
+                return render_template('profile.html', departments=Department.query.all())
+            
+            if len(new_password) < 6:
+                flash('비밀번호는 최소 6자 이상이어야 합니다.', 'error')
+                return render_template('profile.html', departments=Department.query.all())
+            
+            current_user.set_password(new_password)
+        
+        # 프로필 정보 업데이트
+        current_user.name = name
+        current_user.email = email
+        current_user.updated_at = datetime.utcnow()
+        
+        db.session.commit()
+        flash('프로필이 성공적으로 업데이트되었습니다.', 'success')
+        return redirect(url_for('profile'))
+    
+    departments = Department.query.all()
+    return render_template('profile.html', departments=departments)
+
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     """회원가입"""

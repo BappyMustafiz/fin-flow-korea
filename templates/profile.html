@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+
+{% block title %}프로필 설정 - 한국형 오픈뱅킹 회계시스템{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8 mx-auto">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h4 class="card-title mb-0">
+                    <i data-feather="user" class="me-2"></i>프로필 설정
+                </h4>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="name" class="form-label">이름 <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="name" name="name" 
+                                       value="{{ current_user.name }}" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="email" class="form-label">이메일 <span class="text-danger">*</span></label>
+                                <input type="email" class="form-control" id="email" name="email" 
+                                       value="{{ current_user.email }}" required>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="role" class="form-label">역할</label>
+                                <input type="text" class="form-control" id="role" name="role" 
+                                       value="{% if current_user.role == 'admin' %}관리자{% else %}일반 사용자{% endif %}" readonly>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="department" class="form-label">부서</label>
+                                <input type="text" class="form-control" id="department" name="department" 
+                                       value="{% if current_user.department %}{{ current_user.department.name }}{% else %}미지정{% endif %}" readonly>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="created_at" class="form-label">가입일</label>
+                                <input type="text" class="form-control" id="created_at" name="created_at" 
+                                       value="{{ current_user.created_at.strftime('%Y-%m-%d %H:%M') if current_user.created_at else '정보 없음' }}" readonly>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="last_login" class="form-label">마지막 로그인</label>
+                                <input type="text" class="form-control" id="last_login" name="last_login" 
+                                       value="{{ current_user.last_login.strftime('%Y-%m-%d %H:%M') if current_user.last_login else '정보 없음' }}" readonly>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <hr class="my-4">
+                    
+                    <h5 class="mb-3">
+                        <i data-feather="lock" class="me-2"></i>비밀번호 변경 (선택사항)
+                    </h5>
+                    
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="current_password" class="form-label">현재 비밀번호</label>
+                                <input type="password" class="form-control" id="current_password" name="current_password" 
+                                       placeholder="비밀번호를 변경하려면 입력하세요">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="new_password" class="form-label">새 비밀번호</label>
+                                <input type="password" class="form-control" id="new_password" name="new_password" 
+                                       placeholder="새 비밀번호 (6자 이상)">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="confirm_password" class="form-label">비밀번호 확인</label>
+                                <input type="password" class="form-control" id="confirm_password" name="confirm_password" 
+                                       placeholder="새 비밀번호 재입력">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between align-items-center">
+                        <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">
+                            <i data-feather="arrow-left" class="me-1"></i>돌아가기
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i data-feather="save" class="me-1"></i>프로필 저장
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// 비밀번호 변경 필드들 연동
+document.addEventListener('DOMContentLoaded', function() {
+    const currentPassword = document.getElementById('current_password');
+    const newPassword = document.getElementById('new_password');
+    const confirmPassword = document.getElementById('confirm_password');
+    
+    // 새 비밀번호 입력시 현재 비밀번호 필수로 만들기
+    newPassword.addEventListener('input', function() {
+        if (this.value) {
+            currentPassword.required = true;
+            confirmPassword.required = true;
+        } else {
+            currentPassword.required = false;
+            confirmPassword.required = false;
+        }
+    });
+    
+    // 폼 제출시 비밀번호 검증
+    document.querySelector('form').addEventListener('submit', function(e) {
+        if (newPassword.value || confirmPassword.value) {
+            if (!currentPassword.value) {
+                e.preventDefault();
+                alert('비밀번호를 변경하려면 현재 비밀번호를 입력해주세요.');
+                currentPassword.focus();
+                return false;
+            }
+            
+            if (newPassword.value !== confirmPassword.value) {
+                e.preventDefault();
+                alert('새 비밀번호가 일치하지 않습니다.');
+                confirmPassword.focus();
+                return false;
+            }
+            
+            if (newPassword.value.length < 6) {
+                e.preventDefault();
+                alert('새 비밀번호는 최소 6자 이상이어야 합니다.');
+                newPassword.focus();
+                return false;
+            }
+        }
+    });
+});
+</script>
+{% endblock %}
