@@ -166,16 +166,6 @@
                                         data-bs-toggle="modal" data-bs-target="#editUserModal{{ user.id }}">
                                     <i data-feather="edit"></i>
                                 </button>
-                                
-                                <!-- 삭제 버튼 -->
-                                {% if user.id != current_user.id %}
-                                <form method="POST" action="{{ url_for('delete_user', user_id=user.id) }}" class="d-inline">
-                                    <button type="submit" class="btn btn-sm btn-outline-danger" 
-                                            onclick="return confirm('{{ user.name }} 사용자를 정말 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없습니다.')">
-                                        <i data-feather="trash-2"></i>
-                                    </button>
-                                </form>
-                                {% endif %}
                             </div>
                         </td>
                     </tr>
