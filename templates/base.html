@@ -71,19 +71,8 @@
                             <i data-feather="bell" class="me-1"></i>알림
                         </a>
                     </li>
-                    {% if current_user.role == 'admin' %}
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('users') }}">
-                            <i data-feather="users" class="me-1"></i>사용자 관리
-                        </a>
-                    </li>
-                    {% endif %}
-                </ul>
-                {% endif %}
-                
-                {% if current_user.is_authenticated %}
-                <ul class="navbar-nav">
-                    <!-- 직접 로그아웃 버튼 -->
+                    
+                    <!-- 로그인 정보 (알림 바로 뒤) -->
                     <li class="nav-item">
                         <a class="nav-link text-danger" href="javascript:void(0)" onclick="forceLogout()">
                             <i data-feather="log-out" class="me-1"></i>로그아웃
@@ -119,6 +108,14 @@
                             </a></li>
                         </ul>
                     </li>
+                    
+                    {% if current_user.role == 'admin' %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('users') }}">
+                            <i data-feather="users" class="me-1"></i>사용자 관리
+                        </a>
+                    </li>
+                    {% endif %}
                 </ul>
                 {% else %}
                 <ul class="navbar-nav">
