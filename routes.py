@@ -27,7 +27,7 @@ def login():
         user = User.query.filter_by(email=email).first()
         
         if user and user.check_password(password):
-            if not user.is_active:
+            if not user.active:
                 flash('비활성화된 계정입니다. 관리자에게 문의하세요.', 'error')
                 return render_template('auth/login.html')
             
@@ -124,7 +124,7 @@ def profile():
                 flash('새 비밀번호가 일치하지 않습니다.', 'error')
                 return render_template('profile.html', departments=Department.query.all())
             
-            if len(new_password) < 6:
+            if new_password is not None and len(new_password) < 6:
                 flash('비밀번호는 최소 6자 이상이어야 합니다.', 'error')
                 return render_template('profile.html', departments=Department.query.all())
             
@@ -164,7 +164,7 @@ def register():
             flash('패스워드가 일치하지 않습니다.', 'error')
             return render_template('auth/register.html', departments=Department.query.all())
         
-        if len(password) < 6:
+        if password and len(password) < 6:
             flash('패스워드는 최소 6자 이상이어야 합니다.', 'error')
             return render_template('auth/register.html', departments=Department.query.all())
         

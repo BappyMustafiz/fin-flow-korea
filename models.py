@@ -12,7 +12,7 @@ class User(UserMixin, db.Model):
     name = db.Column(db.String(100), nullable=False)
     role = db.Column(db.String(20), default='user')  # admin, user
     department_id = db.Column(db.Integer, db.ForeignKey('department.id'))
-    is_active = db.Column(db.Boolean, default=True)
+    active = db.Column(db.Boolean, default=True)
     last_login = db.Column(db.DateTime)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -35,6 +35,11 @@ class User(UserMixin, db.Model):
     def get_id(self):
         """Flask-Login용 ID 반환"""
         return str(self.id)
+    
+    @property
+    def is_active(self):
+        """Flask-Login용 활성 상태 확인"""
+        return self.active
 
 class Institution(db.Model):
     """금융기관 정보"""
