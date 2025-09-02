@@ -71,14 +71,17 @@
                             <i data-feather="bell" class="me-1"></i>알림
                         </a>
                     </li>
-                    
-                    <!-- 로그인 정보 (알림 바로 뒤) -->
+                    {% if current_user.role == 'admin' %}
                     <li class="nav-item">
-                        <a class="nav-link text-danger" href="javascript:void(0)" onclick="forceLogout()">
-                            <i data-feather="log-out" class="me-1"></i>로그아웃
+                        <a class="nav-link" href="{{ url_for('users') }}">
+                            <i data-feather="users" class="me-1"></i>사용자 관리
                         </a>
                     </li>
-                    
+                    {% endif %}
+                </ul>
+                
+                <!-- 오른쪽 메뉴: 사용자 정보와 로그아웃 -->
+                <ul class="navbar-nav">
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" id="userDropdown">
                             <i data-feather="user" class="me-1"></i>
@@ -108,14 +111,11 @@
                             </a></li>
                         </ul>
                     </li>
-                    
-                    {% if current_user.role == 'admin' %}
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('users') }}">
-                            <i data-feather="users" class="me-1"></i>사용자 관리
+                        <a class="nav-link text-danger fw-bold" href="javascript:void(0)" onclick="forceLogout()">
+                            <i data-feather="log-out" class="me-1"></i>로그아웃
                         </a>
                     </li>
-                    {% endif %}
                 </ul>
                 {% else %}
                 <ul class="navbar-nav">
