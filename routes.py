@@ -271,26 +271,28 @@ def admin_dashboard():
     
     for dept in departments:
         dept_users = User.query.filter_by(department_id=dept.id).all()
+        login_times = [u.last_login for u in dept_users if u.last_login]
         dept_stat = {
             'id': dept.id,
             'name': dept.name,
             'total_users': len(dept_users),
             'active_users': len([u for u in dept_users if u.is_active]),
             'admin_users': len([u for u in dept_users if u.role == 'admin']),
-            'last_activity': max([u.last_login for u in dept_users if u.last_login], default=None)
+            'last_activity': max(login_times) if login_times else None
         }
         department_stats.append(dept_stat)
     
     # 미지정 부서 사용자
     unassigned_users = User.query.filter_by(department_id=None).all()
     if unassigned_users:
+        unassigned_login_times = [u.last_login for u in unassigned_users if u.last_login]
         unassigned_stat = {
             'id': None,
             'name': None,
             'total_users': len(unassigned_users),
             'active_users': len([u for u in unassigned_users if u.is_active]),
             'admin_users': len([u for u in unassigned_users if u.role == 'admin']),
-            'last_activity': max([u.last_login for u in unassigned_users if u.last_login], default=None)
+            'last_activity': max(unassigned_login_times) if unassigned_login_times else None
         }
         department_stats.append(unassigned_stat)
     
