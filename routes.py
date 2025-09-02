@@ -2,11 +2,25 @@ from flask import render_template, request, redirect, url_for, flash, jsonify, s
 from flask_login import login_user, logout_user, login_required, current_user
 from datetime import datetime, timedelta, date
 from sqlalchemy import func, desc, extract
+from functools import wraps
 from app import app, db
 from models import (Institution, Account, Transaction, Category, Department, 
                    Vendor, MappingRule, Contract, AuditLog, Alert, Consent, User)
 import json
 import re
+
+def admin_required(f):
+    """관리자 권한 필요한 라우트에 사용하는 데코레이터"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated:
+            flash('로그인이 필요합니다.', 'error')
+            return redirect(url_for('login'))
+        if not current_user.is_admin():
+            flash('관리자만 접근할 수 있습니다.', 'error')
+            return redirect(url_for('dashboard'))
+        return f(*args, **kwargs)
+    return decorated_function
 
 # 인증 라우트들
 @app.route('/login', methods=['GET', 'POST'])
@@ -166,7 +180,13 @@ def register():
 @app.route('/')
 @login_required
 def dashboard():
-    """대시보드 - KPI 및 주요 지표 표시"""
+    """대시보드 - 역할에 따라 다른 페이지 표시"""
+    if current_user.is_admin():
+        return redirect(url_for('admin_dashboard'))
+    return user_dashboard()
+
+def user_dashboard():
+    """일반 사용자 대시보드 - KPI 및 주요 지표 표시"""
     # KPI 계산
     today = datetime.now().date()
     current_month = today.replace(day=1)
@@ -226,6 +246,58 @@ def dashboard():
                          recent_transactions=recent_transactions,
                          recent_alerts=recent_alerts,
                          dept_expenses=dept_expenses)
+
+@app.route('/admin')
+@admin_required
+def admin_dashboard():
+    """관리자 대시보드"""
+    
+    # 통계 데이터 수집
+    stats = {
+        'total_users': User.query.count(),
+        'active_users': User.query.filter_by(is_active=True).count(),
+        'inactive_users': User.query.filter_by(is_active=False).count(),
+        'admin_users': User.query.filter_by(role='admin').count(),
+        'total_transactions': Transaction.query.count(),
+        'unclassified_transactions': Transaction.query.filter_by(classification_status='pending').count()
+    }
+    
+    # 최근 사용자 활동 (최근 로그인 순)
+    recent_users = User.query.filter(User.last_login.isnot(None)).order_by(User.last_login.desc()).limit(5).all()
+    
+    # 부서별 통계
+    department_stats = []
+    departments = Department.query.all()
+    
+    for dept in departments:
+        dept_users = User.query.filter_by(department_id=dept.id).all()
+        dept_stat = {
+            'id': dept.id,
+            'name': dept.name,
+            'total_users': len(dept_users),
+            'active_users': len([u for u in dept_users if u.is_active]),
+            'admin_users': len([u for u in dept_users if u.role == 'admin']),
+            'last_activity': max([u.last_login for u in dept_users if u.last_login], default=None)
+        }
+        department_stats.append(dept_stat)
+    
+    # 미지정 부서 사용자
+    unassigned_users = User.query.filter_by(department_id=None).all()
+    if unassigned_users:
+        unassigned_stat = {
+            'id': None,
+            'name': None,
+            'total_users': len(unassigned_users),
+            'active_users': len([u for u in unassigned_users if u.is_active]),
+            'admin_users': len([u for u in unassigned_users if u.role == 'admin']),
+            'last_activity': max([u.last_login for u in unassigned_users if u.last_login], default=None)
+        }
+        department_stats.append(unassigned_stat)
+    
+    return render_template('admin_dashboard.html', 
+                         stats=stats, 
+                         recent_users=recent_users,
+                         department_stats=department_stats)
 
 @app.route('/connections')
 @login_required
@@ -531,24 +603,18 @@ def mark_alert_read(alert_id):
 # API 엔드포인트들
 
 @app.route('/users')
-@login_required
+@admin_required
 def users():
     """사용자 관리 (관리자 전용)"""
-    if not current_user.is_admin():
-        flash('관리자만 접근할 수 있습니다.', 'error')
-        return redirect(url_for('dashboard'))
     
     users = User.query.all()
     departments = Department.query.all()
     return render_template('users.html', users=users, departments=departments)
 
 @app.route('/user/<int:user_id>/toggle', methods=['POST'])
-@login_required
+@admin_required
 def toggle_user_status(user_id):
     """사용자 활성화/비활성화 (관리자 전용)"""
-    if not current_user.is_admin():
-        flash('관리자만 접근할 수 있습니다.', 'error')
-        return redirect(url_for('dashboard'))
     
     user = User.query.get_or_404(user_id)
     
@@ -565,12 +631,9 @@ def toggle_user_status(user_id):
     return redirect(url_for('users'))
 
 @app.route('/user/<int:user_id>/role', methods=['POST'])
-@login_required
+@admin_required
 def change_user_role(user_id):
     """사용자 권한 변경 (관리자 전용)"""
-    if not current_user.is_admin():
-        flash('관리자만 접근할 수 있습니다.', 'error')
-        return redirect(url_for('dashboard'))
     
     user = User.query.get_or_404(user_id)
     new_role = request.form.get('role')
@@ -593,12 +656,9 @@ def change_user_role(user_id):
     return redirect(url_for('users'))
 
 @app.route('/user/<int:user_id>/department', methods=['POST'])
-@login_required
+@admin_required
 def change_user_department(user_id):
     """사용자 부서 변경 (관리자 전용)"""
-    if not current_user.is_admin():
-        flash('관리자만 접근할 수 있습니다.', 'error')
-        return redirect(url_for('dashboard'))
     
     user = User.query.get_or_404(user_id)
     department_id = request.form.get('department_id') or None
@@ -612,6 +672,46 @@ def change_user_department(user_id):
     else:
         flash(f'{user.name} 사용자의 부서가 제거되었습니다.', 'success')
     
+    return redirect(url_for('users'))
+
+@app.route('/user/<int:user_id>/delete', methods=['POST'])
+@admin_required
+def delete_user(user_id):
+    """사용자 삭제 (관리자 전용)"""
+    user = User.query.get_or_404(user_id)
+    
+    # 자기 자신은 삭제할 수 없음
+    if user.id == current_user.id:
+        flash('자기 자신의 계정은 삭제할 수 없습니다.', 'error')
+        return redirect(url_for('users'))
+    
+    # 마지막 관리자는 삭제할 수 없음
+    admin_count = User.query.filter_by(role='admin').count()
+    if user.role == 'admin' and admin_count <= 1:
+        flash('마지막 관리자는 삭제할 수 없습니다.', 'error')
+        return redirect(url_for('users'))
+    
+    user_name = user.name
+    user_email = user.email
+    
+    # 사용자와 관련된 데이터 삭제 (외래키 관계 고려)
+    # 거래 내역은 삭제하지 않고 사용자만 삭제
+    db.session.delete(user)
+    db.session.commit()
+    
+    # 감사 로그 생성
+    audit_log = AuditLog(
+        user_id=current_user.id,
+        action='delete_user',
+        target_table='users',
+        target_id=user_id,
+        old_values=f'{{"name": "{user_name}", "email": "{user_email}"}}',
+        description=f'사용자 삭제: {user_name} ({user_email})'
+    )
+    db.session.add(audit_log)
+    db.session.commit()
+    
+    flash(f'{user_name} 사용자가 삭제되었습니다.', 'success')
     return redirect(url_for('users'))
 
 @app.route('/api/dashboard/chart-data')
