@@ -175,12 +175,11 @@ def register():
             return render_template('auth/register.html', departments=Department.query.all())
         
         # 새 사용자 생성
-        user = User(
-            email=email,
-            name=name,
-            department_id=department_id,
-            role='user'  # 기본값은 일반 사용자
-        )
+        user = User()
+        user.email = email
+        user.name = name
+        user.department_id = department_id
+        user.role = 'user'  # 기본값은 일반 사용자
         user.set_password(password)
         
         db.session.add(user)
@@ -277,13 +276,12 @@ def connect_institution(institution_code):
         return redirect(url_for('connections'))
     
     # OAuth 동의 시뮬레이션
-    consent = Consent(
-        institution_id=institution.id,
-        consent_id=f"consent_{institution_code}_{datetime.now().timestamp()}",
-        status='active',
-        scope='account:read transaction:read',
-        expires_at=datetime.now() + timedelta(days=180)
-    )
+    consent = Consent()
+    consent.institution_id = institution.id
+    consent.consent_id = f"consent_{institution_code}_{datetime.now().timestamp()}"
+    consent.status = 'active'
+    consent.scope = 'account:read transaction:read'
+    consent.expires_at = datetime.now() + timedelta(days=180)
     db.session.add(consent)
     db.session.commit()
     
@@ -367,10 +365,14 @@ def edit_transaction(transaction_id):
             if request.form.get('counterparty'):
                 transaction.counterparty = request.form.get('counterparty')
             if request.form.get('amount'):
-                transaction.amount = float(request.form.get('amount'))
+                amount_str = request.form.get('amount')
+                if amount_str:
+                    transaction.amount = float(amount_str)
             if request.form.get('transaction_date'):
                 from datetime import datetime
-                transaction.transaction_date = datetime.fromisoformat(request.form.get('transaction_date'))
+                date_str = request.form.get('transaction_date')
+                if date_str:
+                    transaction.transaction_date = datetime.fromisoformat(date_str)
             
             # 분류 정보 업데이트
             transaction.category_id = request.form.get('category_id') or None
@@ -420,16 +422,15 @@ def rules():
 @login_required
 def add_rule():
     """분류 규칙 추가"""
-    rule = MappingRule(
-        name=request.form['name'],
-        priority=int(request.form.get('priority', 0)),
-        condition_type=request.form['condition_type'],
-        condition_field=request.form['condition_field'],
-        condition_value=request.form['condition_value'],
-        target_category_id=request.form.get('target_category_id') or None,
-        target_department_id=request.form.get('target_department_id') or None,
-        target_vendor_id=request.form.get('target_vendor_id') or None
-    )
+    rule = MappingRule()
+    rule.name = request.form['name']
+    rule.priority = int(request.form.get('priority', 0))
+    rule.condition_type = request.form['condition_type']
+    rule.condition_field = request.form['condition_field']
+    rule.condition_value = request.form['condition_value']
+    rule.target_category_id = request.form.get('target_category_id') or None
+    rule.target_department_id = request.form.get('target_department_id') or None
+    rule.target_vendor_id = request.form.get('target_vendor_id') or None
     
     db.session.add(rule)
     db.session.commit()
@@ -637,7 +638,10 @@ def change_user_department(user_id):
     
     if department_id:
         department = Department.query.get(department_id)
-        flash(f'{user.name} 사용자의 부서가 {department.name}로 변경되었습니다.', 'success')
+        if department:
+            flash(f'{user.name} 사용자의 부서가 {department.name}로 변경되었습니다.', 'success')
+        else:
+            flash(f'{user.name} 사용자의 부서가 변경되었습니다.', 'success')
     else:
         flash(f'{user.name} 사용자의 부서가 제거되었습니다.', 'success')
     
@@ -694,130 +698,149 @@ def init_sample_data():
         return
     
     # 금융기관 데이터
-    institutions = [
-        Institution(code='001', name='KB국민은행', type='bank'),
-        Institution(code='002', name='신한은행', type='bank'),
-        Institution(code='003', name='우리은행', type='bank'),
-        Institution(code='101', name='삼성카드', type='card'),
-        Institution(code='102', name='현대카드', type='card'),
+    institutions = []
+    institution_data = [
+        {'code': '001', 'name': 'KB국민은행', 'type': 'bank'},
+        {'code': '002', 'name': '신한은행', 'type': 'bank'},
+        {'code': '003', 'name': '우리은행', 'type': 'bank'},
+        {'code': '101', 'name': '삼성카드', 'type': 'card'},
+        {'code': '102', 'name': '현대카드', 'type': 'card'},
     ]
+    for data in institution_data:
+        inst = Institution()
+        inst.code = data['code']
+        inst.name = data['name']
+        inst.type = data['type']
+        institutions.append(inst)
     
     # 부서 데이터
-    departments = [
-        Department(code='001', name='경영지원팀', budget=10000000),
-        Department(code='002', name='개발팀', budget=15000000),
-        Department(code='003', name='마케팅팀', budget=8000000),
-        Department(code='004', name='영업팀', budget=12000000),
+    departments = []
+    department_data = [
+        {'code': '001', 'name': '경영지원팀', 'budget': 10000000},
+        {'code': '002', 'name': '개발팀', 'budget': 15000000},
+        {'code': '003', 'name': '마케팅팀', 'budget': 8000000},
+        {'code': '004', 'name': '영업팀', 'budget': 12000000},
     ]
+    for data in department_data:
+        dept = Department()
+        dept.code = data['code']
+        dept.name = data['name']
+        dept.budget = data['budget']
+        departments.append(dept)
     
     # 카테고리 데이터
-    categories = [
-        Category(code='001', name='사무용품'),
-        Category(code='002', name='교통비'),
-        Category(code='003', name='식비'),
-        Category(code='004', name='임대료'),
-        Category(code='005', name='통신비'),
-        Category(code='006', name='광고비'),
-        Category(code='007', name='회의비'),
+    categories = []
+    category_data = [
+        {'code': '001', 'name': '사무용품'},
+        {'code': '002', 'name': '교통비'},
+        {'code': '003', 'name': '식비'},
+        {'code': '004', 'name': '임대료'},
+        {'code': '005', 'name': '통신비'},
+        {'code': '006', 'name': '광고비'},
+        {'code': '007', 'name': '회의비'},
     ]
+    for data in category_data:
+        cat = Category()
+        cat.code = data['code']
+        cat.name = data['name']
+        categories.append(cat)
     
     # 거래처 데이터
-    vendors = [
-        Vendor(name='사무용품쇼핑몰', business_number='123-45-67890', category_id=1),
-        Vendor(name='카카오T', business_number='234-56-78901', category_id=2),
-        Vendor(name='배달의민족', business_number='345-67-89012', category_id=3),
-        Vendor(name='부동산관리공사', business_number='456-78-90123', category_id=4),
-        Vendor(name='SKT', business_number='567-89-01234', category_id=5),
-        Vendor(name='스타벅스', business_number='678-90-12345', category_id=3),
-        Vendor(name='네이버', business_number='789-01-23456', category_id=6),
+    vendors = []
+    vendor_data = [
+        {'name': '사무용품쇼핑몰', 'business_number': '123-45-67890', 'category_id': 1},
+        {'name': '카카오T', 'business_number': '234-56-78901', 'category_id': 2},
+        {'name': '배달의민족', 'business_number': '345-67-89012', 'category_id': 3},
+        {'name': '부동산관리공사', 'business_number': '456-78-90123', 'category_id': 4},
+        {'name': 'SKT', 'business_number': '567-89-01234', 'category_id': 5},
+        {'name': '스타벅스', 'business_number': '678-90-12345', 'category_id': 3},
+        {'name': '네이버', 'business_number': '789-01-23456', 'category_id': 6},
     ]
+    for data in vendor_data:
+        vendor = Vendor()
+        vendor.name = data['name']
+        vendor.business_number = data['business_number']
+        vendor.category_id = data['category_id']
+        vendors.append(vendor)
     
     db.session.add_all(institutions + departments + categories + vendors)
     db.session.commit()
     
     # 계좌 데이터
-    accounts = [
-        Account(institution_id=1, account_number='123-456-789012', 
-                account_name='법인통장', account_type='checking', 
-                balance=50000000, department_id=1),
-        Account(institution_id=2, account_number='987-654-321098', 
-                account_name='개발팀 통장', account_type='checking', 
-                balance=15000000, department_id=2),
-        Account(institution_id=4, account_number='1234-5678-9012', 
-                account_name='법인카드', account_type='credit', 
-                balance=0, department_id=1),
+    accounts = []
+    account_data = [
+        {'institution_id': 1, 'account_number': '123-456-789012', 'account_name': '법인통장', 'account_type': 'checking', 'balance': 50000000, 'department_id': 1},
+        {'institution_id': 2, 'account_number': '987-654-321098', 'account_name': '개발팀 통장', 'account_type': 'checking', 'balance': 15000000, 'department_id': 2},
+        {'institution_id': 4, 'account_number': '1234-5678-9012', 'account_name': '법인카드', 'account_type': 'credit', 'balance': 0, 'department_id': 1},
     ]
+    for data in account_data:
+        account = Account()
+        account.institution_id = data['institution_id']
+        account.account_number = data['account_number']
+        account.account_name = data['account_name']
+        account.account_type = data['account_type']
+        account.balance = data['balance']
+        account.department_id = data['department_id']
+        accounts.append(account)
     
     db.session.add_all(accounts)
     db.session.commit()
     
     # 샘플 거래 데이터
-    sample_transactions = [
-        Transaction(
-            account_id=1, 
-            transaction_id=f'TXN-{i:06d}',
-            amount=-5500 if i % 3 == 0 else (15000 if i % 5 == 0 else -12000),
-            transaction_type='debit',
-            description=f'스타벅스 강남점' if i % 3 == 0 else (f'프로젝트 수수료 입금' if i % 5 == 0 else f'사무용품 구매'),
-            counterparty=f'스타벅스' if i % 3 == 0 else (f'클라이언트' if i % 5 == 0 else f'오피스디포'),
-            transaction_date=datetime.now() - timedelta(days=i),
-            classification_status='pending' if i % 4 == 0 else 'classified',
-            category_id=3 if i % 3 == 0 else (None if i % 5 == 0 else 1),
-            department_id=2 if i % 2 == 0 else 1,
-            vendor_id=6 if i % 3 == 0 else (None if i % 5 == 0 else 1)
-        ) for i in range(100)
-    ]
+    sample_transactions = []
+    for i in range(100):
+        transaction = Transaction()
+        transaction.account_id = 1
+        transaction.transaction_id = f'TXN-{i:06d}'
+        transaction.amount = -5500 if i % 3 == 0 else (15000 if i % 5 == 0 else -12000)
+        transaction.transaction_type = 'debit'
+        transaction.description = f'스타벅스 강남점' if i % 3 == 0 else (f'프로젝트 수수료 입금' if i % 5 == 0 else f'사무용품 구매')
+        transaction.counterparty = f'스타벅스' if i % 3 == 0 else (f'클라이언트' if i % 5 == 0 else f'오피스디포')
+        transaction.transaction_date = datetime.now() - timedelta(days=i)
+        transaction.classification_status = 'pending' if i % 4 == 0 else 'classified'
+        transaction.category_id = 3 if i % 3 == 0 else (None if i % 5 == 0 else 1)
+        transaction.department_id = 2 if i % 2 == 0 else 1
+        transaction.vendor_id = 6 if i % 3 == 0 else (None if i % 5 == 0 else 1)
+        sample_transactions.append(transaction)
     
     db.session.add_all(sample_transactions)
     db.session.commit()
     
     # 샘플 알림 데이터
-    sample_alerts = [
-        Alert(
-            title='예산 초과 경고',
-            message='개발팀의 이번 달 지출이 예산의 85%에 달했습니다.',
-            alert_type='budget',
-            severity='warning'
-        ),
-        Alert(
-            title='계약 만료 임박',
-            message='SKT 통신 서비스 계약이 30일 후 만료됩니다.',
-            alert_type='contract',
-            severity='info'
-        ),
-        Alert(
-            title='이상거래 감지',
-            message='평소보다 큰 금액의 거래가 감지되었습니다. (1,500,000원)',
-            alert_type='anomaly',
-            severity='warning'
-        ),
+    sample_alerts = []
+    alert_data = [
+        {'title': '예산 초과 경고', 'message': '개발팀의 이번 달 지출이 예산의 85%에 달했습니다.', 'alert_type': 'budget', 'severity': 'warning'},
+        {'title': '계약 만료 임박', 'message': 'SKT 통신 서비스 계약이 30일 후 만료됩니다.', 'alert_type': 'contract', 'severity': 'info'},
+        {'title': '이상거래 감지', 'message': '평소보다 큰 금액의 거래가 감지되었습니다. (1,500,000원)', 'alert_type': 'anomaly', 'severity': 'warning'},
     ]
+    for data in alert_data:
+        alert = Alert()
+        alert.title = data['title']
+        alert.message = data['message']
+        alert.alert_type = data['alert_type']
+        alert.severity = data['severity']
+        sample_alerts.append(alert)
     
     db.session.add_all(sample_alerts)
     db.session.commit()
     
     # 샘플 분류 규칙
-    sample_rules = [
-        MappingRule(
-            name='스타벅스 자동분류',
-            priority=8,
-            condition_type='contains',
-            condition_field='counterparty',
-            condition_value='스타벅스',
-            target_category_id=3,
-            target_vendor_id=6
-        ),
-        MappingRule(
-            name='사무용품 자동분류',
-            priority=7,
-            condition_type='contains',
-            condition_field='description',
-            condition_value='사무용품',
-            target_category_id=1,
-            target_department_id=1,
-            target_vendor_id=1
-        ),
+    sample_rules = []
+    rule_data = [
+        {'name': '스타벅스 자동분류', 'priority': 8, 'condition_type': 'contains', 'condition_field': 'counterparty', 'condition_value': '스타벅스', 'target_category_id': 3, 'target_vendor_id': 6},
+        {'name': '사무용품 자동분류', 'priority': 7, 'condition_type': 'contains', 'condition_field': 'description', 'condition_value': '사무용품', 'target_category_id': 1, 'target_department_id': 1, 'target_vendor_id': 1},
     ]
+    for data in rule_data:
+        rule = MappingRule()
+        rule.name = data['name']
+        rule.priority = data['priority']
+        rule.condition_type = data['condition_type']
+        rule.condition_field = data['condition_field']
+        rule.condition_value = data['condition_value']
+        rule.target_category_id = data.get('target_category_id')
+        rule.target_department_id = data.get('target_department_id')
+        rule.target_vendor_id = data.get('target_vendor_id')
+        sample_rules.append(rule)
     
     db.session.add_all(sample_rules)
     db.session.commit()

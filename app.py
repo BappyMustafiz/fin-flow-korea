@@ -23,7 +23,7 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1) # needed for url_for 
 # Flask-Login 설정
 login_manager = LoginManager()
 login_manager.init_app(app)
-login_manager.login_view = 'login'
+login_manager.login_view = 'login'  # type: ignore
 login_manager.login_message = '이 페이지에 접근하려면 로그인이 필요합니다.'
 login_manager.login_message_category = 'info'
 
@@ -140,11 +140,10 @@ with app.app_context():
     
     # Create default admin user if none exists
     if not User.query.filter_by(role='admin').first():
-        admin_user = User(
-            email='admin@company.com',
-            name='관리자',
-            role='admin'
-        )
+        admin_user = User()
+        admin_user.email = 'admin@company.com'
+        admin_user.name = '관리자'
+        admin_user.role = 'admin'
         admin_user.set_password('admin123')
         db.session.add(admin_user)
         db.session.commit()
