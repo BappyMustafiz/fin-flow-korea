@@ -1,0 +1,238 @@
+{% extends "layout.html" %}
+
+{% block title %}연결 관리 - 한국형 오픈뱅킹 회계시스템{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="h3 mb-0">연결 관리</h1>
+        <p class="text-muted">금융기관 계정 연결 및 동의 관리</p>
+    </div>
+</div>
+
+<!-- Connection Status -->
+<div class="row mb-4">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i data-feather="link" class="me-2"></i>
+                    연결 가능한 금융기관
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for institution in institutions %}
+                    <div class="col-md-6 mb-3">
+                        <div class="institution-card">
+                            <div class="d-flex align-items-center">
+                                <div class="institution-logo me-3">
+                                    {% if institution.type == 'bank' %}
+                                        <i data-feather="credit-card" class="text-primary"></i>
+                                    {% elif institution.type == 'card' %}
+                                        <i data-feather="credit-card" class="text-warning"></i>
+                                    {% else %}
+                                        <i data-feather="smartphone" class="text-success"></i>
+                                    {% endif %}
+                                </div>
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-1">{{ institution.name }}</h6>
+                                    <small class="text-muted">
+                                        {% if institution.type == 'bank' %}은행
+                                        {% elif institution.type == 'card' %}카드
+                                        {% else %}간편결제{% endif %}
+                                    </small>
+                                </div>
+                                <div class="institution-actions">
+                                    {% set consent = consents | selectattr('institution_id', 'equalto', institution.id) | first %}
+                                    {% if consent and consent.status == 'active' %}
+                                        <span class="badge bg-success">연결됨</span>
+                                    {% else %}
+                                        <a href="{{ url_for('connect_institution', institution_code=institution.code) }}" 
+                                           class="btn btn-sm btn-outline-primary">연결하기</a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i data-feather="info" class="me-2"></i>
+                    연결 안내
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="info-item mb-3">
+                    <h6 class="text-primary">
+                        <i data-feather="shield" class="me-2"></i>
+                        안전한 연결
+                    </h6>
+                    <p class="small text-muted mb-0">
+                        오픈뱅킹 표준 API를 통한 안전한 데이터 연동
+                    </p>
+                </div>
+                
+                <div class="info-item mb-3">
+                    <h6 class="text-success">
+                        <i data-feather="refresh-cw" class="me-2"></i>
+                        실시간 동기화
+                    </h6>
+                    <p class="small text-muted mb-0">
+                        거래 내역이 실시간으로 자동 수집됩니다
+                    </p>
+                </div>
+                
+                <div class="info-item">
+                    <h6 class="text-info">
+                        <i data-feather="clock" class="me-2"></i>
+                        동의 관리
+                    </h6>
+                    <p class="small text-muted mb-0">
+                        동의 기간은 6개월이며, 언제든 철회 가능합니다
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Current Connections -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i data-feather="check-circle" class="me-2"></i>
+                    현재 연결 상태
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>금융기관</th>
+                                <th>유형</th>
+                                <th>동의ID</th>
+                                <th>연결일시</th>
+                                <th>만료일시</th>
+                                <th>상태</th>
+                                <th>작업</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for consent in consents %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        {% if consent.institution.type == 'bank' %}
+                                            <i data-feather="credit-card" class="text-primary me-2"></i>
+                                        {% elif consent.institution.type == 'card' %}
+                                            <i data-feather="credit-card" class="text-warning me-2"></i>
+                                        {% else %}
+                                            <i data-feather="smartphone" class="text-success me-2"></i>
+                                        {% endif %}
+                                        {{ consent.institution.name }}
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if consent.institution.type == 'bank' %}은행
+                                    {% elif consent.institution.type == 'card' %}카드
+                                    {% else %}간편결제{% endif %}
+                                </td>
+                                <td>
+                                    <code class="small">{{ consent.consent_id[:20] }}...</code>
+                                </td>
+                                <td>{{ consent.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                                <td>{{ consent.expires_at.strftime('%Y-%m-%d %H:%M') if consent.expires_at else '-' }}</td>
+                                <td>
+                                    {% if consent.status == 'active' %}
+                                        <span class="badge bg-success">활성</span>
+                                    {% elif consent.status == 'expired' %}
+                                        <span class="badge bg-warning">만료</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">철회</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        {% if consent.status == 'active' %}
+                                            <button class="btn btn-outline-warning" title="연결 해제">
+                                                <i data-feather="x"></i>
+                                            </button>
+                                            <button class="btn btn-outline-primary" title="동기화">
+                                                <i data-feather="refresh-cw"></i>
+                                            </button>
+                                        {% else %}
+                                            <a href="{{ url_for('connect_institution', institution_code=consent.institution.code) }}" 
+                                               class="btn btn-outline-primary" title="재연결">
+                                                <i data-feather="refresh-cw"></i>
+                                            </a>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="7" class="text-center text-muted py-4">
+                                    연결된 금융기관이 없습니다. 위에서 금융기관을 연결해 주세요.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- OAuth Flow Modal -->
+<div class="modal fade" id="oauthModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">금융기관 연결</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary mb-3" role="status">
+                        <span class="visually-hidden">연결 중...</span>
+                    </div>
+                    <h5>금융기관 인증 중</h5>
+                    <p class="text-muted">잠시만 기다려 주세요...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 연결하기 버튼 클릭 시 모달 표시
+    document.querySelectorAll('a[href*="connect"]').forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            const modal = new bootstrap.Modal(document.getElementById('oauthModal'));
+            modal.show();
+            
+            // 실제 연결 처리 (시뮬레이션)
+            setTimeout(() => {
+                window.location.href = this.href;
+            }, 2000);
+        });
+    });
+});
+</script>
+{% endblock %}

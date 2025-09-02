@@ -1,0 +1,523 @@
+{% extends "layout.html" %}
+
+{% block title %}감사 로그 - 한국형 오픈뱅킹 회계시스템{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="h3 mb-0">감사 로그</h1>
+        <p class="text-muted">시스템 활동 및 변경 내역 추적</p>
+    </div>
+</div>
+
+<!-- Audit Summary -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <i data-feather="activity" class="text-primary mb-2" style="width: 48px; height: 48px;"></i>
+                <h4>1,247</h4>
+                <p class="text-muted mb-0">오늘 활동</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <i data-feather="users" class="text-success mb-2" style="width: 48px; height: 48px;"></i>
+                <h4>8</h4>
+                <p class="text-muted mb-0">활성 사용자</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <i data-feather="edit" class="text-warning mb-2" style="width: 48px; height: 48px;"></i>
+                <h4>156</h4>
+                <p class="text-muted mb-0">데이터 변경</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <i data-feather="shield" class="text-danger mb-2" style="width: 48px; height: 48px;"></i>
+                <h4>3</h4>
+                <p class="text-muted mb-0">보안 이벤트</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <form class="row g-3">
+                    <div class="col-md-2">
+                        <label for="auditDateFrom" class="form-label">시작일</label>
+                        <input type="date" class="form-control" id="auditDateFrom">
+                    </div>
+                    
+                    <div class="col-md-2">
+                        <label for="auditDateTo" class="form-label">종료일</label>
+                        <input type="date" class="form-control" id="auditDateTo">
+                    </div>
+                    
+                    <div class="col-md-2">
+                        <label for="auditUser" class="form-label">사용자</label>
+                        <select class="form-select" id="auditUser">
+                            <option value="">전체</option>
+                            <option value="admin">관리자</option>
+                            <option value="accounting">회계팀</option>
+                            <option value="manager">경영진</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-2">
+                        <label for="auditAction" class="form-label">활동</label>
+                        <select class="form-select" id="auditAction">
+                            <option value="">전체</option>
+                            <option value="create">생성</option>
+                            <option value="update">수정</option>
+                            <option value="delete">삭제</option>
+                            <option value="login">로그인</option>
+                            <option value="export">내보내기</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-2">
+                        <label for="auditTable" class="form-label">테이블</label>
+                        <select class="form-select" id="auditTable">
+                            <option value="">전체</option>
+                            <option value="transaction">거래</option>
+                            <option value="account">계좌</option>
+                            <option value="rule">규칙</option>
+                            <option value="user">사용자</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-2">
+                        <label class="form-label">&nbsp;</label>
+                        <div class="d-grid">
+                            <button type="button" class="btn btn-primary" onclick="filterAuditLogs()">
+                                <i data-feather="search" class="me-1"></i>검색
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Audit Logs -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i data-feather="list" class="me-2"></i>
+                    감사 로그 목록
+                </h5>
+                <div class="btn-group btn-group-sm">
+                    <button class="btn btn-outline-primary" onclick="refreshLogs()">
+                        <i data-feather="refresh-cw" class="me-1"></i>새로고침
+                    </button>
+                    <button class="btn btn-outline-secondary" onclick="exportLogs()">
+                        <i data-feather="download" class="me-1"></i>내보내기
+                    </button>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>시간</th>
+                                <th>사용자</th>
+                                <th>활동</th>
+                                <th>대상</th>
+                                <th>변경 내용</th>
+                                <th>IP 주소</th>
+                                <th>작업</th>
+                            </tr>
+                        </thead>
+                        <tbody id="auditTableBody">
+                            <!-- 샘플 감사 로그 데이터 -->
+                            <tr>
+                                <td>
+                                    <div class="timestamp">
+                                        2024-01-15 14:35:22
+                                        <br>
+                                        <small class="text-muted">5분 전</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="user-info">
+                                        <i data-feather="user" class="me-2 text-primary"></i>
+                                        <strong>관리자</strong>
+                                        <br>
+                                        <small class="text-muted">admin@company.com</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-warning">수정</span>
+                                </td>
+                                <td>
+                                    <div class="target-info">
+                                        <strong>거래</strong>
+                                        <br>
+                                        <small class="text-muted">ID: TXN-12345</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="change-info">
+                                        <small>카테고리: 식비 → 사무용품</small>
+                                        <br>
+                                        <small>부서: 개발팀 → 경영지원팀</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <code class="small">192.168.1.100</code>
+                                </td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-info" onclick="viewAuditDetail(1)">
+                                        <i data-feather="eye"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            
+                            <tr>
+                                <td>
+                                    <div class="timestamp">
+                                        2024-01-15 14:28:15
+                                        <br>
+                                        <small class="text-muted">12분 전</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="user-info">
+                                        <i data-feather="user" class="me-2 text-success"></i>
+                                        <strong>회계팀</strong>
+                                        <br>
+                                        <small class="text-muted">accounting@company.com</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-success">생성</span>
+                                </td>
+                                <td>
+                                    <div class="target-info">
+                                        <strong>분류규칙</strong>
+                                        <br>
+                                        <small class="text-muted">ID: RULE-789</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="change-info">
+                                        <small>규칙명: 스타벅스 자동분류</small>
+                                        <br>
+                                        <small>조건: description contains '스타벅스'</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <code class="small">192.168.1.105</code>
+                                </td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-info" onclick="viewAuditDetail(2)">
+                                        <i data-feather="eye"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            
+                            <tr>
+                                <td>
+                                    <div class="timestamp">
+                                        2024-01-15 14:20:03
+                                        <br>
+                                        <small class="text-muted">20분 전</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="user-info">
+                                        <i data-feather="user" class="me-2 text-info"></i>
+                                        <strong>경영진</strong>
+                                        <br>
+                                        <small class="text-muted">manager@company.com</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-info">조회</span>
+                                </td>
+                                <td>
+                                    <div class="target-info">
+                                        <strong>리포트</strong>
+                                        <br>
+                                        <small class="text-muted">현금흐름 분석</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="change-info">
+                                        <small>기간: 2024-01 ~ 2024-01</small>
+                                        <br>
+                                        <small>내보내기: Excel 형식</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <code class="small">192.168.1.200</code>
+                                </td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-info" onclick="viewAuditDetail(3)">
+                                        <i data-feather="eye"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            
+                            <tr class="table-danger">
+                                <td>
+                                    <div class="timestamp">
+                                        2024-01-15 13:45:12
+                                        <br>
+                                        <small class="text-muted">55분 전</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="user-info">
+                                        <i data-feather="user" class="me-2 text-danger"></i>
+                                        <strong>시스템</strong>
+                                        <br>
+                                        <small class="text-muted">system</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-danger">보안</span>
+                                </td>
+                                <td>
+                                    <div class="target-info">
+                                        <strong>로그인</strong>
+                                        <br>
+                                        <small class="text-muted">실패한 로그인 시도</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="change-info">
+                                        <small>사유: 잘못된 비밀번호</small>
+                                        <br>
+                                        <small>시도 횟수: 5회</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <code class="small text-danger">203.0.113.42</code>
+                                </td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="viewAuditDetail(4)">
+                                        <i data-feather="alert-triangle"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Pagination -->
+            <div class="card-footer">
+                <nav aria-label="감사 로그 페이지네이션">
+                    <ul class="pagination pagination-sm justify-content-center mb-0">
+                        <li class="page-item disabled">
+                            <span class="page-link">이전</span>
+                        </li>
+                        <li class="page-item active">
+                            <span class="page-link">1</span>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="#">2</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="#">3</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="#">다음</a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Audit Detail Modal -->
+<div class="modal fade" id="auditDetailModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">감사 로그 상세 정보</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="auditDetailContent">
+                    <!-- 동적으로 로드 -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 날짜 필터 기본값 설정
+    const today = new Date();
+    const weekAgo = new Date();
+    weekAgo.setDate(today.getDate() - 7);
+    
+    document.getElementById('auditDateFrom').value = weekAgo.toISOString().split('T')[0];
+    document.getElementById('auditDateTo').value = today.toISOString().split('T')[0];
+});
+
+function filterAuditLogs() {
+    const filters = {
+        dateFrom: document.getElementById('auditDateFrom').value,
+        dateTo: document.getElementById('auditDateTo').value,
+        user: document.getElementById('auditUser').value,
+        action: document.getElementById('auditAction').value,
+        table: document.getElementById('auditTable').value
+    };
+    
+    console.log('Filtering audit logs:', filters);
+    showToast('감사 로그를 필터링하고 있습니다...', 'info');
+    
+    // 실제로는 서버 요청
+    setTimeout(() => {
+        showToast('필터가 적용되었습니다.', 'success');
+    }, 1000);
+}
+
+function refreshLogs() {
+    showToast('감사 로그를 새로고침하고 있습니다...', 'info');
+    
+    // 실제로는 서버에서 최신 데이터 로드
+    setTimeout(() => {
+        showToast('감사 로그가 업데이트되었습니다.', 'success');
+    }, 1500);
+}
+
+function exportLogs() {
+    const filters = {
+        dateFrom: document.getElementById('auditDateFrom').value,
+        dateTo: document.getElementById('auditDateTo').value,
+        user: document.getElementById('auditUser').value,
+        action: document.getElementById('auditAction').value,
+        table: document.getElementById('auditTable').value
+    };
+    
+    showToast('감사 로그를 내보내고 있습니다...', 'info');
+    
+    // 실제로는 파일 다운로드 처리
+    setTimeout(() => {
+        showToast('감사 로그 파일이 다운로드되었습니다.', 'success');
+    }, 2000);
+}
+
+function viewAuditDetail(auditId) {
+    const modal = new bootstrap.Modal(document.getElementById('auditDetailModal'));
+    
+    document.getElementById('auditDetailContent').innerHTML = `
+        <div class="text-center py-4">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">로딩 중...</span>
+            </div>
+        </div>
+    `;
+    
+    modal.show();
+    
+    // 시뮬레이션된 상세 정보
+    setTimeout(() => {
+        const detailContent = `
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <h6>기본 정보</h6>
+                    <table class="table table-sm">
+                        <tr><td>감사 ID:</td><td>AUDIT-${auditId}</td></tr>
+                        <tr><td>발생시간:</td><td>2024-01-15 14:35:22</td></tr>
+                        <tr><td>사용자:</td><td>관리자 (admin@company.com)</td></tr>
+                        <tr><td>활동:</td><td>거래 정보 수정</td></tr>
+                    </table>
+                </div>
+                <div class="col-md-6">
+                    <h6>시스템 정보</h6>
+                    <table class="table table-sm">
+                        <tr><td>IP 주소:</td><td>192.168.1.100</td></tr>
+                        <tr><td>User Agent:</td><td>Mozilla/5.0 Chrome/96.0</td></tr>
+                        <tr><td>세션 ID:</td><td>sess_abc123...</td></tr>
+                        <tr><td>요청 방법:</td><td>POST</td></tr>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="row mb-4">
+                <div class="col-12">
+                    <h6>변경 내용</h6>
+                    <div class="card bg-light">
+                        <div class="card-body">
+                            <h6 class="text-danger">변경 전</h6>
+                            <pre class="small">{
+  "category_id": 3,
+  "category_name": "식비",
+  "department_id": 2,
+  "department_name": "개발팀",
+  "classification_status": "manual"
+}</pre>
+                            
+                            <h6 class="text-success mt-3">변경 후</h6>
+                            <pre class="small">{
+  "category_id": 1,
+  "category_name": "사무용품",
+  "department_id": 1,
+  "department_name": "경영지원팀",
+  "classification_status": "manual"
+}</pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-12">
+                    <h6>관련 정보</h6>
+                    <ul class="list-unstyled">
+                        <li><strong>대상 레코드:</strong> 거래 TXN-12345</li>
+                        <li><strong>변경 사유:</strong> 분류 오류 수정</li>
+                        <li><strong>승인자:</strong> 시스템 자동</li>
+                        <li><strong>영향도:</strong> 낮음</li>
+                    </ul>
+                </div>
+            </div>
+        `;
+        
+        document.getElementById('auditDetailContent').innerHTML = detailContent;
+    }, 1000);
+}
+
+function showToast(message, type = 'success') {
+    const toast = document.createElement('div');
+    toast.className = `alert alert-${type} position-fixed top-0 end-0 m-3`;
+    toast.style.zIndex = '9999';
+    toast.textContent = message;
+    
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.remove();
+    }, 3000);
+}
+</script>
+{% endblock %}

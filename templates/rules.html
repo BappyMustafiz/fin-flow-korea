@@ -1,0 +1,458 @@
+{% extends "layout.html" %}
+
+{% block title %}분류 규칙 - 한국형 오픈뱅킹 회계시스템{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="h3 mb-0">분류 규칙 관리</h1>
+        <p class="text-muted">거래 자동 분류를 위한 규칙 설정 및 관리</p>
+    </div>
+</div>
+
+<!-- Rule Stats -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <i data-feather="settings" class="text-primary mb-2" style="width: 48px; height: 48px;"></i>
+                <h4>{{ rules | length }}</h4>
+                <p class="text-muted mb-0">전체 규칙</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <i data-feather="play" class="text-success mb-2" style="width: 48px; height: 48px;"></i>
+                <h4>{{ rules | selectattr('is_active', 'equalto', True) | list | length }}</h4>
+                <p class="text-muted mb-0">활성 규칙</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <i data-feather="pause" class="text-warning mb-2" style="width: 48px; height: 48px;"></i>
+                <h4>{{ rules | selectattr('is_active', 'equalto', False) | list | length }}</h4>
+                <p class="text-muted mb-0">비활성 규칙</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <i data-feather="zap" class="text-info mb-2" style="width: 48px; height: 48px;"></i>
+                <h4>{{ rules | selectattr('priority', 'greaterthan', 5) | list | length }}</h4>
+                <p class="text-muted mb-0">고우선순위</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Rules Management -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i data-feather="list" class="me-2"></i>
+                    분류 규칙 목록
+                </h5>
+                <div class="btn-group">
+                    <button class="btn btn-success" onclick="applyAllRules()">
+                        <i data-feather="play" class="me-2"></i>전체 규칙 적용
+                    </button>
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addRuleModal">
+                        <i data-feather="plus" class="me-2"></i>규칙 추가
+                    </button>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>우선순위</th>
+                                <th>규칙명</th>
+                                <th>조건</th>
+                                <th>분류 대상</th>
+                                <th>상태</th>
+                                <th>작업</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for rule in rules %}
+                            <tr>
+                                <td>
+                                    <span class="badge {% if rule.priority >= 8 %}bg-danger{% elif rule.priority >= 5 %}bg-warning{% else %}bg-secondary{% endif %}">
+                                        {{ rule.priority }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <strong>{{ rule.name }}</strong>
+                                    <br>
+                                    <small class="text-muted">
+                                        {{ rule.created_at.strftime('%Y-%m-%d') }} 생성
+                                    </small>
+                                </td>
+                                <td>
+                                    <div class="rule-condition">
+                                        <code class="small">
+                                            {% if rule.condition_type == 'contains' %}
+                                                {{ rule.condition_field }} 포함 "{{ rule.condition_value }}"
+                                            {% elif rule.condition_type == 'equals' %}
+                                                {{ rule.condition_field }} 일치 "{{ rule.condition_value }}"
+                                            {% elif rule.condition_type == 'regex' %}
+                                                {{ rule.condition_field }} 정규식 "{{ rule.condition_value }}"
+                                            {% elif rule.condition_type == 'amount_range' %}
+                                                금액 범위 {{ rule.condition_value }}
+                                            {% endif %}
+                                        </code>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="rule-targets">
+                                        {% if rule.target_category %}
+                                            <div class="small">
+                                                <i data-feather="tag" class="me-1" style="width: 12px; height: 12px;"></i>
+                                                {{ rule.target_category.name }}
+                                            </div>
+                                        {% endif %}
+                                        {% if rule.target_department %}
+                                            <div class="small">
+                                                <i data-feather="users" class="me-1" style="width: 12px; height: 12px;"></i>
+                                                {{ rule.target_department.name }}
+                                            </div>
+                                        {% endif %}
+                                        {% if rule.target_vendor %}
+                                            <div class="small">
+                                                <i data-feather="building" class="me-1" style="width: 12px; height: 12px;"></i>
+                                                {{ rule.target_vendor.name }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if rule.is_active %}
+                                        <span class="badge bg-success">활성</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">비활성</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{{ url_for('apply_rule', rule_id=rule.id) }}" 
+                                           class="btn btn-outline-success" 
+                                           title="규칙 적용"
+                                           onclick="return confirm('이 규칙을 적용하시겠습니까?')">
+                                            <i data-feather="play"></i>
+                                        </a>
+                                        <button class="btn btn-outline-primary" 
+                                                onclick="editRule({{ rule.id }})" 
+                                                title="편집">
+                                            <i data-feather="edit"></i>
+                                        </button>
+                                        <button class="btn btn-outline-info" 
+                                                onclick="testRule({{ rule.id }})" 
+                                                title="테스트">
+                                            <i data-feather="test-tube"></i>
+                                        </button>
+                                        <button class="btn btn-outline-danger" 
+                                                onclick="deleteRule({{ rule.id }})" 
+                                                title="삭제">
+                                            <i data-feather="trash-2"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="6" class="text-center text-muted py-4">
+                                    등록된 분류 규칙이 없습니다. 새 규칙을 추가해 주세요.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Rule Modal -->
+<div class="modal fade" id="addRuleModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">분류 규칙 추가</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('add_rule') }}">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="mb-3">
+                                <label for="ruleName" class="form-label">규칙명</label>
+                                <input type="text" class="form-control" id="ruleName" name="name" required>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="priority" class="form-label">우선순위</label>
+                                <input type="number" class="form-control" id="priority" name="priority" 
+                                       min="0" max="10" value="5">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    <h6>조건 설정</h6>
+                    
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="conditionType" class="form-label">조건 유형</label>
+                                <select class="form-select" id="conditionType" name="condition_type" required>
+                                    <option value="contains">포함</option>
+                                    <option value="equals">일치</option>
+                                    <option value="regex">정규식</option>
+                                    <option value="amount_range">금액 범위</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="conditionField" class="form-label">대상 필드</label>
+                                <select class="form-select" id="conditionField" name="condition_field" required>
+                                    <option value="description">거래 내용</option>
+                                    <option value="counterparty">거래처</option>
+                                    <option value="amount">금액</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="conditionValue" class="form-label">조건 값</label>
+                                <input type="text" class="form-control" id="conditionValue" name="condition_value" 
+                                       placeholder="예: 스타벅스" required>
+                                <div class="form-text" id="conditionHelp">
+                                    포함: 텍스트 포함 여부 확인
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    <h6>분류 대상</h6>
+                    
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="targetCategory" class="form-label">카테고리</label>
+                                <select class="form-select" id="targetCategory" name="target_category_id">
+                                    <option value="">선택하세요</option>
+                                    {% for cat in categories %}
+                                        <option value="{{ cat.id }}">{{ cat.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="targetDepartment" class="form-label">부서</label>
+                                <select class="form-select" id="targetDepartment" name="target_department_id">
+                                    <option value="">선택하세요</option>
+                                    {% for dept in departments %}
+                                        <option value="{{ dept.id }}">{{ dept.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="targetVendor" class="form-label">거래처</label>
+                                <select class="form-select" id="targetVendor" name="target_vendor_id">
+                                    <option value="">선택하세요</option>
+                                    {% for vendor in vendors %}
+                                        <option value="{{ vendor.id }}">{{ vendor.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                    <button type="submit" class="btn btn-primary">규칙 추가</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Rule Test Modal -->
+<div class="modal fade" id="ruleTestModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">규칙 테스트</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="ruleTestContent">
+                    <!-- 동적으로 로드 -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 조건 유형 변경 시 도움말 업데이트
+    const conditionType = document.getElementById('conditionType');
+    const conditionField = document.getElementById('conditionField');
+    const conditionValue = document.getElementById('conditionValue');
+    const conditionHelp = document.getElementById('conditionHelp');
+    
+    function updateConditionHelp() {
+        const type = conditionType.value;
+        const field = conditionField.value;
+        
+        let helpText = '';
+        let placeholder = '';
+        
+        switch(type) {
+            case 'contains':
+                helpText = `${field} 필드에 입력한 텍스트가 포함된 거래를 찾습니다`;
+                placeholder = '예: 스타벅스';
+                break;
+            case 'equals':
+                helpText = `${field} 필드가 입력한 텍스트와 정확히 일치하는 거래를 찾습니다`;
+                placeholder = '예: 스타벅스 강남점';
+                break;
+            case 'regex':
+                helpText = `${field} 필드에 정규식 패턴을 적용합니다`;
+                placeholder = '예: ^스타벅스.*';
+                break;
+            case 'amount_range':
+                helpText = '금액 범위를 설정합니다 (최소,최대)';
+                placeholder = '예: 10000,50000';
+                break;
+        }
+        
+        conditionHelp.textContent = helpText;
+        conditionValue.placeholder = placeholder;
+    }
+    
+    conditionType.addEventListener('change', updateConditionHelp);
+    conditionField.addEventListener('change', updateConditionHelp);
+    
+    updateConditionHelp();
+});
+
+function applyAllRules() {
+    if (confirm('모든 활성 규칙을 미분류 거래에 적용하시겠습니까?')) {
+        // 전체 규칙 적용 로직
+        showToast('규칙 적용이 시작되었습니다.', 'info');
+        
+        // 시뮬레이션된 처리
+        setTimeout(() => {
+            showToast('규칙 적용이 완료되었습니다. 125건의 거래가 분류되었습니다.', 'success');
+        }, 3000);
+    }
+}
+
+function editRule(ruleId) {
+    // 규칙 편집 (실제로는 모달이나 페이지로 이동)
+    console.log('Editing rule:', ruleId);
+    alert('규칙 편집 기능은 곧 추가될 예정입니다.');
+}
+
+function testRule(ruleId) {
+    // 규칙 테스트 모달 표시
+    const modal = new bootstrap.Modal(document.getElementById('ruleTestModal'));
+    
+    document.getElementById('ruleTestContent').innerHTML = `
+        <div class="text-center py-4">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">테스트 중...</span>
+            </div>
+            <p class="mt-2">규칙을 테스트하고 있습니다...</p>
+        </div>
+    `;
+    
+    modal.show();
+    
+    // 시뮬레이션된 테스트 결과
+    setTimeout(() => {
+        document.getElementById('ruleTestContent').innerHTML = `
+            <div class="alert alert-success">
+                <h6><i data-feather="check-circle" class="me-2"></i>테스트 완료</h6>
+                <p class="mb-0">이 규칙이 적용될 거래: <strong>15건</strong></p>
+            </div>
+            
+            <h6>예상 분류 결과</h6>
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>거래일</th>
+                            <th>거래처</th>
+                            <th>금액</th>
+                            <th>예상 분류</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>2024-01-15</td>
+                            <td>스타벅스 강남점</td>
+                            <td>-5,500원</td>
+                            <td><span class="badge bg-primary">식비</span></td>
+                        </tr>
+                        <tr>
+                            <td>2024-01-14</td>
+                            <td>스타벅스 역삼점</td>
+                            <td>-4,800원</td>
+                            <td><span class="badge bg-primary">식비</span></td>
+                        </tr>
+                        <tr>
+                            <td>2024-01-12</td>
+                            <td>스타벅스 신사점</td>
+                            <td>-6,200원</td>
+                            <td><span class="badge bg-primary">식비</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        `;
+        feather.replace();
+    }, 2000);
+}
+
+function deleteRule(ruleId) {
+    if (confirm('이 규칙을 삭제하시겠습니까?')) {
+        // 규칙 삭제 로직
+        console.log('Deleting rule:', ruleId);
+        showToast('규칙이 삭제되었습니다.', 'success');
+    }
+}
+
+function showToast(message, type = 'success') {
+    const toast = document.createElement('div');
+    toast.className = `alert alert-${type} position-fixed top-0 end-0 m-3`;
+    toast.style.zIndex = '9999';
+    toast.textContent = message;
+    
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.remove();
+    }, 3000);
+}
+</script>
+{% endblock %}

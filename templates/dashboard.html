@@ -1,0 +1,315 @@
+{% extends "layout.html" %}
+
+{% block title %}대시보드 - 한국형 오픈뱅킹 회계시스템{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="h3 mb-0">대시보드</h1>
+        <p class="text-muted">실시간 재무 현황 및 주요 지표</p>
+    </div>
+</div>
+
+<!-- KPI Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card kpi-card kpi-income">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="card-title mb-0">이번달 수입</h5>
+                        <h3 class="mb-0">{{ current_income | currency }}</h3>
+                        <small class="text-muted">
+                            전월: {{ last_income | currency }}
+                        </small>
+                    </div>
+                    <div class="kpi-icon">
+                        <i data-feather="trending-up"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card kpi-card kpi-expense">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="card-title mb-0">이번달 지출</h5>
+                        <h3 class="mb-0">{{ current_expense | currency }}</h3>
+                        <small class="text-muted">
+                            전월: {{ last_expense | currency }}
+                        </small>
+                    </div>
+                    <div class="kpi-icon">
+                        <i data-feather="trending-down"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card kpi-card kpi-balance">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="card-title mb-0">당월 수지</h5>
+                        <h3 class="mb-0 {{ (current_income - current_expense) | amount_color }}">
+                            {{ (current_income - current_expense) | currency }}
+                        </h3>
+                        <small class="text-muted">
+                            전월: {{ (last_income - last_expense) | currency }}
+                        </small>
+                    </div>
+                    <div class="kpi-icon">
+                        <i data-feather="dollar-sign"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card kpi-card kpi-pending">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="card-title mb-0">미분류 거래</h5>
+                        <h3 class="mb-0">{{ unclassified_count }}건</h3>
+                        <small class="text-muted">
+                            <a href="{{ url_for('transactions', status='pending') }}" class="text-decoration-none">
+                                분류 작업 하기
+                            </a>
+                        </small>
+                    </div>
+                    <div class="kpi-icon">
+                        <i data-feather="alert-circle"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row -->
+<div class="row mb-4">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i data-feather="bar-chart-2" class="me-2"></i>
+                    최근 7일 현금흐름
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="cashFlowChart" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i data-feather="pie-chart" class="me-2"></i>
+                    부서별 지출 현황
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="deptExpenseChart" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Content Row -->
+<div class="row">
+    <!-- Recent Transactions -->
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i data-feather="list" class="me-2"></i>
+                    최근 거래 내역
+                </h5>
+                <a href="{{ url_for('transactions') }}" class="btn btn-sm btn-outline-primary">전체 보기</a>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>거래일자</th>
+                                <th>거래처</th>
+                                <th>내용</th>
+                                <th class="text-end">금액</th>
+                                <th>분류상태</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for transaction in recent_transactions %}
+                            <tr>
+                                <td>{{ transaction.transaction_date.strftime('%m/%d') }}</td>
+                                <td>{{ transaction.counterparty or '-' }}</td>
+                                <td>
+                                    <div class="transaction-desc">
+                                        {{ transaction.description[:30] }}{% if transaction.description|length > 30 %}...{% endif %}
+                                    </div>
+                                </td>
+                                <td class="text-end {{ transaction.amount | amount_color }}">
+                                    {{ transaction.amount | currency }}
+                                </td>
+                                <td>
+                                    <span class="badge badge-status-{{ transaction.classification_status }}">
+                                        {{ transaction.classification_status | classification_status }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="5" class="text-center text-muted py-4">
+                                    거래 내역이 없습니다.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Alerts -->
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i data-feather="bell" class="me-2"></i>
+                    최근 알림
+                </h5>
+                <a href="{{ url_for('settings') }}" class="btn btn-sm btn-outline-primary">전체 보기</a>
+            </div>
+            <div class="card-body">
+                {% for alert in recent_alerts %}
+                <div class="alert-item mb-3 pb-3 {% if not loop.last %}border-bottom{% endif %}">
+                    <div class="d-flex align-items-start">
+                        <div class="alert-icon me-3">
+                            {% if alert.alert_type == 'budget' %}
+                                <i data-feather="dollar-sign" class="text-warning"></i>
+                            {% elif alert.alert_type == 'contract' %}
+                                <i data-feather="file-text" class="text-info"></i>
+                            {% else %}
+                                <i data-feather="alert-triangle" class="text-danger"></i>
+                            {% endif %}
+                        </div>
+                        <div class="flex-grow-1">
+                            <h6 class="mb-1">{{ alert.title }}</h6>
+                            <p class="text-muted small mb-1">{{ alert.message }}</p>
+                            <small class="text-muted">{{ alert.created_at.strftime('%m/%d %H:%M') }}</small>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="text-center text-muted py-4">
+                    <i data-feather="check-circle" class="mb-2" style="width: 48px; height: 48px;"></i>
+                    <p class="mb-0">새로운 알림이 없습니다.</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// 현금흐름 차트
+fetch('/api/dashboard/chart-data')
+    .then(response => response.json())
+    .then(data => {
+        const ctx = document.getElementById('cashFlowChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: data.dates,
+                datasets: [{
+                    label: '수입',
+                    data: data.income,
+                    borderColor: '#28a745',
+                    backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                    tension: 0.4
+                }, {
+                    label: '지출',
+                    data: data.expense,
+                    borderColor: '#dc3545',
+                    backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return value.toLocaleString() + '원';
+                            }
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.dataset.label + ': ' + context.parsed.y.toLocaleString() + '원';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    });
+
+// 부서별 지출 차트
+const deptData = {{ dept_expenses | tojson }};
+if (deptData && deptData.length > 0) {
+    const deptCtx = document.getElementById('deptExpenseChart').getContext('2d');
+    new Chart(deptCtx, {
+        type: 'doughnut',
+        data: {
+            labels: deptData.map(d => d[0]),
+            datasets: [{
+                data: deptData.map(d => Math.abs(d[1])),
+                backgroundColor: [
+                    '#007bff',
+                    '#28a745',
+                    '#ffc107',
+                    '#dc3545',
+                    '#6f42c1'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.label + ': ' + context.parsed.toLocaleString() + '원';
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+</script>
+{% endblock %}

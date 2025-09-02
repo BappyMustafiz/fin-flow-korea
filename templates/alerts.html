@@ -1,0 +1,428 @@
+{% extends "layout.html" %}
+
+{% block title %}알림/설정 - 한국형 오픈뱅킹 회계시스템{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="h3 mb-0">알림 및 설정</h1>
+        <p class="text-muted">시스템 알림, 임계값 설정 및 보안 관리</p>
+    </div>
+</div>
+
+<!-- Alert Summary -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center alert-summary-card">
+            <div class="card-body">
+                <i data-feather="bell" class="text-danger mb-2" style="width: 48px; height: 48px;"></i>
+                <h4 class="text-danger">{{ alerts | selectattr('is_read', 'equalto', False) | list | length }}</h4>
+                <p class="text-muted mb-0">읽지 않은 알림</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center alert-summary-card">
+            <div class="card-body">
+                <i data-feather="dollar-sign" class="text-warning mb-2" style="width: 48px; height: 48px;"></i>
+                <h4 class="text-warning">{{ alerts | selectattr('alert_type', 'equalto', 'budget') | list | length }}</h4>
+                <p class="text-muted mb-0">예산 알림</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center alert-summary-card">
+            <div class="card-body">
+                <i data-feather="file-text" class="text-info mb-2" style="width: 48px; height: 48px;"></i>
+                <h4 class="text-info">{{ alerts | selectattr('alert_type', 'equalto', 'contract') | list | length }}</h4>
+                <p class="text-muted mb-0">계약 알림</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center alert-summary-card">
+            <div class="card-body">
+                <i data-feather="alert-triangle" class="text-danger mb-2" style="width: 48px; height: 48px;"></i>
+                <h4 class="text-danger">{{ alerts | selectattr('alert_type', 'equalto', 'anomaly') | list | length }}</h4>
+                <p class="text-muted mb-0">이상거래 알림</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Alert Settings -->
+<div class="row mb-4">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i data-feather="settings" class="me-2"></i>
+                    알림 설정
+                </h5>
+                <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#alertSettingsModal">
+                    <i data-feather="plus" class="me-1"></i>설정 추가
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="alert-settings">
+                    <!-- Budget Alert Settings -->
+                    <div class="setting-section mb-4">
+                        <h6 class="text-primary">
+                            <i data-feather="dollar-sign" class="me-2"></i>
+                            예산 알림 설정
+                        </h6>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="budgetAlertEnabled" checked>
+                                    <label class="form-check-label" for="budgetAlertEnabled">
+                                        예산 알림 활성화
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="budgetThreshold" class="form-label small">임계치 (%)</label>
+                                <input type="number" class="form-control form-control-sm" id="budgetThreshold" 
+                                       value="80" min="50" max="100">
+                            </div>
+                            <div class="col-md-4">
+                                <label for="budgetFrequency" class="form-label small">알림 주기</label>
+                                <select class="form-select form-select-sm" id="budgetFrequency">
+                                    <option value="daily">매일</option>
+                                    <option value="weekly" selected>매주</option>
+                                    <option value="monthly">매월</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Contract Alert Settings -->
+                    <div class="setting-section mb-4">
+                        <h6 class="text-info">
+                            <i data-feather="file-text" class="me-2"></i>
+                            계약 만료 알림 설정
+                        </h6>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="contractAlertEnabled" checked>
+                                    <label class="form-check-label" for="contractAlertEnabled">
+                                        계약 만료 알림 활성화
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="contractDays" class="form-label small">사전 알림 (일)</label>
+                                <input type="number" class="form-control form-control-sm" id="contractDays" 
+                                       value="30" min="7" max="90">
+                            </div>
+                            <div class="col-md-4">
+                                <label for="contractFrequency" class="form-label small">알림 주기</label>
+                                <select class="form-select form-select-sm" id="contractFrequency">
+                                    <option value="daily" selected>매일</option>
+                                    <option value="weekly">매주</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Anomaly Alert Settings -->
+                    <div class="setting-section mb-4">
+                        <h6 class="text-danger">
+                            <i data-feather="alert-triangle" class="me-2"></i>
+                            이상거래 알림 설정
+                        </h6>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="anomalyAlertEnabled" checked>
+                                    <label class="form-check-label" for="anomalyAlertEnabled">
+                                        이상거래 알림 활성화
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="anomalyAmount" class="form-label small">이상 금액 (원)</label>
+                                <input type="number" class="form-control form-control-sm" id="anomalyAmount" 
+                                       value="1000000" min="100000" step="100000">
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check form-switch mt-4">
+                                    <input class="form-check-input" type="checkbox" id="immediateAlert" checked>
+                                    <label class="form-check-label" for="immediateAlert">
+                                        즉시 알림
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="text-end">
+                    <button class="btn btn-success" onclick="saveAlertSettings()">
+                        <i data-feather="save" class="me-1"></i>설정 저장
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Quick Actions -->
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i data-feather="zap" class="me-2"></i>
+                    빠른 작업
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <button class="btn btn-outline-primary" onclick="markAllAsRead()">
+                        <i data-feather="check" class="me-2"></i>모든 알림 읽음 처리
+                    </button>
+                    <button class="btn btn-outline-warning" onclick="testAlerts()">
+                        <i data-feather="bell" class="me-2"></i>알림 테스트
+                    </button>
+                    <button class="btn btn-outline-info" onclick="exportAlerts()">
+                        <i data-feather="download" class="me-2"></i>알림 내역 내보내기
+                    </button>
+                    <button class="btn btn-outline-secondary" onclick="clearOldAlerts()">
+                        <i data-feather="trash-2" class="me-2"></i>오래된 알림 정리
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Alert List -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i data-feather="list" class="me-2"></i>
+                    알림 목록
+                </h5>
+                <div class="btn-group btn-group-sm">
+                    <button class="btn btn-outline-secondary active" onclick="filterAlerts('all')">전체</button>
+                    <button class="btn btn-outline-secondary" onclick="filterAlerts('unread')">읽지않음</button>
+                    <button class="btn btn-outline-secondary" onclick="filterAlerts('budget')">예산</button>
+                    <button class="btn btn-outline-secondary" onclick="filterAlerts('contract')">계약</button>
+                    <button class="btn btn-outline-secondary" onclick="filterAlerts('anomaly')">이상거래</button>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="alert-list">
+                    {% for alert in alerts %}
+                    <div class="alert-item {{ 'unread' if not alert.is_read else '' }}" data-alert-type="{{ alert.alert_type }}">
+                        <div class="d-flex">
+                            <div class="alert-icon me-3">
+                                {% if alert.alert_type == 'budget' %}
+                                    <i data-feather="dollar-sign" class="text-warning"></i>
+                                {% elif alert.alert_type == 'contract' %}
+                                    <i data-feather="file-text" class="text-info"></i>
+                                {% elif alert.alert_type == 'anomaly' %}
+                                    <i data-feather="alert-triangle" class="text-danger"></i>
+                                {% else %}
+                                    <i data-feather="bell" class="text-primary"></i>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="alert-content flex-grow-1">
+                                <div class="d-flex justify-content-between align-items-start mb-1">
+                                    <h6 class="alert-title mb-0">{{ alert.title }}</h6>
+                                    <div class="alert-actions">
+                                        <small class="text-muted me-3">{{ alert.created_at.strftime('%m/%d %H:%M') }}</small>
+                                        {% if not alert.is_read %}
+                                            <a href="{{ url_for('mark_alert_read', alert_id=alert.id) }}" 
+                                               class="btn btn-sm btn-outline-primary">읽음</a>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                <p class="alert-message text-muted mb-2">{{ alert.message }}</p>
+                                
+                                <div class="alert-meta">
+                                    <span class="badge badge-alert-{{ alert.alert_type }}">
+                                        {{ alert.alert_type | alert_type }}
+                                    </span>
+                                    <span class="badge {% if alert.severity == 'error' %}bg-danger{% elif alert.severity == 'warning' %}bg-warning{% else %}bg-info{% endif %}">
+                                        {{ alert.severity.title() }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="text-center text-muted py-5">
+                        <i data-feather="check-circle" class="mb-3" style="width: 64px; height: 64px;"></i>
+                        <h5>알림이 없습니다</h5>
+                        <p>새로운 알림이 있으면 여기에 표시됩니다.</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Alert Settings Modal -->
+<div class="modal fade" id="alertSettingsModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">새 알림 설정</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="#">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="newAlertType" class="form-label">알림 유형</label>
+                        <select class="form-select" id="newAlertType" name="alert_type" required>
+                            <option value="">선택하세요</option>
+                            <option value="budget">예산 초과</option>
+                            <option value="contract">계약 만료</option>
+                            <option value="anomaly">이상거래</option>
+                            <option value="custom">사용자 정의</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="alertName" class="form-label">알림명</label>
+                        <input type="text" class="form-control" id="alertName" name="name" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="alertCondition" class="form-label">조건</label>
+                        <textarea class="form-control" id="alertCondition" name="condition" rows="3" 
+                                  placeholder="알림 발생 조건을 입력하세요"></textarea>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="alertSeverity" class="form-label">심각도</label>
+                                <select class="form-select" id="alertSeverity" name="severity">
+                                    <option value="info">정보</option>
+                                    <option value="warning" selected>경고</option>
+                                    <option value="error">오류</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="alertChannel" class="form-label">알림 채널</label>
+                                <select class="form-select" id="alertChannel" name="channel">
+                                    <option value="system">시스템 알림</option>
+                                    <option value="email">이메일</option>
+                                    <option value="sms">SMS</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                    <button type="submit" class="btn btn-primary">추가</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function filterAlerts(type) {
+    const alertItems = document.querySelectorAll('.alert-item');
+    const filterButtons = document.querySelectorAll('.btn-group .btn');
+    
+    // 버튼 상태 업데이트
+    filterButtons.forEach(btn => btn.classList.remove('active'));
+    event.target.classList.add('active');
+    
+    alertItems.forEach(item => {
+        if (type === 'all') {
+            item.style.display = 'block';
+        } else if (type === 'unread') {
+            item.style.display = item.classList.contains('unread') ? 'block' : 'none';
+        } else {
+            item.style.display = item.dataset.alertType === type ? 'block' : 'none';
+        }
+    });
+}
+
+function markAllAsRead() {
+    if (confirm('모든 알림을 읽음 처리하시겠습니까?')) {
+        // 실제로는 서버 요청
+        document.querySelectorAll('.alert-item.unread').forEach(item => {
+            item.classList.remove('unread');
+            const button = item.querySelector('.btn-outline-primary');
+            if (button) button.remove();
+        });
+        
+        showToast('모든 알림이 읽음 처리되었습니다.', 'success');
+    }
+}
+
+function testAlerts() {
+    showToast('알림 테스트를 실행합니다...', 'info');
+    
+    // 테스트 알림 시뮬레이션
+    setTimeout(() => {
+        showToast('테스트 알림이 발송되었습니다. 설정된 채널을 확인해 주세요.', 'success');
+    }, 2000);
+}
+
+function exportAlerts() {
+    showToast('알림 내역을 내보내고 있습니다...', 'info');
+    
+    setTimeout(() => {
+        showToast('알림 내역 파일이 다운로드되었습니다.', 'success');
+    }, 1500);
+}
+
+function clearOldAlerts() {
+    if (confirm('30일 이전의 읽은 알림을 모두 삭제하시겠습니까?')) {
+        showToast('오래된 알림을 정리하고 있습니다...', 'info');
+        
+        setTimeout(() => {
+            showToast('15개의 오래된 알림이 삭제되었습니다.', 'success');
+        }, 2000);
+    }
+}
+
+function saveAlertSettings() {
+    const settings = {
+        budgetAlert: document.getElementById('budgetAlertEnabled').checked,
+        budgetThreshold: document.getElementById('budgetThreshold').value,
+        budgetFrequency: document.getElementById('budgetFrequency').value,
+        contractAlert: document.getElementById('contractAlertEnabled').checked,
+        contractDays: document.getElementById('contractDays').value,
+        contractFrequency: document.getElementById('contractFrequency').value,
+        anomalyAlert: document.getElementById('anomalyAlertEnabled').checked,
+        anomalyAmount: document.getElementById('anomalyAmount').value,
+        immediateAlert: document.getElementById('immediateAlert').checked
+    };
+    
+    // 실제로는 서버에 저장
+    console.log('Saving alert settings:', settings);
+    showToast('알림 설정이 저장되었습니다.', 'success');
+}
+
+function showToast(message, type = 'success') {
+    const toast = document.createElement('div');
+    toast.className = `alert alert-${type} position-fixed top-0 end-0 m-3`;
+    toast.style.zIndex = '9999';
+    toast.textContent = message;
+    
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.remove();
+    }, 3000);
+}
+</script>
+{% endblock %}
