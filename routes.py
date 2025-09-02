@@ -47,44 +47,31 @@ def login():
 @app.route('/logout', methods=['GET', 'POST'])
 def logout():
     """로그아웃"""
+    print("=== 로그아웃 시작 ===")
     try:
+        print(f"현재 사용자 인증 상태: {current_user.is_authenticated}")
         if current_user.is_authenticated:
+            print(f"로그아웃할 사용자: {current_user.email}")
             logout_user()
+            print("logout_user() 완료")
         
         # 세션 완전 초기화
+        print(f"세션 클리어 전: {dict(session)}")
         session.clear()
+        print("세션 클리어 완료")
         
-        # 응답 생성 - 직접 HTML 리다이렉트
-        html = '''
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="UTF-8">
-            <script>
-                // 스토리지 완전 클리어
-                if(typeof(Storage) !== "undefined") {
-                    localStorage.clear();
-                    sessionStorage.clear();
-                }
-                // 강제 리다이렉트
-                window.location.replace('/login');
-            </script>
-        </head>
-        <body>
-            <p>로그아웃 중...</p>
-        </body>
-        </html>
-        '''
-        
-        response = make_response(html)
+        # 간단한 리다이렉트 사용
+        print("로그인 페이지로 리다이렉트")
+        response = make_response(redirect(url_for('login')))
         response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
         response.headers['Pragma'] = 'no-cache' 
         response.headers['Expires'] = '0'
-        response.headers['Content-Type'] = 'text/html; charset=utf-8'
         
+        print("=== 로그아웃 응답 생성 완료 ===")
         return response
         
     except Exception as e:
+        print(f"로그아웃 에러: {e}")
         # 에러가 나도 강제로 로그인 페이지로
         return redirect(url_for('login'))
 
