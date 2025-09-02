@@ -44,7 +44,7 @@ def login():
     
     return render_template('auth/login.html')
 
-@app.route('/logout')
+@app.route('/logout', methods=['GET', 'POST'])
 def logout():
     """로그아웃"""
     if current_user.is_authenticated:
