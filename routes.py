@@ -347,8 +347,8 @@ def api_dashboard_chart_data():
     
     daily_flow = db.session.query(
         func.date(Transaction.transaction_date).label('date'),
-        func.sum(func.case([(Transaction.amount > 0, Transaction.amount)], else_=0)).label('income'),
-        func.sum(func.case([(Transaction.amount < 0, func.abs(Transaction.amount))], else_=0)).label('expense')
+        func.sum(func.case((Transaction.amount > 0, Transaction.amount), else_=0)).label('income'),
+        func.sum(func.case((Transaction.amount < 0, func.abs(Transaction.amount)), else_=0)).label('expense')
     ).filter(
         func.date(Transaction.transaction_date) >= start_date
     ).group_by(func.date(Transaction.transaction_date)).order_by('date').all()

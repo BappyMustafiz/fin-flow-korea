@@ -108,7 +108,7 @@
                     <div class="summary-item">
                         <div class="d-flex justify-content-between">
                             <span class="text-muted">평균 월 지출</span>
-                            <strong>{{ ((monthly_flow | selectattr('total', 'lt', 0) | sum(attribute='total')) / (monthly_flow | length)) | abs | currency }}</strong>
+                            <strong>{{ ((monthly_flow | selectattr('total', 'lt', 0) | sum(attribute='total')) / (monthly_flow | length if monthly_flow | length > 0 else 1)) | abs | currency }}</strong>
                         </div>
                     </div>
                 </div>
@@ -137,7 +137,7 @@
         <div class="card">
             <div class="card-header">
                 <h5 class="card-title mb-0">
-                    <i data-feather="building" class="me-2"></i>
+                    <i data-feather="briefcase" class="me-2"></i>
                     상위 거래처 (TOP 10)
                 </h5>
             </div>

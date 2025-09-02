@@ -127,7 +127,7 @@
                                         {% endif %}
                                         {% if rule.target_vendor %}
                                             <div class="small">
-                                                <i data-feather="building" class="me-1" style="width: 12px; height: 12px;"></i>
+                                                <i data-feather="briefcase" class="me-1" style="width: 12px; height: 12px;"></i>
                                                 {{ rule.target_vendor.name }}
                                             </div>
                                         {% endif %}
@@ -156,7 +156,7 @@
                                         <button class="btn btn-outline-info" 
                                                 onclick="testRule({{ rule.id }})" 
                                                 title="테스트">
-                                            <i data-feather="test-tube"></i>
+                                            <i data-feather="check-circle"></i>
                                         </button>
                                         <button class="btn btn-outline-danger" 
                                                 onclick="deleteRule({{ rule.id }})" 
