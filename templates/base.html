@@ -77,19 +77,29 @@
                 </ul>
                 
                 <ul class="navbar-nav">
+                    <!-- 직접 로그아웃 버튼 -->
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('logout') }}">
+                            <i data-feather="log-out" class="me-1"></i>로그아웃
+                        </a>
+                    </li>
+                    
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" id="userDropdown">
                             <i data-feather="user" class="me-1"></i>
                             {{ current_user.name }}
                             {% if current_user.is_authenticated and current_user.role == 'admin' %}
                                 <span class="badge bg-warning ms-1">관리자</span>
                             {% endif %}
                         </a>
-                        <ul class="dropdown-menu">
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                            <li><h6 class="dropdown-header">{{ current_user.name }}</h6></li>
                             <li><a class="dropdown-item" href="#">
                                 <i data-feather="user" class="me-2"></i>프로필
                             </a></li>
                             {% if current_user.is_authenticated and current_user.role == 'admin' %}
+                            <li><hr class="dropdown-divider"></li>
+                            <li><h6 class="dropdown-header">관리자 메뉴</h6></li>
                             <li><a class="dropdown-item" href="{{ url_for('audit') }}">
                                 <i data-feather="eye" class="me-2"></i>감사 로그
                             </a></li>
@@ -98,7 +108,7 @@
                             </a></li>
                             {% endif %}
                             <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="{{ url_for('logout') }}">
+                            <li><a class="dropdown-item text-danger" href="{{ url_for('logout') }}">
                                 <i data-feather="log-out" class="me-2"></i>로그아웃
                             </a></li>
                         </ul>
@@ -132,7 +142,26 @@
     
     <!-- Feather Icons -->
     <script src="https://unpkg.com/feather-icons"></script>
-    <script>feather.replace();</script>
+    <script>
+        // Feather 아이콘 초기화
+        feather.replace();
+        
+        // 드롭다운 메뉴 수동 초기화
+        document.addEventListener('DOMContentLoaded', function() {
+            // Bootstrap 드롭다운 초기화
+            var dropdownElementList = [].slice.call(document.querySelectorAll('.dropdown-toggle'));
+            var dropdownList = dropdownElementList.map(function (dropdownToggleEl) {
+                return new bootstrap.Dropdown(dropdownToggleEl);
+            });
+            
+            // 드롭다운이 열릴 때 아이콘 다시 렌더링
+            document.querySelectorAll('.dropdown').forEach(function(dropdown) {
+                dropdown.addEventListener('shown.bs.dropdown', function() {
+                    feather.replace();
+                });
+            });
+        });
+    </script>
     
     <!-- Custom JS -->
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
