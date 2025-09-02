@@ -75,6 +75,45 @@ def logout():
         # 에러가 나도 강제로 로그인 페이지로
         return redirect(url_for('login'))
 
+@app.route('/force-logout')
+def force_logout():
+    """강제 로그아웃 - 모든 세션 데이터 삭제"""
+    print("=== 강제 로그아웃 시작 ===")
+    try:
+        # Flask-Login 로그아웃
+        if current_user.is_authenticated:
+            logout_user()
+        
+        # 세션 완전 삭제
+        session.clear()
+        
+        # 직접 HTML 응답으로 강제 리다이렉트
+        html = '''<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<meta http-equiv="refresh" content="0;url=/login">
+<script>
+sessionStorage.clear();
+localStorage.clear();
+document.cookie.split(";").forEach(function(c) { 
+    document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
+});
+window.location.replace('/login');
+</script></head>
+<body><p>로그아웃 중... <a href="/login">로그인 페이지로 이동</a></p></body></html>'''
+        
+        response = make_response(html)
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+        # 쿠키도 삭제
+        response.set_cookie('session', '', expires=0)
+        
+        print("=== 강제 로그아웃 완료 ===")
+        return response
+    except Exception as e:
+        print(f"강제 로그아웃 에러: {e}")
+        return redirect(url_for('login'))
+
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     """회원가입"""
