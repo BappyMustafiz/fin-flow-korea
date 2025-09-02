@@ -1,13 +1,108 @@
 from flask import render_template, request, redirect, url_for, flash, jsonify
+from flask_login import login_user, logout_user, login_required, current_user
 from datetime import datetime, timedelta, date
 from sqlalchemy import func, desc, extract
 from app import app, db
 from models import (Institution, Account, Transaction, Category, Department, 
-                   Vendor, MappingRule, Contract, AuditLog, Alert, Consent)
+                   Vendor, MappingRule, Contract, AuditLog, Alert, Consent, User)
 import json
 import re
 
+# 인증 라우트들
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    """로그인"""
+    if current_user.is_authenticated:
+        return redirect(url_for('dashboard'))
+    
+    if request.method == 'POST':
+        email = request.form.get('email')
+        password = request.form.get('password')
+        remember = bool(request.form.get('remember'))
+        
+        if not email or not password:
+            flash('이메일과 패스워드를 입력해주세요.', 'error')
+            return render_template('auth/login.html')
+        
+        user = User.query.filter_by(email=email).first()
+        
+        if user and user.check_password(password):
+            if not user.is_active:
+                flash('비활성화된 계정입니다. 관리자에게 문의하세요.', 'error')
+                return render_template('auth/login.html')
+            
+            login_user(user, remember=remember)
+            user.last_login = datetime.utcnow()
+            db.session.commit()
+            
+            next_page = request.args.get('next')
+            if next_page:
+                return redirect(next_page)
+            return redirect(url_for('dashboard'))
+        else:
+            flash('이메일 또는 패스워드가 올바르지 않습니다.', 'error')
+    
+    return render_template('auth/login.html')
+
+@app.route('/logout')
+@login_required
+def logout():
+    """로그아웃"""
+    logout_user()
+    flash('성공적으로 로그아웃되었습니다.', 'info')
+    return redirect(url_for('login'))
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    """회원가입"""
+    if current_user.is_authenticated:
+        return redirect(url_for('dashboard'))
+    
+    if request.method == 'POST':
+        email = request.form.get('email')
+        password = request.form.get('password')
+        confirm_password = request.form.get('confirm_password')
+        name = request.form.get('name')
+        department_id = request.form.get('department_id') or None
+        
+        # 입력 검증
+        if not all([email, password, confirm_password, name]):
+            flash('모든 필드를 입력해주세요.', 'error')
+            return render_template('auth/register.html', departments=Department.query.all())
+        
+        if password != confirm_password:
+            flash('패스워드가 일치하지 않습니다.', 'error')
+            return render_template('auth/register.html', departments=Department.query.all())
+        
+        if len(password) < 6:
+            flash('패스워드는 최소 6자 이상이어야 합니다.', 'error')
+            return render_template('auth/register.html', departments=Department.query.all())
+        
+        # 이메일 중복 확인
+        if User.query.filter_by(email=email).first():
+            flash('이미 등록된 이메일입니다.', 'error')
+            return render_template('auth/register.html', departments=Department.query.all())
+        
+        # 새 사용자 생성
+        user = User(
+            email=email,
+            name=name,
+            department_id=department_id,
+            role='user'  # 기본값은 일반 사용자
+        )
+        user.set_password(password)
+        
+        db.session.add(user)
+        db.session.commit()
+        
+        flash('회원가입이 완료되었습니다. 로그인해주세요.', 'success')
+        return redirect(url_for('login'))
+    
+    departments = Department.query.all()
+    return render_template('auth/register.html', departments=departments)
+
 @app.route('/')
+@login_required
 def dashboard():
     """대시보드 - KPI 및 주요 지표 표시"""
     # KPI 계산
@@ -71,6 +166,7 @@ def dashboard():
                          dept_expenses=dept_expenses)
 
 @app.route('/connections')
+@login_required
 def connections():
     """연결 관리 - 금융기관 연결 현황"""
     institutions = Institution.query.all()
@@ -81,6 +177,7 @@ def connections():
                          consents=consents)
 
 @app.route('/connect/<institution_code>')
+@login_required
 def connect_institution(institution_code):
     """금융기관 연결 (OAuth 시뮬레이션)"""
     institution = Institution.query.filter_by(code=institution_code).first()
@@ -103,6 +200,7 @@ def connect_institution(institution_code):
     return redirect(url_for('connections'))
 
 @app.route('/accounts')
+@login_required
 def accounts():
     """계정 관리"""
     accounts = Account.query.join(Institution).all()
@@ -113,6 +211,7 @@ def accounts():
                          departments=departments)
 
 @app.route('/transactions')
+@login_required
 def transactions():
     """거래 내역 관리"""
     page = request.args.get('page', 1, type=int)
@@ -164,6 +263,7 @@ def transactions():
                          })
 
 @app.route('/transaction/<int:transaction_id>/edit', methods=['GET', 'POST'])
+@login_required
 def edit_transaction(transaction_id):
     """거래 내역 편집"""
     transaction = Transaction.query.get_or_404(transaction_id)
@@ -211,6 +311,7 @@ def edit_transaction(transaction_id):
                          vendors=vendors)
 
 @app.route('/rules')
+@login_required
 def rules():
     """분류 규칙 관리"""
     rules = MappingRule.query.order_by(MappingRule.priority.desc()).all()
@@ -225,6 +326,7 @@ def rules():
                          vendors=vendors)
 
 @app.route('/rule/add', methods=['POST'])
+@login_required
 def add_rule():
     """분류 규칙 추가"""
     rule = MappingRule(
@@ -245,6 +347,7 @@ def add_rule():
     return redirect(url_for('rules'))
 
 @app.route('/rule/<int:rule_id>/apply')
+@login_required
 def apply_rule(rule_id):
     """규칙 적용 실행"""
     rule = MappingRule.query.get_or_404(rule_id)
@@ -275,6 +378,7 @@ def apply_rule(rule_id):
     return redirect(url_for('rules'))
 
 @app.route('/reports')
+@login_required
 def reports():
     """보고서"""
     # 현금흐름 차트 데이터 (최근 12개월)
@@ -326,22 +430,26 @@ def reports():
                          top_vendors=top_vendors)
 
 @app.route('/settings')
+@login_required
 def settings():
     """설정 및 알림 - alerts.html로 리다이렉트"""
     return redirect(url_for('alerts'))
 
 @app.route('/alerts')
+@login_required
 def alerts():
     """알림 관리"""
     alerts = Alert.query.order_by(desc(Alert.created_at)).limit(50).all()
     return render_template('alerts.html', alerts=alerts)
 
 @app.route('/audit')
+@login_required
 def audit():
     """감사 로그"""
     return render_template('audit.html')
 
 @app.route('/init_data')
+@login_required
 def init_data():
     """샘플 데이터 초기화"""
     init_sample_data()
@@ -349,6 +457,7 @@ def init_data():
     return redirect(url_for('dashboard'))
 
 @app.route('/alert/<int:alert_id>/read')
+@login_required
 def mark_alert_read(alert_id):
     """알림 읽음 처리"""
     alert = Alert.query.get_or_404(alert_id)
@@ -359,7 +468,92 @@ def mark_alert_read(alert_id):
 
 # API 엔드포인트들
 
+@app.route('/users')
+@login_required
+def users():
+    """사용자 관리 (관리자 전용)"""
+    if not current_user.is_admin():
+        flash('관리자만 접근할 수 있습니다.', 'error')
+        return redirect(url_for('dashboard'))
+    
+    users = User.query.all()
+    departments = Department.query.all()
+    return render_template('users.html', users=users, departments=departments)
+
+@app.route('/user/<int:user_id>/toggle', methods=['POST'])
+@login_required
+def toggle_user_status(user_id):
+    """사용자 활성화/비활성화 (관리자 전용)"""
+    if not current_user.is_admin():
+        flash('관리자만 접근할 수 있습니다.', 'error')
+        return redirect(url_for('dashboard'))
+    
+    user = User.query.get_or_404(user_id)
+    
+    # 자기 자신은 비활성화할 수 없음
+    if user.id == current_user.id:
+        flash('자기 자신의 계정은 비활성화할 수 없습니다.', 'error')
+        return redirect(url_for('users'))
+    
+    user.is_active = not user.is_active
+    db.session.commit()
+    
+    status = "활성화" if user.is_active else "비활성화"
+    flash(f'{user.name} 사용자가 {status}되었습니다.', 'success')
+    return redirect(url_for('users'))
+
+@app.route('/user/<int:user_id>/role', methods=['POST'])
+@login_required
+def change_user_role(user_id):
+    """사용자 권한 변경 (관리자 전용)"""
+    if not current_user.is_admin():
+        flash('관리자만 접근할 수 있습니다.', 'error')
+        return redirect(url_for('dashboard'))
+    
+    user = User.query.get_or_404(user_id)
+    new_role = request.form.get('role')
+    
+    if new_role not in ['admin', 'user']:
+        flash('잘못된 권한입니다.', 'error')
+        return redirect(url_for('users'))
+    
+    # 자기 자신의 관리자 권한은 해제할 수 없음
+    if user.id == current_user.id and new_role != 'admin':
+        flash('자기 자신의 관리자 권한은 해제할 수 없습니다.', 'error')
+        return redirect(url_for('users'))
+    
+    old_role = user.role
+    user.role = new_role
+    db.session.commit()
+    
+    role_name = "관리자" if new_role == 'admin' else "일반 사용자"
+    flash(f'{user.name} 사용자의 권한이 {role_name}로 변경되었습니다.', 'success')
+    return redirect(url_for('users'))
+
+@app.route('/user/<int:user_id>/department', methods=['POST'])
+@login_required
+def change_user_department(user_id):
+    """사용자 부서 변경 (관리자 전용)"""
+    if not current_user.is_admin():
+        flash('관리자만 접근할 수 있습니다.', 'error')
+        return redirect(url_for('dashboard'))
+    
+    user = User.query.get_or_404(user_id)
+    department_id = request.form.get('department_id') or None
+    
+    user.department_id = department_id
+    db.session.commit()
+    
+    if department_id:
+        department = Department.query.get(department_id)
+        flash(f'{user.name} 사용자의 부서가 {department.name}로 변경되었습니다.', 'success')
+    else:
+        flash(f'{user.name} 사용자의 부서가 제거되었습니다.', 'success')
+    
+    return redirect(url_for('users'))
+
 @app.route('/api/dashboard/chart-data')
+@login_required
 def api_dashboard_chart_data():
     """대시보드 차트 데이터 API"""
     # 최근 7일 일별 현금흐름

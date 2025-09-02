@@ -1,0 +1,312 @@
+{% extends "base.html" %}
+
+{% block title %}사용자 관리 - 한국형 오픈뱅킹 회계시스템{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2><i data-feather="users" class="me-2"></i>사용자 관리</h2>
+            <div class="d-flex gap-2">
+                <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addUserModal">
+                    <i data-feather="user-plus" class="me-2"></i>새 사용자 추가
+                </button>
+                <a href="{{ url_for('register') }}" class="btn btn-primary">
+                    <i data-feather="external-link" class="me-2"></i>회원가입 페이지
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 사용자 통계 카드 -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h5 class="card-title">전체 사용자</h5>
+                        <h3 class="mb-0">{{ users|length }}</h3>
+                    </div>
+                    <div class="align-self-center">
+                        <i data-feather="users" style="width: 2rem; height: 2rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h5 class="card-title">활성 사용자</h5>
+                        <h3 class="mb-0">{{ users|selectattr('is_active')|list|length }}</h3>
+                    </div>
+                    <div class="align-self-center">
+                        <i data-feather="user-check" style="width: 2rem; height: 2rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h5 class="card-title">관리자</h5>
+                        <h3 class="mb-0">{{ users|selectattr('role', 'equalto', 'admin')|list|length }}</h3>
+                    </div>
+                    <div class="align-self-center">
+                        <i data-feather="shield" style="width: 2rem; height: 2rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-danger text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h5 class="card-title">비활성 사용자</h5>
+                        <h3 class="mb-0">{{ users|rejectattr('is_active')|list|length }}</h3>
+                    </div>
+                    <div class="align-self-center">
+                        <i data-feather="user-x" style="width: 2rem; height: 2rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 사용자 목록 테이블 -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="card-title mb-0">사용자 목록</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>이름</th>
+                        <th>이메일</th>
+                        <th>권한</th>
+                        <th>부서</th>
+                        <th>상태</th>
+                        <th>가입일</th>
+                        <th>최근 로그인</th>
+                        <th>관리</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr class="{% if not user.is_active %}table-secondary{% endif %}">
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-sm bg-primary rounded-circle d-flex align-items-center justify-content-center text-white me-2">
+                                    {{ user.name[0] }}
+                                </div>
+                                <div>
+                                    <strong>{{ user.name }}</strong>
+                                    {% if user.id == current_user.id %}
+                                        <span class="badge bg-info ms-1">나</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </td>
+                        <td>{{ user.email }}</td>
+                        <td>
+                            {% if user.role == 'admin' %}
+                                <span class="badge bg-warning">관리자</span>
+                            {% else %}
+                                <span class="badge bg-secondary">일반 사용자</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if user.department %}
+                                {{ user.department.name }}
+                            {% else %}
+                                <span class="text-muted">미지정</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if user.is_active %}
+                                <span class="badge bg-success">활성</span>
+                            {% else %}
+                                <span class="badge bg-danger">비활성</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ user.created_at.strftime('%Y-%m-%d') if user.created_at else '-' }}</td>
+                        <td>
+                            {% if user.last_login %}
+                                {{ user.last_login.strftime('%Y-%m-%d %H:%M') }}
+                            {% else %}
+                                <span class="text-muted">없음</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                <!-- 활성화/비활성화 버튼 -->
+                                {% if user.id != current_user.id %}
+                                <form method="POST" action="{{ url_for('toggle_user_status', user_id=user.id) }}" class="d-inline">
+                                    <button type="submit" class="btn btn-sm {% if user.is_active %}btn-outline-danger{% else %}btn-outline-success{% endif %}" 
+                                            onclick="return confirm('{{ user.name }} 사용자를 {% if user.is_active %}비활성화{% else %}활성화{% endif %}하시겠습니까?')">
+                                        <i data-feather="{% if user.is_active %}user-x{% else %}user-check{% endif %}"></i>
+                                    </button>
+                                </form>
+                                {% endif %}
+                                
+                                <!-- 편집 버튼 -->
+                                <button type="button" class="btn btn-sm btn-outline-primary" 
+                                        data-bs-toggle="modal" data-bs-target="#editUserModal{{ user.id }}">
+                                    <i data-feather="edit"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- 사용자 편집 모달들 -->
+{% for user in users %}
+<div class="modal fade" id="editUserModal{{ user.id }}" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">{{ user.name }} 사용자 편집</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <!-- 권한 변경 -->
+                <div class="mb-3">
+                    <label class="form-label">권한 변경</label>
+                    <form method="POST" action="{{ url_for('change_user_role', user_id=user.id) }}" class="d-flex gap-2">
+                        <select name="role" class="form-select">
+                            <option value="user" {% if user.role == 'user' %}selected{% endif %}>일반 사용자</option>
+                            <option value="admin" {% if user.role == 'admin' %}selected{% endif %}>관리자</option>
+                        </select>
+                        <button type="submit" class="btn btn-primary"
+                                {% if user.id == current_user.id %}disabled title="자기 자신의 권한은 변경할 수 없습니다"{% endif %}>
+                            변경
+                        </button>
+                    </form>
+                </div>
+                
+                <!-- 부서 변경 -->
+                <div class="mb-3">
+                    <label class="form-label">부서 변경</label>
+                    <form method="POST" action="{{ url_for('change_user_department', user_id=user.id) }}" class="d-flex gap-2">
+                        <select name="department_id" class="form-select">
+                            <option value="">부서 미지정</option>
+                            {% for department in departments %}
+                            <option value="{{ department.id }}" 
+                                    {% if user.department_id == department.id %}selected{% endif %}>
+                                {{ department.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <button type="submit" class="btn btn-primary">변경</button>
+                    </form>
+                </div>
+                
+                <!-- 사용자 정보 -->
+                <div class="mb-3">
+                    <h6>사용자 정보</h6>
+                    <ul class="list-unstyled">
+                        <li><strong>이메일:</strong> {{ user.email }}</li>
+                        <li><strong>가입일:</strong> {{ user.created_at.strftime('%Y년 %m월 %d일') if user.created_at else '정보 없음' }}</li>
+                        <li><strong>최근 로그인:</strong> 
+                            {% if user.last_login %}
+                                {{ user.last_login.strftime('%Y년 %m월 %d일 %H시 %M분') }}
+                            {% else %}
+                                없음
+                            {% endif %}
+                        </li>
+                        <li><strong>상태:</strong> 
+                            {% if user.is_active %}
+                                <span class="text-success">활성</span>
+                            {% else %}
+                                <span class="text-danger">비활성</span>
+                            {% endif %}
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+<style>
+.avatar-sm {
+    width: 40px;
+    height: 40px;
+    font-size: 1rem;
+    font-weight: bold;
+}
+
+.table th {
+    border-top: none;
+    font-weight: 600;
+    color: #495057;
+}
+
+.btn-group .btn {
+    padding: 0.25rem 0.5rem;
+}
+
+.card {
+    border: none;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.table-responsive {
+    border-radius: 0.375rem;
+}
+
+.badge {
+    font-size: 0.75rem;
+}
+
+.modal-body .form-label {
+    font-weight: 600;
+    color: #495057;
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// 모달이 열릴 때 feather 아이콘 다시 렌더링
+document.addEventListener('DOMContentLoaded', function() {
+    const modals = document.querySelectorAll('.modal');
+    modals.forEach(modal => {
+        modal.addEventListener('shown.bs.modal', function() {
+            feather.replace();
+        });
+    });
+});
+
+// 확인 대화상자
+function confirmAction(message) {
+    return confirm(message);
+}
+</script>
+{% endblock %}

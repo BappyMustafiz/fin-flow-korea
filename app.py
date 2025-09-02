@@ -3,6 +3,7 @@ import logging
 
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
+from flask_login import LoginManager
 from sqlalchemy.orm import DeclarativeBase
 from werkzeug.middleware.proxy_fix import ProxyFix
 
@@ -18,6 +19,13 @@ db = SQLAlchemy(model_class=Base)
 app = Flask(__name__)
 app.secret_key = os.environ.get("SESSION_SECRET", "korean-accounting-secret-key")
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1) # needed for url_for to generate with https
+
+# Flask-Login 설정
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
+login_manager.login_message = '이 페이지에 접근하려면 로그인이 필요합니다.'
+login_manager.login_message_category = 'info'
 
 # configure the database, relative to the app instance folder
 app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL", "sqlite:///accounting.db")
@@ -100,6 +108,11 @@ def alert_type_filter(alert_type):
     }
     return type_map.get(alert_type, alert_type)
 
+@login_manager.user_loader
+def load_user(user_id):
+    from models import User
+    return User.query.get(int(user_id))
+
 with app.app_context():
     # Make sure to import the models here or their tables won't be created
     import models  # noqa: F401
@@ -109,10 +122,22 @@ with app.app_context():
     
     # Initialize sample data on first run
     from routes import create_tables
-    from models import Institution
+    from models import Institution, User
     if not Institution.query.first():  # Only if no institutions exist
         try:
             create_tables()
         except Exception as e:
             print(f"Sample data initialization error: {e}")
             # Continue anyway as the basic structure should work
+    
+    # Create default admin user if none exists
+    if not User.query.filter_by(role='admin').first():
+        admin_user = User(
+            email='admin@company.com',
+            name='관리자',
+            role='admin'
+        )
+        admin_user.set_password('admin123')
+        db.session.add(admin_user)
+        db.session.commit()
+        print("Default admin user created: admin@company.com / admin123")

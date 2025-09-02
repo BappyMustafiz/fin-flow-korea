@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>회원가입 - 한국형 오픈뱅킹 회계시스템</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/feather-icons"></script>
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 2rem 0;
+        }
+        .register-container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+            overflow: hidden;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .register-form {
+            padding: 3rem;
+        }
+        .register-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .register-header h1 {
+            color: #333;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+        .register-header p {
+            color: #666;
+            margin-bottom: 0;
+        }
+        .form-control {
+            border-radius: 10px;
+            border: 2px solid #e9ecef;
+            padding: 0.75rem 1rem;
+            transition: all 0.3s ease;
+        }
+        .form-control:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        }
+        .btn-register {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            border: none;
+            border-radius: 10px;
+            padding: 0.75rem 2rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        .btn-register:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        .alert {
+            border-radius: 10px;
+            border: none;
+        }
+        .password-strength {
+            margin-top: 0.5rem;
+        }
+        .strength-bar {
+            height: 4px;
+            border-radius: 2px;
+            background: #e9ecef;
+            overflow: hidden;
+        }
+        .strength-fill {
+            height: 100%;
+            transition: all 0.3s ease;
+            width: 0%;
+        }
+        .strength-weak { background: #dc3545; }
+        .strength-medium { background: #ffc107; }
+        .strength-strong { background: #28a745; }
+    </style>
+</head>
+<body>
+    <div class="register-container">
+        <div class="register-form">
+            <div class="register-header">
+                <h1><i data-feather="user-plus" style="width: 2rem; height: 2rem;"></i></h1>
+                <h1>회원가입</h1>
+                <p>한국형 오픈뱅킹 회계시스템에 가입하세요</p>
+            </div>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <form method="POST" id="registerForm">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">이메일 주소 *</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i data-feather="mail"></i></span>
+                                <input type="email" class="form-control" name="email" required 
+                                       placeholder="example@company.com">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">이름 *</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i data-feather="user"></i></span>
+                                <input type="text" class="form-control" name="name" required 
+                                       placeholder="홍길동">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">패스워드 *</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i data-feather="lock"></i></span>
+                                <input type="password" class="form-control" name="password" required 
+                                       placeholder="최소 6자 이상" id="password">
+                            </div>
+                            <div class="password-strength">
+                                <div class="strength-bar">
+                                    <div class="strength-fill" id="strengthFill"></div>
+                                </div>
+                                <small class="text-muted" id="strengthText">패스워드 강도</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">패스워드 확인 *</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i data-feather="lock"></i></span>
+                                <input type="password" class="form-control" name="confirm_password" required 
+                                       placeholder="패스워드 재입력" id="confirmPassword">
+                            </div>
+                            <div class="mt-1">
+                                <small class="text-muted" id="passwordMatch"></small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">소속 부서</label>
+                    <select class="form-select" name="department_id">
+                        <option value="">부서 선택 (선택사항)</option>
+                        {% for department in departments %}
+                        <option value="{{ department.id }}">{{ department.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="mb-4">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="agree" required>
+                        <label class="form-check-label" for="agree">
+                            <strong>이용약관 및 개인정보처리방침에 동의합니다 *</strong>
+                        </label>
+                    </div>
+                    <small class="text-muted">
+                        회원가입 시 시스템 이용약관과 개인정보처리방침에 동의한 것으로 간주됩니다.
+                    </small>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-register w-100">
+                    <i data-feather="user-plus" class="me-2"></i>
+                    회원가입
+                </button>
+            </form>
+
+            <div class="text-center mt-4">
+                <p class="mb-2">이미 계정이 있으신가요?</p>
+                <a href="{{ url_for('login') }}" class="btn btn-outline-primary">
+                    <i data-feather="log-in" class="me-2"></i>
+                    로그인
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        feather.replace();
+
+        // 패스워드 강도 체크
+        const passwordInput = document.getElementById('password');
+        const strengthFill = document.getElementById('strengthFill');
+        const strengthText = document.getElementById('strengthText');
+
+        passwordInput.addEventListener('input', function() {
+            const password = this.value;
+            let strength = 0;
+            
+            if (password.length >= 6) strength += 1;
+            if (password.match(/[a-z]/) && password.match(/[A-Z]/)) strength += 1;
+            if (password.match(/[0-9]/)) strength += 1;
+            if (password.match(/[^a-zA-Z0-9]/)) strength += 1;
+            
+            let className = '';
+            let text = '';
+            let width = '0%';
+            
+            if (strength === 0) {
+                text = '패스워드를 입력하세요';
+                width = '0%';
+            } else if (strength <= 2) {
+                className = 'strength-weak';
+                text = '약함';
+                width = '33%';
+            } else if (strength === 3) {
+                className = 'strength-medium';
+                text = '보통';
+                width = '66%';
+            } else {
+                className = 'strength-strong';
+                text = '강함';
+                width = '100%';
+            }
+            
+            strengthFill.className = 'strength-fill ' + className;
+            strengthFill.style.width = width;
+            strengthText.textContent = '패스워드 강도: ' + text;
+        });
+
+        // 패스워드 확인 체크
+        const confirmPasswordInput = document.getElementById('confirmPassword');
+        const passwordMatchText = document.getElementById('passwordMatch');
+
+        function checkPasswordMatch() {
+            const password = passwordInput.value;
+            const confirmPassword = confirmPasswordInput.value;
+            
+            if (confirmPassword === '') {
+                passwordMatchText.textContent = '';
+                passwordMatchText.className = 'text-muted';
+            } else if (password === confirmPassword) {
+                passwordMatchText.textContent = '패스워드가 일치합니다';
+                passwordMatchText.className = 'text-success';
+            } else {
+                passwordMatchText.textContent = '패스워드가 일치하지 않습니다';
+                passwordMatchText.className = 'text-danger';
+            }
+        }
+
+        passwordInput.addEventListener('input', checkPasswordMatch);
+        confirmPasswordInput.addEventListener('input', checkPasswordMatch);
+
+        // 폼 검증
+        document.getElementById('registerForm').addEventListener('submit', function(e) {
+            const email = document.querySelector('input[name="email"]').value;
+            const password = passwordInput.value;
+            const confirmPassword = confirmPasswordInput.value;
+            const name = document.querySelector('input[name="name"]').value;
+            const agree = document.getElementById('agree').checked;
+            
+            if (!email || !password || !confirmPassword || !name) {
+                e.preventDefault();
+                alert('필수 필드를 모두 입력해주세요.');
+                return false;
+            }
+            
+            if (password !== confirmPassword) {
+                e.preventDefault();
+                alert('패스워드가 일치하지 않습니다.');
+                return false;
+            }
+            
+            if (password.length < 6) {
+                e.preventDefault();
+                alert('패스워드는 최소 6자 이상이어야 합니다.');
+                return false;
+            }
+            
+            if (!agree) {
+                e.preventDefault();
+                alert('이용약관에 동의해주세요.');
+                return false;
+            }
+        });
+    </script>
+</body>
+</html>

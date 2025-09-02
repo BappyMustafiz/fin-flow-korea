@@ -1,6 +1,40 @@
 from datetime import datetime
 from app import db
 from sqlalchemy import func
+from flask_login import UserMixin
+from werkzeug.security import generate_password_hash, check_password_hash
+
+class User(UserMixin, db.Model):
+    """사용자 정보"""
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    password_hash = db.Column(db.String(255), nullable=False)
+    name = db.Column(db.String(100), nullable=False)
+    role = db.Column(db.String(20), default='user')  # admin, user
+    department_id = db.Column(db.Integer, db.ForeignKey('department.id'))
+    is_active = db.Column(db.Boolean, default=True)
+    last_login = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    department = db.relationship('Department', backref='users')
+    
+    def set_password(self, password):
+        """패스워드 해시 설정"""
+        self.password_hash = generate_password_hash(password)
+    
+    def check_password(self, password):
+        """패스워드 확인"""
+        return check_password_hash(self.password_hash, password)
+    
+    def is_admin(self):
+        """관리자 권한 확인"""
+        return self.role == 'admin'
+    
+    def get_id(self):
+        """Flask-Login용 ID 반환"""
+        return str(self.id)
 
 class Institution(db.Model):
     """금융기관 정보"""
