@@ -23,7 +23,13 @@
         <div class="card text-center">
             <div class="card-body">
                 <i data-feather="dollar-sign" class="text-success mb-2" style="width: 48px; height: 48px;"></i>
-                <h4 class="text-success">{{ ((departments | sum(attribute='budget') | default(0) | float) / 1000000) | round(1) }}M</h4>
+                {% set total_budget = 0 %}
+                {% for dept in departments %}
+                    {% if dept.budget %}
+                        {% set total_budget = total_budget + (dept.budget | float) %}
+                    {% endif %}
+                {% endfor %}
+                <h4 class="text-success">{{ (total_budget / 1000000) | round(1) }}M</h4>
                 <p class="text-muted mb-0">총 예산</p>
             </div>
         </div>
@@ -32,7 +38,13 @@
         <div class="card text-center">
             <div class="card-body">
                 <i data-feather="users" class="text-info mb-2" style="width: 48px; height: 48px;"></i>
-                <h4 class="text-info">{{ departments | selectattr('users') | map(attribute='users') | sum | length if departments | selectattr('users') else 0 }}</h4>
+                {% set total_users = 0 %}
+                {% for dept in departments %}
+                    {% if dept.users %}
+                        {% set total_users = total_users + dept.users|length %}
+                    {% endif %}
+                {% endfor %}
+                <h4 class="text-info">{{ total_users }}</h4>
                 <p class="text-muted mb-0">총 직원</p>
             </div>
         </div>
@@ -41,7 +53,8 @@
         <div class="card text-center">
             <div class="card-body">
                 <i data-feather="trending-up" class="text-warning mb-2" style="width: 48px; height: 48px;"></i>
-                <h4 class="text-warning">{{ ((departments | sum(attribute='budget') | default(0) | float) / departments|length / 1000000) | round(1) if departments else 0 }}M</h4>
+                {% set avg_budget = (total_budget / departments|length) if departments|length > 0 else 0 %}
+                <h4 class="text-warning">{{ (avg_budget / 1000000) | round(1) }}M</h4>
                 <p class="text-muted mb-0">평균 예산</p>
             </div>
         </div>
