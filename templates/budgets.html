@@ -25,7 +25,7 @@
         <div class="card text-center">
             <div class="card-body">
                 <i data-feather="dollar-sign" class="text-success mb-2" style="width: 48px; height: 48px;"></i>
-                <h4 class="text-success">{{ (departments | sum(attribute='budget') | default(0) / 1000000) | round(1) }}M</h4>
+                <h4 class="text-success">{{ ((departments | sum(attribute='budget') | default(0) | float) / 1000000) | round(1) }}M</h4>
                 <p class="text-muted mb-0">총 예산</p>
             </div>
         </div>
@@ -34,7 +34,7 @@
         <div class="card text-center">
             <div class="card-body">
                 <i data-feather="trending-up" class="text-info mb-2" style="width: 48px; height: 48px;"></i>
-                <h4 class="text-info">{{ (departments | sum(attribute='budget') | default(0) / departments|length / 1000000) | round(1) }}M</h4>
+                <h4 class="text-info">{{ ((departments | sum(attribute='budget') | default(0) | float) / departments|length / 1000000) | round(1) }}M</h4>
                 <p class="text-muted mb-0">평균 예산</p>
             </div>
         </div>
@@ -105,11 +105,11 @@
                             <div class="row text-center">
                                 <div class="col-6">
                                     <small class="text-muted d-block">월 평균</small>
-                                    <strong id="monthly_{{ department.id }}">₩{{ "{:,.0f}".format((department.budget or 0) / 12) }}</strong>
+                                    <strong id="monthly_{{ department.id }}">₩{{ "{:,.0f}".format(((department.budget or 0) | float) / 12) }}</strong>
                                 </div>
                                 <div class="col-6">
                                     <small class="text-muted d-block">잔여 예산</small>
-                                    <strong class="text-primary" id="remaining_{{ department.id }}">₩{{ "{:,.0f}".format((department.budget or 0) * 0.25) }}</strong>
+                                    <strong class="text-primary" id="remaining_{{ department.id }}">₩{{ "{:,.0f}".format(((department.budget or 0) | float) * 0.25) }}</strong>
                                 </div>
                             </div>
                         </div>
@@ -216,7 +216,7 @@ function createBudgetChart() {
     const ctx = document.getElementById('budgetChart').getContext('2d');
     
     const departmentNames = {{ departments | map(attribute='name') | list | tojson }};
-    const budgetAmounts = {{ departments | map(attribute='budget') | list | tojson }};
+    const budgetAmounts = {{ departments | map(attribute='budget') | map('float') | list | tojson }};
     
     new Chart(ctx, {
         type: 'doughnut',
