@@ -295,6 +295,28 @@ def add_account():
     
     return redirect(url_for('accounts'))
 
+@app.route('/account/<int:account_id>/edit', methods=['POST'])
+@login_required
+def edit_account(account_id):
+    """계좌 정보 수정"""
+    try:
+        account = Account.query.get_or_404(account_id)
+        
+        # 계좌 정보 업데이트
+        account.account_name = request.form.get('account_name')
+        account.account_number = request.form.get('account_number')
+        account.account_type = request.form.get('account_type')
+        account.balance = float(request.form.get('balance', account.balance))
+        account.department_id = request.form.get('department_id') or None
+        
+        db.session.commit()
+        flash('계좌 정보가 성공적으로 수정되었습니다.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'계좌 수정 중 오류가 발생했습니다: {str(e)}', 'error')
+    
+    return redirect(url_for('accounts'))
+
 @app.route('/transactions')
 @login_required
 def transactions():
