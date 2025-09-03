@@ -1049,18 +1049,46 @@ def export_csv(data, report_type, start_date, end_date):
     from flask import make_response
     
     output = io.StringIO()
+    
+    # BOM 추가로 Excel에서 한글 깨짐 방지
+    output.write('\ufeff')
+    
     writer = csv.writer(output)
     
-    # 헤더
-    writer.writerow(['기간', '수입(원)', '지출(원)', '순현금흐름(원)'])
+    # 리포트 헤더 정보
+    writer.writerow(['한국형 오픈뱅킹 회계시스템 - 재무 리포트'])
+    writer.writerow([f'기간: {start_date} ~ {end_date}'])
+    writer.writerow([f'생성일: {datetime.now().strftime("%Y-%m-%d %H:%M")}'])
+    writer.writerow([''])
     
-    # 데이터
+    # 요약 정보
+    total_income = sum(row['income'] for row in data)
+    total_expense = sum(row['expense'] for row in data)
+    net_flow = total_income - total_expense
+    
+    writer.writerow(['== 요약 정보 =='])
+    writer.writerow(['총 수입', f'{total_income:,.0f}원'])
+    writer.writerow(['총 지출', f'{total_expense:,.0f}원'])
+    writer.writerow(['순현금흐름', f'{net_flow:,.0f}원'])
+    writer.writerow(['평균 월 수입', f'{total_income/len(data) if data else 0:,.0f}원'])
+    writer.writerow(['평균 월 지출', f'{total_expense/len(data) if data else 0:,.0f}원'])
+    writer.writerow([''])
+    
+    # 월별 상세 데이터
+    writer.writerow(['== 월별 상세 =='])
+    writer.writerow(['기간', '수입(원)', '지출(원)', '순현금흐름(원)', '수입 비중(%)', '지출 비중(%)'])
+    
     for row in data:
+        income_ratio = (row['income'] / total_income * 100) if total_income > 0 else 0
+        expense_ratio = (row['expense'] / total_expense * 100) if total_expense > 0 else 0
+        
         writer.writerow([
             row['period'],
             f"{row['income']:,.0f}",
             f"{row['expense']:,.0f}",
-            f"{row['net']:,.0f}"
+            f"{row['net']:,.0f}",
+            f"{income_ratio:.1f}%",
+            f"{expense_ratio:.1f}%"
         ])
     
     # 응답 생성
@@ -1075,21 +1103,83 @@ def export_excel(data, report_type, start_date, end_date):
     import pandas as pd
     import io
     from flask import make_response
+    from datetime import datetime
     
-    # DataFrame 생성
-    df = pd.DataFrame([
-        {
+    # 요약 정보 계산
+    total_income = sum(row['income'] for row in data)
+    total_expense = sum(row['expense'] for row in data)
+    net_flow = total_income - total_expense
+    avg_income = total_income / len(data) if data else 0
+    avg_expense = total_expense / len(data) if data else 0
+    
+    # 요약 데이터프레임
+    summary_data = {
+        '항목': ['총 수입', '총 지출', '순현금흐름', '평균 월 수입', '평균 월 지출', '분석 기간'],
+        '금액': [
+            f'{total_income:,.0f}원',
+            f'{total_expense:,.0f}원', 
+            f'{net_flow:,.0f}원',
+            f'{avg_income:,.0f}원',
+            f'{avg_expense:,.0f}원',
+            f'{len(data)}개월'
+        ]
+    }
+    summary_df = pd.DataFrame(summary_data)
+    
+    # 상세 데이터프레임
+    detail_data = []
+    for row in data:
+        income_ratio = (row['income'] / total_income * 100) if total_income > 0 else 0
+        expense_ratio = (row['expense'] / total_expense * 100) if total_expense > 0 else 0
+        
+        detail_data.append({
             '기간': row['period'],
             '수입(원)': row['income'],
             '지출(원)': row['expense'],
-            '순현금흐름(원)': row['net']
-        } for row in data
-    ])
+            '순현금흐름(원)': row['net'],
+            '수입 비중(%)': round(income_ratio, 1),
+            '지출 비중(%)': round(expense_ratio, 1),
+            '수익률(%)': round((row['net'] / row['expense'] * 100) if row['expense'] > 0 else 0, 1)
+        })
+    
+    detail_df = pd.DataFrame(detail_data)
+    
+    # 메타데이터
+    metadata = {
+        '정보': ['리포트명', '생성일시', '기간', '데이터 건수'],
+        '값': [
+            '한국형 오픈뱅킹 회계시스템 재무리포트',
+            datetime.now().strftime('%Y년 %m월 %d일 %H:%M'),
+            f'{start_date} ~ {end_date}',
+            f'{len(data)}개월'
+        ]
+    }
+    metadata_df = pd.DataFrame(metadata)
     
     # Excel 파일 생성
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df.to_excel(writer, sheet_name='재무리포트', index=False)
+        # 메타데이터 시트
+        metadata_df.to_excel(writer, sheet_name='리포트정보', index=False)
+        
+        # 요약 시트
+        summary_df.to_excel(writer, sheet_name='재무요약', index=False)
+        
+        # 상세 데이터 시트
+        detail_df.to_excel(writer, sheet_name='월별상세', index=False)
+        
+        # 워크시트 서식 설정
+        workbook = writer.book
+        
+        # 요약 시트 서식
+        summary_ws = writer.sheets['재무요약']
+        summary_ws.column_dimensions['A'].width = 15
+        summary_ws.column_dimensions['B'].width = 20
+        
+        # 상세 시트 서식
+        detail_ws = writer.sheets['월별상세']
+        for col in ['A', 'B', 'C', 'D', 'E', 'F', 'G']:
+            detail_ws.column_dimensions[col].width = 15
     
     output.seek(0)
     
@@ -1102,63 +1192,167 @@ def export_excel(data, report_type, start_date, end_date):
 
 def export_pdf(data, report_type, start_date, end_date):
     """PDF 내보내기"""
-    from reportlab.lib.pagesizes import A4
-    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    from reportlab.lib.pagesizes import A4, letter
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
     from reportlab.lib import colors
-    from reportlab.lib.units import inch
+    from reportlab.lib.units import inch, cm
     from reportlab.pdfbase import pdfmetrics
     from reportlab.pdfbase.ttfonts import TTFont
+    from reportlab.graphics.shapes import Drawing
+    from reportlab.graphics.charts.barcharts import VerticalBarChart
+    from reportlab.graphics.charts.piecharts import Pie
     import io
     from flask import make_response
+    from datetime import datetime
+    
+    # 한글 폰트 등록 (시스템 폰트 사용)
+    try:
+        # Noto Sans 폰트 사용 시도
+        font_path = '/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc'
+        try:
+            pdfmetrics.registerFont(TTFont('NotoSans', font_path))
+            korean_font = 'NotoSans'
+        except:
+            # 기본 폰트 사용
+            korean_font = 'Helvetica'
+    except:
+        korean_font = 'Helvetica'
     
     # 메모리에 PDF 생성
     buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4)
+    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=2*cm, leftMargin=2*cm, topMargin=2*cm, bottomMargin=2*cm)
     
-    # 스타일
+    # 스타일 정의
     styles = getSampleStyleSheet()
+    
     title_style = ParagraphStyle(
         'CustomTitle',
         parent=styles['Heading1'],
-        fontSize=16,
+        fontName=korean_font,
+        fontSize=20,
         spaceAfter=30,
-        alignment=1  # 중앙 정렬
+        alignment=1,  # 중앙 정렬
+        textColor=colors.darkblue
+    )
+    
+    heading_style = ParagraphStyle(
+        'CustomHeading',
+        parent=styles['Heading2'],
+        fontName=korean_font,
+        fontSize=14,
+        spaceAfter=12,
+        spaceBefore=20,
+        textColor=colors.darkgreen
+    )
+    
+    normal_style = ParagraphStyle(
+        'CustomNormal',
+        parent=styles['Normal'],
+        fontName=korean_font,
+        fontSize=10,
+        spaceAfter=6
     )
     
     # 내용 생성
     story = []
     
     # 제목
-    title = Paragraph(f"재무 리포트 ({start_date} ~ {end_date})", title_style)
+    title = Paragraph("한국형 오픈뱅킹 회계시스템", title_style)
     story.append(title)
-    story.append(Spacer(1, 12))
+    subtitle = Paragraph(f"재무 리포트 ({start_date} ~ {end_date})", heading_style)
+    story.append(subtitle)
     
-    # 테이블 데이터
-    table_data = [['기간', '수입(원)', '지출(원)', '순현금흐름(원)']]
+    # 생성 정보
+    generation_info = Paragraph(f"생성일시: {datetime.now().strftime('%Y년 %m월 %d일 %H:%M')}", normal_style)
+    story.append(generation_info)
+    story.append(Spacer(1, 20))
     
-    for row in data:
-        table_data.append([
-            row['period'],
-            f"{row['income']:,.0f}",
-            f"{row['expense']:,.0f}",
-            f"{row['net']:,.0f}"
-        ])
+    # 요약 정보
+    total_income = sum(row['income'] for row in data)
+    total_expense = sum(row['expense'] for row in data)
+    net_flow = total_income - total_expense
+    avg_income = total_income / len(data) if data else 0
+    avg_expense = total_expense / len(data) if data else 0
     
-    # 테이블 생성
-    table = Table(table_data)
-    table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+    summary_heading = Paragraph("== 재무 요약 ==", heading_style)
+    story.append(summary_heading)
+    
+    summary_data = [
+        ['항목', '금액'],
+        ['총 수입', f'{total_income:,.0f}원'],
+        ['총 지출', f'{total_expense:,.0f}원'],
+        ['순현금흐름', f'{net_flow:,.0f}원'],
+        ['평균 월 수입', f'{avg_income:,.0f}원'],
+        ['평균 월 지출', f'{avg_expense:,.0f}원'],
+        ['분석 기간', f'{len(data)}개월']
+    ]
+    
+    summary_table = Table(summary_data, colWidths=[4*cm, 6*cm])
+    summary_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.lightblue),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
         ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, 0), 12),
+        ('FONTNAME', (0, 0), (-1, 0), korean_font),
+        ('FONTNAME', (0, 1), (-1, -1), korean_font),
+        ('FONTSIZE', (0, 0), (-1, -1), 10),
         ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.lightgrey),
         ('GRID', (0, 0), (-1, -1), 1, colors.black)
     ]))
     
-    story.append(table)
+    story.append(summary_table)
+    story.append(Spacer(1, 20))
+    
+    # 월별 상세 데이터
+    detail_heading = Paragraph("== 월별 상세 내역 ==", heading_style)
+    story.append(detail_heading)
+    
+    detail_data = [['기간', '수입(원)', '지출(원)', '순현금흐름(원)', '수입비중(%)', '지출비중(%)']]
+    
+    for row in data:
+        income_ratio = (row['income'] / total_income * 100) if total_income > 0 else 0
+        expense_ratio = (row['expense'] / total_expense * 100) if total_expense > 0 else 0
+        
+        detail_data.append([
+            row['period'],
+            f"{row['income']:,.0f}",
+            f"{row['expense']:,.0f}",
+            f"{row['net']:,.0f}",
+            f"{income_ratio:.1f}%",
+            f"{expense_ratio:.1f}%"
+        ])
+    
+    detail_table = Table(detail_data, colWidths=[2.5*cm, 2.5*cm, 2.5*cm, 2.5*cm, 2*cm, 2*cm])
+    detail_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.darkgreen),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, -1), korean_font),
+        ('FONTSIZE', (0, 0), (-1, 0), 9),
+        ('FONTSIZE', (0, 1), (-1, -1), 8),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.lightgrey]),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black)
+    ]))
+    
+    story.append(detail_table)
+    story.append(Spacer(1, 20))
+    
+    # 분석 의견
+    analysis_heading = Paragraph("== 재무 분석 의견 ==", heading_style)
+    story.append(analysis_heading)
+    
+    if net_flow > 0:
+        analysis_text = f"분석 기간 동안 {net_flow:,.0f}원의 순현금 유입이 발생했습니다. 재무 상태가 양호합니다."
+    else:
+        analysis_text = f"분석 기간 동안 {abs(net_flow):,.0f}원의 순현금 유출이 발생했습니다. 지출 관리가 필요합니다."
+    
+    if avg_income > avg_expense:
+        analysis_text += f" 월 평균 수입({avg_income:,.0f}원)이 지출({avg_expense:,.0f}원)보다 많아 안정적인 현금흐름을 보이고 있습니다."
+    
+    analysis_para = Paragraph(analysis_text, normal_style)
+    story.append(analysis_para)
     
     # PDF 빌드
     doc.build(story)
