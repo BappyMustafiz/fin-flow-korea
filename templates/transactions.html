@@ -65,41 +65,50 @@
     justify-content: space-between;
 }
 
-.grid-container {
+#grid-view.grid-container {
     display: grid !important;
     grid-template-columns: repeat(5, 1fr) !important;
     gap: 1rem !important;
     padding: 0 !important;
     margin: 0 !important;
+    width: 100% !important;
 }
 
-.grid-item {
+#grid-view .grid-item {
     width: 100% !important;
     margin: 0 !important;
     padding: 0 !important;
+    display: block !important;
+}
+
+/* Bootstrap 클래스 무시 */
+#grid-view .grid-item[class*="col-"] {
+    flex: none !important;
+    max-width: none !important;
+    width: 100% !important;
 }
 
 /* 반응형 그리드 */
 @media (max-width: 1399px) {
-    .grid-container {
+    #grid-view.grid-container {
         grid-template-columns: repeat(4, 1fr) !important;
     }
 }
 
 @media (max-width: 1199px) {
-    .grid-container {
+    #grid-view.grid-container {
         grid-template-columns: repeat(3, 1fr) !important;
     }
 }
 
 @media (max-width: 767px) {
-    .grid-container {
+    #grid-view.grid-container {
         grid-template-columns: repeat(2, 1fr) !important;
     }
 }
 
 @media (max-width: 575px) {
-    .grid-container {
+    #grid-view.grid-container {
         grid-template-columns: 1fr !important;
     }
 }
@@ -630,6 +639,7 @@ function switchView(view) {
     if (view === 'list') {
         listView.style.display = 'block';
         gridView.style.display = 'none';
+        gridView.classList.remove('grid-container');
         listBtn.classList.add('active');
         gridBtn.classList.remove('active');
         
@@ -637,9 +647,20 @@ function switchView(view) {
         localStorage.setItem('transactionView', 'list');
     } else if (view === 'grid') {
         listView.style.display = 'none';
-        gridView.style.display = 'block';
+        gridView.style.display = 'grid';
+        gridView.classList.add('grid-container');
+        gridView.style.gridTemplateColumns = 'repeat(5, 1fr)';
+        gridView.style.gap = '1rem';
         gridBtn.classList.add('active');
         listBtn.classList.remove('active');
+        
+        // 그리드 아이템들 강제 스타일 적용
+        const gridItems = gridView.querySelectorAll('.grid-item');
+        gridItems.forEach(item => {
+            item.style.width = '100%';
+            item.style.margin = '0';
+            item.style.padding = '0';
+        });
         
         // 로컬스토리지에 보기 설정 저장
         localStorage.setItem('transactionView', 'grid');
