@@ -638,8 +638,10 @@ def settings():
 @login_required
 def alerts():
     """알림 관리"""
+    from models import AlertSetting
     alerts = Alert.query.order_by(desc(Alert.created_at)).limit(50).all()
-    return render_template('alerts.html', alerts=alerts)
+    alert_settings = AlertSetting.query.order_by(desc(AlertSetting.created_at)).all()
+    return render_template('alerts.html', alerts=alerts, alert_settings=alert_settings)
 
 @app.route('/audit')
 @login_required
@@ -678,6 +680,84 @@ def save_alert_settings():
         
         return jsonify({'success': True, 'message': '알림 설정이 저장되었습니다.'})
     except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+@app.route('/alerts/add', methods=['POST'])
+@login_required  
+def add_alert_setting():
+    """새 알림 설정 추가"""
+    try:
+        from utils import parse_alert_condition
+        from models import AlertSetting
+        
+        # 폼 데이터 받기
+        name = request.form.get('name')
+        alert_type = request.form.get('type')
+        condition = request.form.get('condition')
+        severity = request.form.get('severity')
+        channel = request.form.get('channel')
+        
+        if not name or not condition:
+            flash('알림명과 조건은 필수입니다.', 'error')
+            return redirect(url_for('alerts'))
+        
+        # 조건 파싱
+        parsed = parse_alert_condition(condition)
+        
+        # 새 알림 설정 생성
+        alert_setting = AlertSetting()
+        alert_setting.name = name
+        alert_setting.alert_type = alert_type or 'custom'
+        alert_setting.condition = condition
+        alert_setting.severity = severity or 'info'
+        alert_setting.channel = channel or 'system'
+        
+        if parsed:
+            alert_setting.condition_type = parsed['type']
+            alert_setting.condition_field = parsed['field']
+            alert_setting.condition_value = parsed['value']
+        
+        db.session.add(alert_setting)
+        db.session.commit()
+        
+        flash(f'알림 설정 "{name}"이 추가되었습니다.', 'success')
+        return redirect(url_for('alerts'))
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'알림 설정 추가 중 오류가 발생했습니다: {str(e)}', 'error')
+        return redirect(url_for('alerts'))
+
+@app.route('/alerts/settings/<int:setting_id>/toggle', methods=['POST'])
+@login_required
+def toggle_alert_setting(setting_id):
+    """알림 설정 활성화/비활성화"""
+    try:
+        from models import AlertSetting
+        setting = AlertSetting.query.get_or_404(setting_id)
+        setting.is_active = not setting.is_active
+        db.session.commit()
+        
+        status = '활성화' if setting.is_active else '비활성화'
+        return jsonify({'success': True, 'message': f'알림 설정이 {status}되었습니다.'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+@app.route('/alerts/settings/<int:setting_id>/delete', methods=['POST'])
+@login_required
+def delete_alert_setting(setting_id):
+    """알림 설정 삭제"""
+    try:
+        from models import AlertSetting
+        setting = AlertSetting.query.get_or_404(setting_id)
+        setting_name = setting.name
+        db.session.delete(setting)
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': f'알림 설정 "{setting_name}"이 삭제되었습니다.'})
+    except Exception as e:
+        db.session.rollback()
         return jsonify({'success': False, 'error': str(e)}), 400
 
 # API 엔드포인트들

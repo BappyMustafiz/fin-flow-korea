@@ -218,3 +218,23 @@ class Alert(db.Model):
     related_table = db.Column(db.String(50))
     related_id = db.Column(db.Integer)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class AlertSetting(db.Model):
+    """사용자 정의 알림 설정"""
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    alert_type = db.Column(db.String(20), nullable=False)  # custom, budget, contract, anomaly
+    condition = db.Column(db.Text, nullable=False)  # 사용자가 입력한 조건 텍스트
+    
+    # 파싱된 조건 필드들 (MappingRule과 유사)
+    condition_type = db.Column(db.String(20))  # contains, equals, regex, amount_range
+    condition_field = db.Column(db.String(50))  # description, counterparty, amount
+    condition_value = db.Column(db.Text)
+    
+    # 알림 설정
+    severity = db.Column(db.String(10), default='info')  # info, warning, error
+    channel = db.Column(db.String(20), default='system')  # system, email, sms
+    is_active = db.Column(db.Boolean, default=True)
+    
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

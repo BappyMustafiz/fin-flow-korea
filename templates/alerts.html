@@ -167,29 +167,67 @@
         </div>
     </div>
     
-    <!-- Quick Actions -->
+    <!-- Custom Alert Settings -->
     <div class="col-lg-4">
         <div class="card">
             <div class="card-header">
-                <h5 class="card-title mb-0">
-                    <i data-feather="zap" class="me-2"></i>
-                    빠른 작업
-                </h5>
+                <h6 class="card-title mb-0">
+                    <i data-feather="bell" class="me-2"></i>
+                    사용자 정의 알림 설정
+                </h6>
             </div>
             <div class="card-body">
-                <div class="d-grid gap-2">
-                    <button class="btn btn-outline-primary" onclick="markAllAsRead()">
-                        <i data-feather="check" class="me-2"></i>모든 알림 읽음 처리
-                    </button>
-                    <button class="btn btn-outline-warning" onclick="testAlerts()">
-                        <i data-feather="bell" class="me-2"></i>알림 테스트
-                    </button>
-                    <button class="btn btn-outline-info" onclick="exportAlerts()">
-                        <i data-feather="download" class="me-2"></i>알림 내역 내보내기
-                    </button>
-                    <button class="btn btn-outline-secondary" onclick="clearOldAlerts()">
-                        <i data-feather="trash-2" class="me-2"></i>오래된 알림 정리
-                    </button>
+                {% if alert_settings %}
+                    {% for setting in alert_settings %}
+                    <div class="mb-3 p-3 border rounded {% if not setting.is_active %}bg-light{% endif %}">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h6 class="mb-1">{{ setting.name }}</h6>
+                                <small class="text-muted">{{ setting.condition }}</small>
+                                <div class="mt-1">
+                                    <span class="badge bg-{{ 'info' if setting.severity == 'info' else 'warning' if setting.severity == 'warning' else 'danger' }} me-1">
+                                        {{ setting.severity.title() }}
+                                    </span>
+                                    <span class="badge bg-secondary">
+                                        {{ setting.channel.title() }}
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="btn-group-vertical btn-group-sm">
+                                <button class="btn btn-outline-primary btn-sm" onclick="toggleAlertSetting({{ setting.id }})">
+                                    <i data-feather="{% if setting.is_active %}pause{% else %}play{% endif %}" style="width: 12px; height: 12px;"></i>
+                                </button>
+                                <button class="btn btn-outline-danger btn-sm" onclick="deleteAlertSetting({{ setting.id }})">
+                                    <i data-feather="trash-2" style="width: 12px; height: 12px;"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center text-muted">
+                        <i data-feather="bell-off" class="mb-2"></i>
+                        <p class="small mb-0">설정된 알림이 없습니다</p>
+                    </div>
+                {% endif %}
+                
+                <!-- Quick Actions -->
+                <div class="mt-4 pt-3 border-top">
+                    <h6 class="text-muted mb-3">빠른 작업</h6>
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-outline-primary btn-sm" onclick="markAllAsRead()">
+                            <i data-feather="check" class="me-2"></i>모든 알림 읽음 처리
+                        </button>
+                        <button class="btn btn-outline-warning btn-sm" onclick="testAlerts()">
+                            <i data-feather="bell" class="me-2"></i>알림 테스트
+                        </button>
+                        <button class="btn btn-outline-info btn-sm" onclick="exportAlerts()">
+                            <i data-feather="download" class="me-2"></i>알림 내역 내보내기
+                        </button>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="clearOldAlerts()">
+                            <i data-feather="trash-2" class="me-2"></i>오래된 알림 정리
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -276,7 +314,7 @@
                 <h5 class="modal-title">새 알림 설정</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form method="POST" action="#">
+            <form method="POST" action="{{ url_for('add_alert_setting') }}">
                 <div class="modal-body">
                     <div class="mb-3">
                         <label for="newAlertType" class="form-label">알림 유형</label>
@@ -297,7 +335,14 @@
                     <div class="mb-3">
                         <label for="alertCondition" class="form-label">조건</label>
                         <textarea class="form-control" id="alertCondition" name="condition" rows="3" 
-                                  placeholder="알림 발생 조건을 입력하세요"></textarea>
+                                  placeholder="예시:&#10;counterparty contains 스타벅스&#10;amount > 500000&#10;description equals 급여"></textarea>
+                        <small class="form-text text-muted">
+                            <strong>사용 가능한 조건:</strong><br>
+                            • counterparty contains 텍스트 (거래처에 텍스트 포함)<br>
+                            • description equals 정확한텍스트 (거래내용 정확히 일치)<br>
+                            • amount > 금액 또는 amount < 금액 (금액 크거나 작은 경우)<br>
+                            • counterparty regex 정규표현식 (고급 패턴)
+                        </small>
                     </div>
                     
                     <div class="row">
@@ -429,6 +474,52 @@ function saveAlertSettings() {
         console.error('Error:', error);
         showToast('설정 저장 중 오류가 발생했습니다.', 'error');
     });
+}
+
+function toggleAlertSetting(settingId) {
+    fetch(`/alerts/settings/${settingId}/toggle`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast(data.message, 'success');
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            showToast('설정 변경 중 오류가 발생했습니다.', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('설정 변경 중 오류가 발생했습니다.', 'error');
+    });
+}
+
+function deleteAlertSetting(settingId) {
+    if (confirm('이 알림 설정을 삭제하시겠습니까?')) {
+        fetch(`/alerts/settings/${settingId}/delete`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast(data.message, 'success');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showToast('설정 삭제 중 오류가 발생했습니다.', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('설정 삭제 중 오류가 발생했습니다.', 'error');
+        });
+    }
 }
 
 function showToast(message, type = 'success') {

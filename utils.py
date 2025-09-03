@@ -21,6 +21,55 @@ def apply_classification_rules(transaction):
     
     return False
 
+def parse_alert_condition(condition_text):
+    """
+    사용자 입력 조건을 파싱하여 구조화된 조건으로 변환
+    예시: "counterparty contains 스타벅스" -> {'type': 'contains', 'field': 'counterparty', 'value': '스타벅스'}
+    """
+    condition_text = condition_text.strip()
+    
+    # 기본 패턴들
+    patterns = [
+        (r'(\w+)\s+(contains?)\s+(.+)', 'contains'),
+        (r'(\w+)\s+(equals?)\s+(.+)', 'equals'),  
+        (r'(\w+)\s+(regex)\s+(.+)', 'regex'),
+        (r'(\w+)\s+(range)\s+([0-9,]+)', 'amount_range'),
+        (r'amount\s+>\s*([0-9]+)', 'amount_gt'),
+        (r'amount\s+<\s*([0-9]+)', 'amount_lt'),
+    ]
+    
+    for pattern, condition_type in patterns:
+        match = re.search(pattern, condition_text, re.IGNORECASE)
+        if match:
+            if condition_type == 'amount_gt':
+                return {
+                    'type': 'amount_range',
+                    'field': 'amount', 
+                    'value': f"{match.group(1)},9999999999"
+                }
+            elif condition_type == 'amount_lt':
+                return {
+                    'type': 'amount_range',
+                    'field': 'amount',
+                    'value': f"0,{match.group(1)}"
+                }
+            else:
+                return {
+                    'type': condition_type,
+                    'field': match.group(1).lower(),
+                    'value': match.group(3 if condition_type != 'amount_range' else 3)
+                }
+    
+    # 단순 텍스트인 경우 description contains로 처리
+    if condition_text:
+        return {
+            'type': 'contains',
+            'field': 'description', 
+            'value': condition_text
+        }
+    
+    return None
+
 def check_rule_condition(transaction, rule):
     """규칙 조건 확인"""
     field_value = getattr(transaction, rule.condition_field, '')
