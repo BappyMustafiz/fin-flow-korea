@@ -584,20 +584,48 @@ def reports():
     end_date = date.today()
     start_date = end_date.replace(year=end_date.year - 1)
     
-    # 월별 현금흐름
-    monthly_flow_raw = db.session.query(
+    # 월별 현금흐름 (수입과 지출 분리)
+    monthly_income_raw = db.session.query(
         extract('year', Transaction.transaction_date).label('year'),
         extract('month', Transaction.transaction_date).label('month'),
         func.sum(Transaction.amount).label('total')
     ).filter(
-        Transaction.transaction_date >= start_date
+        Transaction.transaction_date >= start_date,
+        Transaction.amount > 0
     ).group_by(
         extract('year', Transaction.transaction_date),
         extract('month', Transaction.transaction_date)
     ).order_by('year', 'month').all()
     
-    # Convert to JSON serializable format
-    monthly_flow = [{'year': int(row.year), 'month': int(row.month), 'total': float(row.total or 0)} for row in monthly_flow_raw]
+    monthly_expense_raw = db.session.query(
+        extract('year', Transaction.transaction_date).label('year'),
+        extract('month', Transaction.transaction_date).label('month'),
+        func.sum(Transaction.amount).label('total')
+    ).filter(
+        Transaction.transaction_date >= start_date,
+        Transaction.amount < 0
+    ).group_by(
+        extract('year', Transaction.transaction_date),
+        extract('month', Transaction.transaction_date)
+    ).order_by('year', 'month').all()
+    
+    # 수입과 지출 데이터를 합치기
+    income_dict = {(int(row.year), int(row.month)): float(row.total or 0) for row in monthly_income_raw}
+    expense_dict = {(int(row.year), int(row.month)): float(row.total or 0) for row in monthly_expense_raw}
+    
+    # 모든 월에 대해 수입과 지출 데이터 생성
+    all_months = set(income_dict.keys()) | set(expense_dict.keys())
+    monthly_flow = []
+    for year, month in sorted(all_months):
+        income = income_dict.get((year, month), 0)
+        expense = expense_dict.get((year, month), 0)
+        monthly_flow.append({
+            'year': year,
+            'month': month,
+            'income': income,
+            'expense': expense,
+            'total': income + expense
+        })
     
     # 부서별 지출 현황 (이번달)
     current_month = end_date.replace(day=1)

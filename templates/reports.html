@@ -95,11 +95,8 @@
                     
                     {% set ns = namespace(total_income=0, total_expense=0) %}
                     {% for item in monthly_flow %}
-                        {% if item.total > 0 %}
-                            {% set ns.total_income = ns.total_income + item.total %}
-                        {% else %}
-                            {% set ns.total_expense = ns.total_expense + item.total %}
-                        {% endif %}
+                        {% set ns.total_income = ns.total_income + item.income %}
+                        {% set ns.total_expense = ns.total_expense + item.expense %}
                     {% endfor %}
                     
                     <div class="summary-item mb-3">
@@ -339,8 +336,8 @@ function initCashflowChart() {
     const monthlyData = {{ monthly_flow | tojson }};
     
     const labels = monthlyData.map(d => `${d.year}-${String(d.month).padStart(2, '0')}`);
-    const incomeData = monthlyData.map(d => d.total > 0 ? d.total : 0);
-    const expenseData = monthlyData.map(d => d.total < 0 ? Math.abs(d.total) : 0);
+    const incomeData = monthlyData.map(d => d.income || 0);
+    const expenseData = monthlyData.map(d => Math.abs(d.expense || 0));
     
     new Chart(ctx, {
         type: 'bar',
