@@ -139,12 +139,18 @@
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label for="contractVendor" class="form-label">공급업체 *</label>
-                                <select class="form-select" id="contractVendor" name="vendor_id" required>
-                                    <option value="">공급업체를 선택하세요</option>
-                                    {% for vendor in vendors %}
-                                    <option value="{{ vendor.id }}">{{ vendor.name }}</option>
-                                    {% endfor %}
-                                </select>
+                                <div class="input-group">
+                                    <select class="form-select" id="contractVendor" name="vendor_id" required>
+                                        <option value="">공급업체를 선택하세요</option>
+                                        {% for vendor in vendors %}
+                                        <option value="{{ vendor.id }}">{{ vendor.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#addVendorModal">
+                                        <i data-feather="plus" style="width: 14px; height: 14px;"></i>
+                                    </button>
+                                </div>
+                                <small class="text-muted">공급업체가 없다면 오른쪽 + 버튼으로 추가하세요</small>
                             </div>
                         </div>
                     </div>
@@ -286,6 +292,49 @@
         </div>
     </div>
 </div>
+<!-- Add Vendor Modal -->
+<div class="modal fade" id="addVendorModal" tabindex="-1" aria-labelledby="addVendorModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addVendorModalLabel">
+                    <i data-feather="plus" class="me-2"></i>새 공급업체 추가
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="/vendors/add" method="POST" id="vendorForm">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="vendorName" class="form-label">업체명 *</label>
+                        <input type="text" class="form-control" id="vendorName" name="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="vendorBusinessNumber" class="form-label">사업자번호</label>
+                        <input type="text" class="form-control" id="vendorBusinessNumber" name="business_number" placeholder="123-45-67890">
+                    </div>
+                    <div class="mb-3">
+                        <label for="vendorContact" class="form-label">연락처</label>
+                        <textarea class="form-control" id="vendorContact" name="contact_info" rows="3" placeholder="전화번호, 주소, 담당자 등"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="vendorCategory" class="form-label">분류</label>
+                        <select class="form-select" id="vendorCategory" name="category_id">
+                            <option value="">분류를 선택하세요</option>
+                            {% for category in categories %}
+                            <option value="{{ category.id }}">{{ category.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                    <button type="submit" class="btn btn-primary">추가</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}

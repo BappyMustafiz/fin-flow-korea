@@ -832,11 +832,12 @@ def edit_alert_setting():
 @login_required
 def contracts():
     """계약 관리"""
-    from models import Contract, Vendor, Department
+    from models import Contract, Vendor, Department, Category
     contracts = Contract.query.order_by(desc(Contract.created_at)).all()
     vendors = Vendor.query.all()
     departments = Department.query.all()
-    return render_template('contracts.html', contracts=contracts, vendors=vendors, departments=departments)
+    categories = Category.query.all()
+    return render_template('contracts.html', contracts=contracts, vendors=vendors, departments=departments, categories=categories)
 
 @app.route('/contracts/add', methods=['POST'])
 @login_required
@@ -919,6 +920,40 @@ def edit_contract(contract_id):
     except Exception as e:
         db.session.rollback()
         flash(f'계약 수정 중 오류가 발생했습니다: {str(e)}', 'error')
+        return redirect(url_for('contracts'))
+
+@app.route('/vendors/add', methods=['POST'])
+@login_required
+def add_vendor():
+    """공급업체 추가"""
+    try:
+        from models import Vendor
+        
+        name = request.form.get('name')
+        business_number = request.form.get('business_number', '')
+        contact_info = request.form.get('contact_info', '')
+        category_id = request.form.get('category_id')
+        
+        if not name:
+            flash('업체명은 필수입니다.', 'error')
+            return redirect(url_for('contracts'))
+        
+        vendor = Vendor(
+            name=name,
+            business_number=business_number,
+            contact_info=contact_info,
+            category_id=int(category_id) if category_id else None
+        )
+        
+        db.session.add(vendor)
+        db.session.commit()
+        
+        flash(f'공급업체 "{name}"이 추가되었습니다.', 'success')
+        return redirect(url_for('contracts'))
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'공급업체 추가 중 오류가 발생했습니다: {str(e)}', 'error')
         return redirect(url_for('contracts'))
 
 @app.route('/budgets')
