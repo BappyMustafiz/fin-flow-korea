@@ -1207,43 +1207,8 @@ def export_pdf(data, report_type, start_date, end_date):
     from flask import make_response
     from datetime import datetime
     
-    # 한글 폰트 등록
+    # PDF에서는 한글 지원이 어려우므로 영문으로 출력
     korean_font = 'Helvetica'
-    try:
-        # 시스템에서 사용 가능한 한글 폰트 찾기
-        possible_fonts = [
-            '/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc',
-            '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
-            '/System/Library/Fonts/AppleSDGothicNeo.ttc',  # macOS
-            'C:/Windows/Fonts/malgun.ttf'  # Windows
-        ]
-        
-        for font_path in possible_fonts:
-            try:
-                import os
-                if os.path.exists(font_path):
-                    pdfmetrics.registerFont(TTFont('KoreanFont', font_path))
-                    korean_font = 'KoreanFont'
-                    break
-            except:
-                continue
-                
-        # 폰트가 없으면 유니코드 문자를 ASCII로 변환
-        if korean_font == 'Helvetica':
-            # 한글을 로마자로 변환하는 간단한 방법
-            def clean_text(text):
-                import re
-                # 한글과 특수문자를 제거하고 기본 텍스트만 유지
-                return re.sub(r'[^\w\s\-\.\(\)\%]', '', str(text))
-        else:
-            def clean_text(text):
-                return str(text)
-                
-    except Exception as e:
-        korean_font = 'Helvetica'
-        def clean_text(text):
-            import re
-            return re.sub(r'[^\w\s\-\.\(\)\%]', '', str(text))
     
     # 메모리에 PDF 생성
     buffer = io.BytesIO()
@@ -1283,21 +1248,13 @@ def export_pdf(data, report_type, start_date, end_date):
     # 내용 생성
     story = []
     
-    # 제목 - 한글 지원 여부에 따라 처리
-    if korean_font == 'Helvetica':
-        title = Paragraph("Korean Open Banking Accounting System", title_style)
-        story.append(title)
-        subtitle = Paragraph(f"Financial Report ({start_date} ~ {end_date})", heading_style)
-        story.append(subtitle)
-        generation_info = Paragraph(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M')}", normal_style)
-        story.append(generation_info)
-    else:
-        title = Paragraph("한국형 오픈뱅킹 회계시스템", title_style)
-        story.append(title)
-        subtitle = Paragraph(f"재무 리포트 ({start_date} ~ {end_date})", heading_style)
-        story.append(subtitle)
-        generation_info = Paragraph(f"생성일시: {datetime.now().strftime('%Y년 %m월 %d일 %H:%M')}", normal_style)
-        story.append(generation_info)
+    # 제목 - 영문으로 출력
+    title = Paragraph("Korean Open Banking Accounting System", title_style)
+    story.append(title)
+    subtitle = Paragraph(f"Financial Report ({start_date} ~ {end_date})", heading_style)
+    story.append(subtitle)
+    generation_info = Paragraph(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M')}", normal_style)
+    story.append(generation_info)
     story.append(Spacer(1, 20))
     
     # 요약 정보
@@ -1307,32 +1264,18 @@ def export_pdf(data, report_type, start_date, end_date):
     avg_income = total_income / len(data) if data else 0
     avg_expense = total_expense / len(data) if data else 0
     
-    if korean_font == 'Helvetica':
-        summary_heading = Paragraph("== Financial Summary ==", heading_style)
-        story.append(summary_heading)
-        
-        summary_data = [
-            ['Item', 'Amount'],
-            ['Total Income', f'{total_income:,.0f} KRW'],
-            ['Total Expense', f'{total_expense:,.0f} KRW'],
-            ['Net Cash Flow', f'{net_flow:,.0f} KRW'],
-            ['Avg Monthly Income', f'{avg_income:,.0f} KRW'],
-            ['Avg Monthly Expense', f'{avg_expense:,.0f} KRW'],
-            ['Analysis Period', f'{len(data)} months']
-        ]
-    else:
-        summary_heading = Paragraph("== 재무 요약 ==", heading_style)
-        story.append(summary_heading)
-        
-        summary_data = [
-            ['항목', '금액'],
-            ['총 수입', f'{total_income:,.0f}원'],
-            ['총 지출', f'{total_expense:,.0f}원'],
-            ['순현금흐름', f'{net_flow:,.0f}원'],
-            ['평균 월 수입', f'{avg_income:,.0f}원'],
-            ['평균 월 지출', f'{avg_expense:,.0f}원'],
-            ['분석 기간', f'{len(data)}개월']
-        ]
+    summary_heading = Paragraph("== Financial Summary ==", heading_style)
+    story.append(summary_heading)
+    
+    summary_data = [
+        ['Item', 'Amount'],
+        ['Total Income', f'{total_income:,.0f} KRW'],
+        ['Total Expense', f'{total_expense:,.0f} KRW'],
+        ['Net Cash Flow', f'{net_flow:,.0f} KRW'],
+        ['Avg Monthly Income', f'{avg_income:,.0f} KRW'],
+        ['Avg Monthly Expense', f'{avg_expense:,.0f} KRW'],
+        ['Analysis Period', f'{len(data)} months']
+    ]
     
     summary_table = Table(summary_data, colWidths=[4*cm, 6*cm])
     summary_table.setStyle(TableStyle([
@@ -1351,42 +1294,23 @@ def export_pdf(data, report_type, start_date, end_date):
     story.append(Spacer(1, 20))
     
     # 월별 상세 데이터
-    if korean_font == 'Helvetica':
-        detail_heading = Paragraph("== Monthly Details ==", heading_style)
-        story.append(detail_heading)
+    detail_heading = Paragraph("== Monthly Details ==", heading_style)
+    story.append(detail_heading)
+    
+    detail_data = [['Period', 'Income(KRW)', 'Expense(KRW)', 'Net Flow(KRW)', 'Income(%)', 'Expense(%)']]
+    
+    for row in data:
+        income_ratio = (row['income'] / total_income * 100) if total_income > 0 else 0
+        expense_ratio = (row['expense'] / total_expense * 100) if total_expense > 0 else 0
         
-        detail_data = [['Period', 'Income(KRW)', 'Expense(KRW)', 'Net Flow(KRW)', 'Income(%)', 'Expense(%)']]
-        
-        for row in data:
-            income_ratio = (row['income'] / total_income * 100) if total_income > 0 else 0
-            expense_ratio = (row['expense'] / total_expense * 100) if total_expense > 0 else 0
-            
-            detail_data.append([
-                row['period'],
-                f"{row['income']:,.0f}",
-                f"{row['expense']:,.0f}",
-                f"{row['net']:,.0f}",
-                f"{income_ratio:.1f}%",
-                f"{expense_ratio:.1f}%"
-            ])
-    else:
-        detail_heading = Paragraph("== 월별 상세 내역 ==", heading_style)
-        story.append(detail_heading)
-        
-        detail_data = [['기간', '수입(원)', '지출(원)', '순현금흐름(원)', '수입비중(%)', '지출비중(%)']]
-        
-        for row in data:
-            income_ratio = (row['income'] / total_income * 100) if total_income > 0 else 0
-            expense_ratio = (row['expense'] / total_expense * 100) if total_expense > 0 else 0
-            
-            detail_data.append([
-                row['period'],
-                f"{row['income']:,.0f}",
-                f"{row['expense']:,.0f}",
-                f"{row['net']:,.0f}",
-                f"{income_ratio:.1f}%",
-                f"{expense_ratio:.1f}%"
-            ])
+        detail_data.append([
+            row['period'],
+            f"{row['income']:,.0f}",
+            f"{row['expense']:,.0f}",
+            f"{row['net']:,.0f}",
+            f"{income_ratio:.1f}%",
+            f"{expense_ratio:.1f}%"
+        ])
     
     detail_table = Table(detail_data, colWidths=[2.5*cm, 2.5*cm, 2.5*cm, 2.5*cm, 2*cm, 2*cm])
     detail_table.setStyle(TableStyle([
@@ -1405,28 +1329,16 @@ def export_pdf(data, report_type, start_date, end_date):
     story.append(Spacer(1, 20))
     
     # 분석 의견
-    if korean_font == 'Helvetica':
-        analysis_heading = Paragraph("== Financial Analysis ==", heading_style)
-        story.append(analysis_heading)
-        
-        if net_flow > 0:
-            analysis_text = f"During the analysis period, there was a net cash inflow of {net_flow:,.0f} KRW. Financial status is healthy."
-        else:
-            analysis_text = f"During the analysis period, there was a net cash outflow of {abs(net_flow):,.0f} KRW. Expense management is needed."
-        
-        if avg_income > avg_expense:
-            analysis_text += f" Monthly average income ({avg_income:,.0f} KRW) exceeds expenses ({avg_expense:,.0f} KRW), showing stable cash flow."
+    analysis_heading = Paragraph("== Financial Analysis ==", heading_style)
+    story.append(analysis_heading)
+    
+    if net_flow > 0:
+        analysis_text = f"During the analysis period, there was a net cash inflow of {net_flow:,.0f} KRW. Financial status is healthy."
     else:
-        analysis_heading = Paragraph("== 재무 분석 의견 ==", heading_style)
-        story.append(analysis_heading)
-        
-        if net_flow > 0:
-            analysis_text = f"분석 기간 동안 {net_flow:,.0f}원의 순현금 유입이 발생했습니다. 재무 상태가 양호합니다."
-        else:
-            analysis_text = f"분석 기간 동안 {abs(net_flow):,.0f}원의 순현금 유출이 발생했습니다. 지출 관리가 필요합니다."
-        
-        if avg_income > avg_expense:
-            analysis_text += f" 월 평균 수입({avg_income:,.0f}원)이 지출({avg_expense:,.0f}원)보다 많아 안정적인 현금흐름을 보이고 있습니다."
+        analysis_text = f"During the analysis period, there was a net cash outflow of {abs(net_flow):,.0f} KRW. Expense management is needed."
+    
+    if avg_income > avg_expense:
+        analysis_text += f" Monthly average income ({avg_income:,.0f} KRW) exceeds expenses ({avg_expense:,.0f} KRW), showing stable cash flow."
     
     analysis_para = Paragraph(analysis_text, normal_style)
     story.append(analysis_para)
