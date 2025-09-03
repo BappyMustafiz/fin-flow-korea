@@ -65,14 +65,15 @@
     justify-content: space-between;
 }
 
-/* 자동 반응형 그리드 - 카드 최소 크기 기준으로 자동 조정 */
+/* 자동 반응형 그리드 - 카드 최소/최대 크기 기준으로 자동 조정 */
 #grid-view {
     display: grid !important;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)) !important;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 300px)) !important;
     gap: 1rem !important;
     padding: 0 !important;
     margin: 0 !important;
     width: 100% !important;
+    justify-content: start !important;
 }
 
 #grid-view .grid-item {
@@ -630,7 +631,7 @@ function switchView(view) {
     } else if (view === 'grid') {
         listView.style.display = 'none';
         gridView.style.display = 'grid';
-        gridView.style.gridTemplateColumns = 'repeat(auto-fit, minmax(250px, 1fr))';
+        gridView.style.gridTemplateColumns = 'repeat(auto-fit, minmax(200px, 300px))';
         gridView.style.gap = '1rem';
         gridBtn.classList.add('active');
         listBtn.classList.remove('active');
