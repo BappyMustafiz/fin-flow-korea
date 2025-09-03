@@ -622,6 +622,10 @@ def reports():
         Transaction.transaction_date >= current_month
     ).group_by(Vendor.name).order_by(desc('total')).limit(10).all()
     
+    # 디버깅을 위한 로그
+    print(f"Monthly flow data: {monthly_flow}")
+    print(f"Dept spending data: {dept_spending}")
+    
     return render_template('reports.html',
                          monthly_flow=monthly_flow,
                          dept_spending=dept_spending,

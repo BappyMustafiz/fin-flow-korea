@@ -87,32 +87,37 @@
                     </h5>
                 </div>
                 <div class="card-body">
-                    {% set total_income = 0 %}
-                    {% set total_expense = 0 %}
+                    <!-- 디버깅 정보 -->
+                    <div class="alert alert-info">
+                        <small>데이터 개수: {{ monthly_flow | length }}개</small><br>
+                        <small>데이터: {{ monthly_flow }}</small>
+                    </div>
+                    
+                    {% set ns = namespace(total_income=0, total_expense=0) %}
                     {% for item in monthly_flow %}
                         {% if item.total > 0 %}
-                            {% set total_income = total_income + item.total %}
+                            {% set ns.total_income = ns.total_income + item.total %}
                         {% else %}
-                            {% set total_expense = total_expense + item.total %}
+                            {% set ns.total_expense = ns.total_expense + item.total %}
                         {% endif %}
                     {% endfor %}
                     
                     <div class="summary-item mb-3">
                         <div class="d-flex justify-content-between">
                             <span class="text-muted">총 수입</span>
-                            <strong class="text-success">₩{{ "{:,.0f}".format(total_income) }}</strong>
+                            <strong class="text-success">₩{{ "{:,.0f}".format(ns.total_income) }}</strong>
                         </div>
                     </div>
                     <div class="summary-item mb-3">
                         <div class="d-flex justify-content-between">
                             <span class="text-muted">총 지출</span>
-                            <strong class="text-danger">₩{{ "{:,.0f}".format(total_expense | abs) }}</strong>
+                            <strong class="text-danger">₩{{ "{:,.0f}".format(ns.total_expense | abs) }}</strong>
                         </div>
                     </div>
                     <div class="summary-item mb-3">
                         <div class="d-flex justify-content-between">
                             <span class="text-muted">순현금흐름</span>
-                            {% set net_flow = total_income + total_expense %}
+                            {% set net_flow = ns.total_income + ns.total_expense %}
                             <strong class="{% if net_flow > 0 %}text-success{% elif net_flow < 0 %}text-danger{% else %}text-muted{% endif %}">
                                 ₩{{ "{:,.0f}".format(net_flow) }}
                             </strong>
@@ -121,7 +126,7 @@
                     <div class="summary-item">
                         <div class="d-flex justify-content-between">
                             <span class="text-muted">평균 월 지출</span>
-                            {% set avg_expense = (total_expense / (monthly_flow | length if monthly_flow | length > 0 else 1)) | abs %}
+                            {% set avg_expense = (ns.total_expense / (monthly_flow | length if monthly_flow | length > 0 else 1)) | abs %}
                             <strong>₩{{ "{:,.0f}".format(avg_expense) }}</strong>
                         </div>
                     </div>
