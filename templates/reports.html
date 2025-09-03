@@ -87,22 +87,32 @@
                     </h5>
                 </div>
                 <div class="card-body">
+                    {% set total_income = 0 %}
+                    {% set total_expense = 0 %}
+                    {% for item in monthly_flow %}
+                        {% if item.total > 0 %}
+                            {% set total_income = total_income + item.total %}
+                        {% else %}
+                            {% set total_expense = total_expense + item.total %}
+                        {% endif %}
+                    {% endfor %}
+                    
                     <div class="summary-item mb-3">
                         <div class="d-flex justify-content-between">
                             <span class="text-muted">총 수입</span>
-                            <strong class="text-success">₩{{ "{:,.0f}".format(monthly_flow | selectattr('total', 'gt', 0) | sum(attribute='total') or 0) }}</strong>
+                            <strong class="text-success">₩{{ "{:,.0f}".format(total_income) }}</strong>
                         </div>
                     </div>
                     <div class="summary-item mb-3">
                         <div class="d-flex justify-content-between">
                             <span class="text-muted">총 지출</span>
-                            <strong class="text-danger">₩{{ "{:,.0f}".format((monthly_flow | selectattr('total', 'lt', 0) | sum(attribute='total') or 0) | abs) }}</strong>
+                            <strong class="text-danger">₩{{ "{:,.0f}".format(total_expense | abs) }}</strong>
                         </div>
                     </div>
                     <div class="summary-item mb-3">
                         <div class="d-flex justify-content-between">
                             <span class="text-muted">순현금흐름</span>
-                            {% set net_flow = monthly_flow | sum(attribute='total') or 0 %}
+                            {% set net_flow = total_income + total_expense %}
                             <strong class="{% if net_flow > 0 %}text-success{% elif net_flow < 0 %}text-danger{% else %}text-muted{% endif %}">
                                 ₩{{ "{:,.0f}".format(net_flow) }}
                             </strong>
@@ -111,7 +121,7 @@
                     <div class="summary-item">
                         <div class="d-flex justify-content-between">
                             <span class="text-muted">평균 월 지출</span>
-                            {% set avg_expense = ((monthly_flow | selectattr('total', 'lt', 0) | sum(attribute='total') or 0) / (monthly_flow | length if monthly_flow | length > 0 else 1)) | abs %}
+                            {% set avg_expense = (total_expense / (monthly_flow | length if monthly_flow | length > 0 else 1)) | abs %}
                             <strong>₩{{ "{:,.0f}".format(avg_expense) }}</strong>
                         </div>
                     </div>
