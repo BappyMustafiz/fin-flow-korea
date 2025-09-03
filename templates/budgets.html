@@ -185,10 +185,10 @@
                                     <span class="text-success">₩{{ "{:,.0f}".format(budget.budget_amount) }}</span>
                                 </td>
                                 <td>
-                                    <span class="text-warning">₩{{ "{:,.0f}".format(budget.budget_amount * 0.6) }}</span>
+                                    <span class="text-warning">₩{{ "{:,.0f}".format((budget.budget_amount | float) * 0.6) }}</span>
                                 </td>
                                 <td>
-                                    <span class="text-info">₩{{ "{:,.0f}".format(budget.budget_amount * 0.4) }}</span>
+                                    <span class="text-info">₩{{ "{:,.0f}".format((budget.budget_amount | float) * 0.4) }}</span>
                                 </td>
                                 <td>
                                     <div class="progress" style="width: 80px; height: 20px;">
