@@ -898,9 +898,28 @@ def edit_contract(contract_id):
 @login_required
 def budgets():
     """예산 관리"""
-    from models import Department
+    from models import Department, Category, CategoryBudget
+    from datetime import datetime
+    
     departments = Department.query.all()
-    return render_template('budgets.html', departments=departments)
+    categories = Category.query.all()
+    
+    # 현재 월의 분류별 예산 가져오기
+    current_year = datetime.now().year
+    current_month = datetime.now().month
+    
+    category_budgets = CategoryBudget.query.filter_by(
+        year=current_year, 
+        month=current_month, 
+        is_active=True
+    ).all()
+    
+    return render_template('budgets.html', 
+                         departments=departments,
+                         categories=categories,
+                         category_budgets=category_budgets,
+                         current_year=current_year,
+                         current_month=current_month)
 
 @app.route('/budgets/update', methods=['POST'])
 @login_required
@@ -924,6 +943,93 @@ def update_budgets():
     except Exception as e:
         db.session.rollback()
         flash(f'예산 업데이트 중 오류가 발생했습니다: {str(e)}', 'error')
+    
+    return redirect(url_for('budgets'))
+
+@app.route('/budgets/category/add', methods=['POST'])
+@login_required
+def add_category_budget():
+    """분류별 예산 추가"""
+    try:
+        from models import CategoryBudget
+        from datetime import datetime
+        
+        category_id = int(request.form.get('category_id'))
+        budget_amount = float(request.form.get('budget_amount', 0))
+        year = int(request.form.get('year', datetime.now().year))
+        month = int(request.form.get('month', datetime.now().month))
+        description = request.form.get('description', '').strip()
+        
+        # 중복 체크
+        existing = CategoryBudget.query.filter_by(
+            category_id=category_id,
+            year=year,
+            month=month,
+            is_active=True
+        ).first()
+        
+        if existing:
+            flash('해당 분류의 예산이 이미 설정되어 있습니다.', 'error')
+            return redirect(url_for('budgets'))
+        
+        category_budget = CategoryBudget(
+            category_id=category_id,
+            budget_amount=budget_amount,
+            year=year,
+            month=month,
+            description=description
+        )
+        
+        db.session.add(category_budget)
+        db.session.commit()
+        
+        flash('분류별 예산이 추가되었습니다.', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'분류별 예산 추가 중 오류가 발생했습니다: {str(e)}', 'error')
+    
+    return redirect(url_for('budgets'))
+
+@app.route('/budgets/category/<int:budget_id>/edit', methods=['POST'])
+@login_required
+def edit_category_budget(budget_id):
+    """분류별 예산 수정"""
+    try:
+        from models import CategoryBudget
+        
+        category_budget = CategoryBudget.query.get_or_404(budget_id)
+        
+        category_budget.budget_amount = float(request.form.get('budget_amount', 0))
+        category_budget.description = request.form.get('description', '').strip()
+        
+        db.session.commit()
+        
+        flash('분류별 예산이 수정되었습니다.', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'분류별 예산 수정 중 오류가 발생했습니다: {str(e)}', 'error')
+    
+    return redirect(url_for('budgets'))
+
+@app.route('/budgets/category/<int:budget_id>/delete', methods=['POST'])
+@login_required
+def delete_category_budget(budget_id):
+    """분류별 예산 삭제"""
+    try:
+        from models import CategoryBudget
+        
+        category_budget = CategoryBudget.query.get_or_404(budget_id)
+        category_budget.is_active = False  # Soft delete
+        
+        db.session.commit()
+        
+        flash('분류별 예산이 삭제되었습니다.', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'분류별 예산 삭제 중 오류가 발생했습니다: {str(e)}', 'error')
     
     return redirect(url_for('budgets'))
 

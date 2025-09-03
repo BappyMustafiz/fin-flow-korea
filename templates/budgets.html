@@ -5,10 +5,29 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2><i data-feather="dollar-sign" class="me-2"></i>예산 관리</h2>
-    <button class="btn btn-success" onclick="saveBudgets()">
-        <i data-feather="save" class="me-2"></i>예산 저장
-    </button>
+    <div class="d-flex gap-2">
+        <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addCategoryBudgetModal">
+            <i data-feather="plus" class="me-2"></i>분류별 예산 추가
+        </button>
+        <button class="btn btn-success" onclick="saveBudgets()">
+            <i data-feather="save" class="me-2"></i>예산 저장
+        </button>
+    </div>
 </div>
+
+<!-- Navigation Tabs -->
+<ul class="nav nav-tabs mb-4" id="budgetTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="department-tab" data-bs-toggle="tab" data-bs-target="#department-content" type="button" role="tab">
+            <i data-feather="home" class="me-1"></i>부서별 예산
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="category-tab" data-bs-toggle="tab" data-bs-target="#category-content" type="button" role="tab">
+            <i data-feather="tag" class="me-1"></i>분류별 예산
+        </button>
+    </li>
+</ul>
 
 <!-- Budget Overview -->
 <div class="row mb-4">
@@ -50,12 +69,15 @@
     </div>
 </div>
 
-<!-- Budget Management Form -->
-<div class="card">
-    <div class="card-header">
-        <h5 class="card-title mb-0">부서별 예산 설정</h5>
-    </div>
-    <div class="card-body">
+<!-- Tab Content -->
+<div class="tab-content" id="budgetTabContent">
+    <!-- 부서별 예산 탭 -->
+    <div class="tab-pane fade show active" id="department-content" role="tabpanel">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">부서별 예산 설정</h5>
+            </div>
+            <div class="card-body">
         <form id="budgetForm" action="/budgets/update" method="POST">
             <div class="row">
                 {% for department in departments %}
@@ -126,7 +148,84 @@
                     <i data-feather="save" class="me-2"></i>예산 저장
                 </button>
             </div>
-        </form>
+            </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 분류별 예산 탭 -->
+    <div class="tab-pane fade" id="category-content" role="tabpanel">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">분류별 예산 관리 ({{ current_year }}년 {{ current_month }}월)</h5>
+            </div>
+            <div class="card-body">
+                {% if category_budgets %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>분류명</th>
+                                <th>예산 금액</th>
+                                <th>사용 금액</th>
+                                <th>잔여 금액</th>
+                                <th>사용률</th>
+                                <th>설명</th>
+                                <th>작업</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for budget in category_budgets %}
+                            <tr>
+                                <td>
+                                    <strong>{{ budget.category.name if budget.category else '알수없음' }}</strong>
+                                    <br><small class="text-muted">{{ budget.category.code if budget.category else '' }}</small>
+                                </td>
+                                <td>
+                                    <span class="text-success">₩{{ "{:,.0f}".format(budget.budget_amount) }}</span>
+                                </td>
+                                <td>
+                                    <span class="text-warning">₩{{ "{:,.0f}".format(budget.budget_amount * 0.6) }}</span>
+                                </td>
+                                <td>
+                                    <span class="text-info">₩{{ "{:,.0f}".format(budget.budget_amount * 0.4) }}</span>
+                                </td>
+                                <td>
+                                    <div class="progress" style="width: 80px; height: 20px;">
+                                        <div class="progress-bar bg-success" style="width: 60%"></div>
+                                    </div>
+                                    <small class="text-muted">60%</small>
+                                </td>
+                                <td>
+                                    <small class="text-muted">{{ budget.description or '-' }}</small>
+                                </td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-primary me-1" 
+                                            onclick="editCategoryBudget({{ budget.id }}, {{ budget.budget_amount }}, '{{ budget.description or '' }}')">
+                                        <i data-feather="edit-2"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger" 
+                                            onclick="deleteCategoryBudget({{ budget.id }}, '{{ budget.category.name if budget.category else '' }}')">
+                                        <i data-feather="trash-2"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i data-feather="tag" style="width: 64px; height: 64px;" class="text-muted mb-3"></i>
+                    <h5 class="text-muted">등록된 분류별 예산이 없습니다</h5>
+                    <p class="text-muted">첫 번째 분류별 예산을 추가해보세요.</p>
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addCategoryBudgetModal">
+                        <i data-feather="plus" class="me-1"></i>분류별 예산 추가
+                    </button>
+                </div>
+                {% endif %}
+            </div>
+        </div>
     </div>
 </div>
 
@@ -168,6 +267,107 @@
                         <li>비상 예산 10% 별도 확보</li>
                     </ul>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 분류별 예산 추가 모달 -->
+<div class="modal fade" id="addCategoryBudgetModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">분류별 예산 추가</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('add_category_budget') }}" method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="category_id" class="form-label">분류 선택 *</label>
+                        <select class="form-select" id="category_id" name="category_id" required>
+                            <option value="">분류를 선택하세요</option>
+                            {% for category in categories %}
+                            <option value="{{ category.id }}">{{ category.name }} ({{ category.code }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="budget_amount" class="form-label">예산 금액 (원) *</label>
+                        <input type="number" class="form-control" id="budget_amount" name="budget_amount" required min="0" step="10000">
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label for="year" class="form-label">연도 *</label>
+                            <input type="number" class="form-control" id="year" name="year" value="{{ current_year }}" min="2020" max="2030" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="month" class="form-label">월 *</label>
+                            <select class="form-select" id="month" name="month" required>
+                                {% for i in range(1, 13) %}
+                                <option value="{{ i }}" {% if i == current_month %}selected{% endif %}>{{ i }}월</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3 mt-3">
+                        <label for="description" class="form-label">설명</label>
+                        <textarea class="form-control" id="description" name="description" rows="3" placeholder="예: 회식비, 교통비, 사무용품비 등"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                    <button type="submit" class="btn btn-primary">추가</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 분류별 예산 수정 모달 -->
+<div class="modal fade" id="editCategoryBudgetModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">분류별 예산 수정</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="editCategoryForm" method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="editBudgetAmount" class="form-label">예산 금액 (원) *</label>
+                        <input type="number" class="form-control" id="editBudgetAmount" name="budget_amount" required min="0" step="10000">
+                    </div>
+                    <div class="mb-3">
+                        <label for="editDescription" class="form-label">설명</label>
+                        <textarea class="form-control" id="editDescription" name="description" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                    <button type="submit" class="btn btn-primary">수정</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 분류별 예산 삭제 확인 모달 -->
+<div class="modal fade" id="deleteCategoryBudgetModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-danger">분류별 예산 삭제</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>정말로 <strong id="deleteCategoryName"></strong> 분류의 예산을 삭제하시겠습니까?</p>
+                <p class="text-danger"><small>이 작업은 되돌릴 수 없습니다.</small></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                <form id="deleteCategoryForm" method="POST" class="d-inline">
+                    <button type="submit" class="btn btn-danger">삭제</button>
+                </form>
             </div>
         </div>
     </div>
@@ -264,9 +464,29 @@ function updateBudgetChart() {
     createBudgetChart();
 }
 
+// 분류별 예산 수정 모달 열기
+function editCategoryBudget(id, amount, description) {
+    document.getElementById('editBudgetAmount').value = amount;
+    document.getElementById('editDescription').value = description;
+    document.getElementById('editCategoryForm').action = '/budgets/category/' + id + '/edit';
+    
+    var modal = new bootstrap.Modal(document.getElementById('editCategoryBudgetModal'));
+    modal.show();
+}
+
+// 분류별 예산 삭제 모달 열기
+function deleteCategoryBudget(id, categoryName) {
+    document.getElementById('deleteCategoryName').textContent = categoryName;
+    document.getElementById('deleteCategoryForm').action = '/budgets/category/' + id + '/delete';
+    
+    var modal = new bootstrap.Modal(document.getElementById('deleteCategoryBudgetModal'));
+    modal.show();
+}
+
 // 페이지 로드 시 차트 생성
 document.addEventListener('DOMContentLoaded', function() {
     createBudgetChart();
+    feather.replace();
     
     // 모든 부서의 표시 초기화
     {% for department in departments %}

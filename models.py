@@ -238,3 +238,19 @@ class AlertSetting(db.Model):
     
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+class CategoryBudget(db.Model):
+    """분류별 예산 정보"""
+    id = db.Column(db.Integer, primary_key=True)
+    category_id = db.Column(db.Integer, db.ForeignKey('category.id'), nullable=False)
+    budget_amount = db.Column(db.Numeric(15, 2), nullable=False)
+    period_type = db.Column(db.String(10), default='monthly')  # monthly, yearly
+    year = db.Column(db.Integer, nullable=False)
+    month = db.Column(db.Integer)  # null for yearly budgets
+    description = db.Column(db.Text)
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    category = db.relationship('Category', backref='budgets')
