@@ -407,9 +407,28 @@ function saveAlertSettings() {
         immediateAlert: document.getElementById('immediateAlert').checked
     };
     
-    // 실제로는 서버에 저장
     console.log('Saving alert settings:', settings);
-    showToast('알림 설정이 저장되었습니다.', 'success');
+    
+    // 서버에 저장
+    fetch('/alerts/settings', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(settings)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast('알림 설정이 저장되었습니다.', 'success');
+        } else {
+            showToast('설정 저장 중 오류가 발생했습니다.', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('설정 저장 중 오류가 발생했습니다.', 'error');
+    });
 }
 
 function showToast(message, type = 'success') {

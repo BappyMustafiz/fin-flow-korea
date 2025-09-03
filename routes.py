@@ -665,6 +665,21 @@ def mark_alert_read(alert_id):
     
     return redirect(url_for('alerts'))
 
+@app.route('/alerts/settings', methods=['POST'])
+@login_required
+def save_alert_settings():
+    """알림 설정 저장"""
+    try:
+        settings_data = request.get_json()
+        
+        # 실제 구현에서는 사용자별 설정을 데이터베이스에 저장
+        # 현재는 세션에 임시 저장
+        session['alert_settings'] = settings_data
+        
+        return jsonify({'success': True, 'message': '알림 설정이 저장되었습니다.'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
 # API 엔드포인트들
 
 @app.route('/users')
