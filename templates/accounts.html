@@ -185,9 +185,9 @@
                     <div class="mb-3">
                         <label for="institution" class="form-label">금융기관</label>
                         <select class="form-select" id="institution" name="institution_id" required>
-                            <option value="">선택하세요</option>
-                            {% for account in accounts %}
-                                <option value="{{ account.institution.id }}">{{ account.institution.name }}</option>
+                            <option value="">금융기관을 선택하세요</option>
+                            {% for institution in institutions %}
+                                <option value="{{ institution.id }}">{{ institution.name }}</option>
                             {% endfor %}
                         </select>
                     </div>

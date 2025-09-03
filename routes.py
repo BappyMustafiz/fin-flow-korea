@@ -262,10 +262,12 @@ def accounts():
     """계정 관리"""
     accounts = Account.query.join(Institution).all()
     departments = Department.query.all()
+    institutions = Institution.query.all()
     
     return render_template('accounts.html', 
                          accounts=accounts,
-                         departments=departments)
+                         departments=departments,
+                         institutions=institutions)
 
 @app.route('/transactions')
 @login_required
