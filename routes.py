@@ -331,8 +331,8 @@ def transactions():
     account_id = request.args.get('account_id', '')
     search = request.args.get('search', '')
     
-    # 기본 쿼리
-    query = Transaction.query
+    # 기본 쿼리 (활성 거래만)
+    query = Transaction.query.filter(Transaction.is_active == True)
     
     # 필터 적용
     if status:
@@ -380,6 +380,83 @@ def transactions():
                              'account_id': account_id,
                              'search': search
                          })
+
+@app.route('/transaction/<int:transaction_id>/details', methods=['GET'])
+@login_required
+def transaction_details(transaction_id):
+    """거래 상세 정보 조회 (JSON)"""
+    try:
+        transaction = Transaction.query.get_or_404(transaction_id)
+        
+        transaction_data = {
+            'id': transaction.id,
+            'counterparty': transaction.counterparty,
+            'description': transaction.description,
+            'amount': float(transaction.amount),
+            'transaction_date': transaction.transaction_date.isoformat(),
+            'classification_status': transaction.classification_status,
+            'account': {
+                'institution': {'name': transaction.account.institution.name},
+                'account_name': transaction.account.account_name
+            }
+        }
+        
+        return jsonify({'success': True, 'transaction': transaction_data})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/transaction/<int:transaction_id>/split', methods=['POST'])
+@login_required
+def split_transaction(transaction_id):
+    """거래 분할 처리"""
+    try:
+        original_transaction = Transaction.query.get_or_404(transaction_id)
+        
+        # 분할 데이터 받기
+        amounts = request.form.getlist('amounts[]')
+        descriptions = request.form.getlist('descriptions[]')
+        categories = request.form.getlist('categories[]')
+        departments = request.form.getlist('departments[]')
+        
+        # 금액 합계 검증
+        total_amount = sum(float(amount) for amount in amounts)
+        if abs(total_amount - float(original_transaction.amount)) > 0.01:
+            flash('분할된 금액의 합계가 원본 거래 금액과 일치하지 않습니다.', 'error')
+            return redirect(url_for('transactions'))
+        
+        # 원본 거래를 비활성화
+        original_transaction.is_active = False
+        original_transaction.split_parent_id = None  # 이것이 분할의 부모임을 표시
+        
+        # 분할된 거래들 생성
+        for i, amount in enumerate(amounts):
+            split_transaction = Transaction()
+            split_transaction.account_id = original_transaction.account_id
+            split_transaction.counterparty = original_transaction.counterparty
+            split_transaction.description = descriptions[i] if descriptions[i] else f"{original_transaction.description} (분할 {i+1})"
+            split_transaction.amount = float(amount)
+            split_transaction.transaction_date = original_transaction.transaction_date
+            split_transaction.processed_date = original_transaction.processed_date
+            split_transaction.transaction_type = original_transaction.transaction_type
+            split_transaction.classification_status = 'manual'  # 분할된 거래는 수동분류로 설정
+            split_transaction.split_parent_id = original_transaction.id  # 원본 거래 ID 저장
+            
+            # 카테고리와 부서 설정
+            if categories[i]:
+                split_transaction.category_id = int(categories[i])
+            if departments[i]:
+                split_transaction.department_id = int(departments[i])
+            
+            db.session.add(split_transaction)
+        
+        db.session.commit()
+        flash(f'거래가 {len(amounts)}개로 성공적으로 분할되었습니다.', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'거래 분할 중 오류가 발생했습니다: {str(e)}', 'error')
+    
+    return redirect(url_for('transactions'))
 
 @app.route('/transaction/<int:transaction_id>/edit', methods=['GET', 'POST'])
 @login_required

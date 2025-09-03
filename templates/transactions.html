@@ -522,6 +522,57 @@
     </div>
 </div>
 
+<!-- Transaction Split Modal -->
+<div class="modal fade" id="transactionSplitModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">거래 분할</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="" id="splitForm">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">원본 거래 정보</label>
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <div id="originalTransactionInfo">
+                                    <!-- 원본 거래 정보가 여기에 표시됩니다 -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">분할할 항목 수</label>
+                        <select class="form-select" id="splitCount" onchange="generateSplitItems()">
+                            <option value="2">2개로 분할</option>
+                            <option value="3">3개로 분할</option>
+                            <option value="4">4개로 분할</option>
+                            <option value="5">5개로 분할</option>
+                        </select>
+                    </div>
+                    
+                    <div id="splitItems">
+                        <!-- 분할 항목들이 동적으로 생성됩니다 -->
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <i data-feather="info" class="me-2"></i>
+                        분할된 금액의 합계는 원본 거래 금액과 일치해야 합니다.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i data-feather="scissors" class="me-1"></i>분할 실행
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <!-- Transaction Details Modal -->
 <div class="modal fade" id="transactionDetailsModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
@@ -644,18 +695,161 @@ function switchView(view) {
     feather.replace();
 }
 
-// 페이지 로드 시 저장된 보기 설정 적용
+// 페이지 로드 시 저장된 보기 설정 적용 (기본값: 리스트)
 document.addEventListener('DOMContentLoaded', function() {
     const savedView = localStorage.getItem('transactionView') || 'list';
-    switchView(savedView);
+    // 첫 방문 시에는 항상 리스트 뷰로 시작
+    if (!localStorage.getItem('transactionView')) {
+        switchView('list');
+    } else {
+        switchView(savedView);
+    }
 });
 
+// 거래 분할 관련 전역 변수
+let currentTransactionId = null;
+let originalTransactionAmount = 0;
+
 function splitTransaction(transactionId) {
-    if (confirm('이 거래를 분할하시겠습니까?')) {
-        // 거래 분할 로직
-        console.log('Splitting transaction:', transactionId);
-        alert('거래 분할 기능은 곧 추가될 예정입니다.');
+    currentTransactionId = transactionId;
+    
+    // 원본 거래 정보 가져오기
+    fetch(`/transaction/${transactionId}/details`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                displayOriginalTransaction(data.transaction);
+                originalTransactionAmount = data.transaction.amount;
+                generateSplitItems(); // 기본 2개 분할로 시작
+                
+                // 폼의 액션 URL 설정
+                document.getElementById('splitForm').action = `/transaction/${transactionId}/split`;
+                
+                const modal = new bootstrap.Modal(document.getElementById('transactionSplitModal'));
+                modal.show();
+            } else {
+                alert('거래 정보를 불러올 수 없습니다.');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('거래 정보를 불러오는 중 오류가 발생했습니다.');
+        });
+}
+
+function displayOriginalTransaction(transaction) {
+    const originalInfo = document.getElementById('originalTransactionInfo');
+    const amountClass = transaction.amount > 0 ? 'text-success' : 'text-danger';
+    const amountText = transaction.amount > 0 ? `+${Math.abs(transaction.amount).toLocaleString()}원` : `-${Math.abs(transaction.amount).toLocaleString()}원`;
+    
+    originalInfo.innerHTML = `
+        <div class="row">
+            <div class="col-md-6">
+                <strong>거래처:</strong> ${transaction.counterparty || '(거래처 미상)'}<br>
+                <strong>거래내용:</strong> ${transaction.description}<br>
+                <strong>거래일시:</strong> ${new Date(transaction.transaction_date).toLocaleDateString()}
+            </div>
+            <div class="col-md-6">
+                <strong>금액:</strong> <span class="${amountClass}">${amountText}</span><br>
+                <strong>계좌:</strong> ${transaction.account.institution.name} - ${transaction.account.account_name}<br>
+                <strong>분류상태:</strong> ${getClassificationStatusText(transaction.classification_status)}
+            </div>
+        </div>
+    `;
+}
+
+function generateSplitItems() {
+    const splitCount = parseInt(document.getElementById('splitCount').value);
+    const splitItemsContainer = document.getElementById('splitItems');
+    const suggestedAmount = Math.floor(originalTransactionAmount / splitCount);
+    
+    let html = '<div class="row g-3">';
+    
+    for (let i = 1; i <= splitCount; i++) {
+        html += `
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0">분할 항목 ${i}</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-2">
+                            <label class="form-label">금액</label>
+                            <input type="number" class="form-control split-amount" name="amounts[]" 
+                                   value="${suggestedAmount}" step="0.01" onchange="updateTotal()">
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label">거래내용</label>
+                            <input type="text" class="form-control" name="descriptions[]" 
+                                   placeholder="분할 거래 설명">
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label">카테고리</label>
+                            <select class="form-select" name="categories[]">
+                                <option value="">선택하세요</option>
+                                {% for cat in categories %}
+                                    <option value="{{ cat.id }}">{{ cat.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label">부서</label>
+                            <select class="form-select" name="departments[]">
+                                <option value="">선택하세요</option>
+                                {% for dept in departments %}
+                                    <option value="{{ dept.id }}">{{ dept.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
     }
+    
+    html += '</div>';
+    html += `
+        <div class="mt-3">
+            <div class="row">
+                <div class="col-md-6">
+                    <strong>원본 금액:</strong> <span class="text-muted">${originalTransactionAmount.toLocaleString()}원</span>
+                </div>
+                <div class="col-md-6">
+                    <strong>분할 합계:</strong> <span id="splitTotal" class="text-danger">0원</span>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    splitItemsContainer.innerHTML = html;
+    updateTotal();
+}
+
+function updateTotal() {
+    const amountInputs = document.querySelectorAll('.split-amount');
+    let total = 0;
+    
+    amountInputs.forEach(input => {
+        total += parseFloat(input.value) || 0;
+    });
+    
+    const totalElement = document.getElementById('splitTotal');
+    totalElement.textContent = total.toLocaleString() + '원';
+    
+    if (Math.abs(total - originalTransactionAmount) < 0.01) {
+        totalElement.className = 'text-success';
+    } else {
+        totalElement.className = 'text-danger';
+    }
+}
+
+function getClassificationStatusText(status) {
+    const statusMap = {
+        'pending': '미분류',
+        'classified': '자동분류',
+        'manual': '수동분류'
+    };
+    return statusMap[status] || status;
 }
 
 function viewDetails(transactionId) {

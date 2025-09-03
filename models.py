@@ -138,6 +138,10 @@ class Transaction(db.Model):
     vendor_id = db.Column(db.Integer, db.ForeignKey('vendor.id'))
     classification_status = db.Column(db.String(20), default='pending')  # pending, classified, manual
     
+    # Split transaction fields
+    is_active = db.Column(db.Boolean, default=True)  # 분할 후 원본은 비활성화
+    split_parent_id = db.Column(db.Integer, db.ForeignKey('transaction.id'))  # 분할된 거래의 원본 ID
+    
     # Metadata
     raw_data = db.Column(db.Text)  # 원본 데이터 JSON
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
