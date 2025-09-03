@@ -328,6 +328,7 @@ def transactions():
     status = request.args.get('status', '')
     department_id = request.args.get('department_id', '')
     category_id = request.args.get('category_id', '')
+    account_id = request.args.get('account_id', '')
     search = request.args.get('search', '')
     
     # 기본 쿼리
@@ -340,6 +341,8 @@ def transactions():
         query = query.filter(Transaction.department_id == department_id)
     if category_id:
         query = query.filter(Transaction.category_id == category_id)
+    if account_id:
+        query = query.filter(Transaction.account_id == account_id)
     if search:
         query = query.filter(
             db.or_(
@@ -356,16 +359,25 @@ def transactions():
     # 필터 옵션을 위한 데이터
     departments = Department.query.all()
     categories = Category.query.all()
+    accounts = Account.query.join(Institution).all()
+    
+    # 현재 선택된 계좌 정보
+    selected_account = None
+    if account_id:
+        selected_account = Account.query.get(account_id)
     
     return render_template('transactions.html',
                          transactions=transactions_page.items,
                          pagination=transactions_page,
                          departments=departments,
                          categories=categories,
+                         accounts=accounts,
+                         selected_account=selected_account,
                          current_filters={
                              'status': status,
                              'department_id': department_id,
                              'category_id': category_id,
+                             'account_id': account_id,
                              'search': search
                          })
 
