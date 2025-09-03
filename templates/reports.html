@@ -87,11 +87,6 @@
                     </h5>
                 </div>
                 <div class="card-body">
-                    <!-- 디버깅 정보 -->
-                    <div class="alert alert-info">
-                        <small>데이터 개수: {{ monthly_flow | length }}개</small><br>
-                        <small>데이터: {{ monthly_flow }}</small>
-                    </div>
                     
                     {% set ns = namespace(total_income=0, total_expense=0) %}
                     {% for item in monthly_flow %}
