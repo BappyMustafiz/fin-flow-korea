@@ -2,6 +2,59 @@
 
 {% block title %}거래 내역 - 한국형 오픈뱅킹 회계시스템{% endblock %}
 
+{% block extra_css %}
+<style>
+.transaction-card {
+    transition: transform 0.2s, box-shadow 0.2s;
+    border: 1px solid #e3e6f0;
+}
+
+.transaction-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0.125rem 0.5rem rgba(0, 0, 0, 0.15);
+}
+
+.transaction-icon i {
+    width: 20px;
+    height: 20px;
+}
+
+.view-options .btn.active {
+    background-color: #007bff;
+    color: white;
+    border-color: #007bff;
+}
+
+.badge-status-pending {
+    background-color: #6c757d;
+    color: white;
+}
+
+.badge-status-classified {
+    background-color: #28a745;
+    color: white;
+}
+
+.badge-status-manual {
+    background-color: #007bff;
+    color: white;
+}
+
+#grid-view .btn-group {
+    flex-direction: column;
+}
+
+#grid-view .btn-group .btn {
+    border-radius: 0.25rem;
+    margin-bottom: 0.25rem;
+}
+
+#grid-view .btn-group .btn:last-child {
+    margin-bottom: 0;
+}
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="row mb-4">
     <div class="col-12">
@@ -112,10 +165,10 @@
             
             <div class="view-options">
                 <div class="btn-group btn-group-sm">
-                    <button class="btn btn-outline-secondary active" data-view="list">
+                    <button class="btn btn-outline-secondary active" data-view="list" onclick="switchView('list')">
                         <i data-feather="list"></i>
                     </button>
-                    <button class="btn btn-outline-secondary" data-view="grid">
+                    <button class="btn btn-outline-secondary" data-view="grid" onclick="switchView('grid')">
                         <i data-feather="grid"></i>
                     </button>
                 </div>
@@ -124,8 +177,8 @@
     </div>
 </div>
 
-<!-- Transactions List -->
-<div class="row">
+<!-- Transactions List View -->
+<div class="row" id="list-view">
     <div class="col-12">
         <div class="card">
             <div class="card-body p-0">
@@ -263,6 +316,113 @@
             </div>
         </div>
     </div>
+</div>
+
+<!-- Transactions Grid View -->
+<div class="row" id="grid-view" style="display: none;">
+    {% for transaction in transactions %}
+    <div class="col-lg-4 col-md-6 mb-4">
+        <div class="card h-100 transaction-card">
+            <div class="card-body">
+                <!-- 체크박스와 거래처 정보 -->
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input transaction-checkbox" 
+                               value="{{ transaction.id }}">
+                    </div>
+                    <div class="transaction-icon">
+                        {% if transaction.amount > 0 %}
+                            <i data-feather="arrow-down-right" class="text-success"></i>
+                        {% else %}
+                            <i data-feather="arrow-up-right" class="text-danger"></i>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- 거래처 및 설명 -->
+                <div class="mb-3">
+                    <h6 class="card-title">{{ transaction.counterparty or '(거래처 미상)' }}</h6>
+                    <p class="card-text text-muted small">{{ transaction.description }}</p>
+                    <small class="text-muted">{{ transaction.account.institution.name }}</small>
+                </div>
+                
+                <!-- 금액 -->
+                <div class="mb-3 text-center">
+                    <span class="h4 {{ transaction.amount | amount_color }}">
+                        {{ transaction.amount | currency }}
+                    </span>
+                </div>
+                
+                <!-- 날짜 정보 -->
+                <div class="mb-3 text-center">
+                    <div class="fw-bold">{{ transaction.transaction_date.strftime('%Y-%m-%d') }}</div>
+                    <small class="text-muted">{{ transaction.transaction_date.strftime('%H:%M') }}</small>
+                    {% if transaction.processed_date %}
+                    <div class="text-muted small">
+                        처리: {{ transaction.processed_date.strftime('%m/%d') }}
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <!-- 분류 정보 -->
+                <div class="mb-3">
+                    <div class="text-center mb-2">
+                        <span class="badge badge-status-{{ transaction.classification_status }}">
+                            {{ transaction.classification_status | classification_status }}
+                        </span>
+                    </div>
+                    
+                    {% if transaction.category %}
+                    <div class="text-center small text-muted mb-1">
+                        <i data-feather="tag" class="me-1" style="width: 12px; height: 12px;"></i>
+                        {{ transaction.category.name }}
+                    </div>
+                    {% endif %}
+                    
+                    {% if transaction.department %}
+                    <div class="text-center small text-muted mb-1">
+                        <i data-feather="users" class="me-1" style="width: 12px; height: 12px;"></i>
+                        {{ transaction.department.name }}
+                    </div>
+                    {% endif %}
+                    
+                    {% if transaction.vendor %}
+                    <div class="text-center small text-muted mb-1">
+                        <i data-feather="briefcase" class="me-1" style="width: 12px; height: 12px;"></i>
+                        {{ transaction.vendor.name }}
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <!-- 작업 버튼 -->
+                <div class="d-grid gap-2">
+                    <div class="btn-group btn-group-sm">
+                        <a href="{{ url_for('edit_transaction', transaction_id=transaction.id) }}" 
+                           class="btn btn-outline-primary" title="편집">
+                            <i data-feather="edit" class="me-1"></i>편집
+                        </a>
+                        <button class="btn btn-outline-secondary" 
+                                onclick="splitTransaction({{ transaction.id }})" 
+                                title="분할">
+                            <i data-feather="scissors" class="me-1"></i>분할
+                        </button>
+                        <button class="btn btn-outline-info" 
+                                onclick="viewDetails({{ transaction.id }})" 
+                                title="상세">
+                            <i data-feather="eye" class="me-1"></i>상세
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="col-12">
+        <div class="text-center text-muted py-4">
+            조건에 맞는 거래 내역이 없습니다.
+        </div>
+    </div>
+    {% endfor %}
 </div>
 
 <!-- Pagination -->
@@ -435,8 +595,42 @@ function bulkExport() {
     // 내보내기 로직
     const ids = Array.from(checkedBoxes).map(cb => cb.value);
     console.log('Exporting transactions:', ids);
-    alert('선택된 거래를 내보냅니다.');
 }
+
+// 보기 전환 함수
+function switchView(view) {
+    const listView = document.getElementById('list-view');
+    const gridView = document.getElementById('grid-view');
+    const listBtn = document.querySelector('[data-view="list"]');
+    const gridBtn = document.querySelector('[data-view="grid"]');
+    
+    if (view === 'list') {
+        listView.style.display = 'block';
+        gridView.style.display = 'none';
+        listBtn.classList.add('active');
+        gridBtn.classList.remove('active');
+        
+        // 로컬스토리지에 보기 설정 저장
+        localStorage.setItem('transactionView', 'list');
+    } else if (view === 'grid') {
+        listView.style.display = 'none';
+        gridView.style.display = 'block';
+        gridBtn.classList.add('active');
+        listBtn.classList.remove('active');
+        
+        // 로컬스토리지에 보기 설정 저장
+        localStorage.setItem('transactionView', 'grid');
+    }
+    
+    // Feather 아이콘 다시 렌더링
+    feather.replace();
+}
+
+// 페이지 로드 시 저장된 보기 설정 적용
+document.addEventListener('DOMContentLoaded', function() {
+    const savedView = localStorage.getItem('transactionView') || 'list';
+    switchView(savedView);
+});
 
 function splitTransaction(transactionId) {
     if (confirm('이 거래를 분할하시겠습니까?')) {
