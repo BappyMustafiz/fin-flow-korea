@@ -90,27 +90,29 @@
                     <div class="summary-item mb-3">
                         <div class="d-flex justify-content-between">
                             <span class="text-muted">총 수입</span>
-                            <strong class="text-success">{{ monthly_flow | selectattr('total', 'gt', 0) | sum(attribute='total') | currency }}</strong>
+                            <strong class="text-success">₩{{ "{:,.0f}".format(monthly_flow | selectattr('total', 'gt', 0) | sum(attribute='total') or 0) }}</strong>
                         </div>
                     </div>
                     <div class="summary-item mb-3">
                         <div class="d-flex justify-content-between">
                             <span class="text-muted">총 지출</span>
-                            <strong class="text-danger">{{ (monthly_flow | selectattr('total', 'lt', 0) | sum(attribute='total')) | abs | currency }}</strong>
+                            <strong class="text-danger">₩{{ "{:,.0f}".format((monthly_flow | selectattr('total', 'lt', 0) | sum(attribute='total') or 0) | abs) }}</strong>
                         </div>
                     </div>
                     <div class="summary-item mb-3">
                         <div class="d-flex justify-content-between">
                             <span class="text-muted">순현금흐름</span>
-                            <strong class="{{ (monthly_flow | sum(attribute='total')) | amount_color }}">
-                                {{ monthly_flow | sum(attribute='total') | currency }}
+                            {% set net_flow = monthly_flow | sum(attribute='total') or 0 %}
+                            <strong class="{% if net_flow > 0 %}text-success{% elif net_flow < 0 %}text-danger{% else %}text-muted{% endif %}">
+                                ₩{{ "{:,.0f}".format(net_flow) }}
                             </strong>
                         </div>
                     </div>
                     <div class="summary-item">
                         <div class="d-flex justify-content-between">
                             <span class="text-muted">평균 월 지출</span>
-                            <strong>{{ ((monthly_flow | selectattr('total', 'lt', 0) | sum(attribute='total')) / (monthly_flow | length if monthly_flow | length > 0 else 1)) | abs | currency }}</strong>
+                            {% set avg_expense = ((monthly_flow | selectattr('total', 'lt', 0) | sum(attribute='total') or 0) / (monthly_flow | length if monthly_flow | length > 0 else 1)) | abs %}
+                            <strong>₩{{ "{:,.0f}".format(avg_expense) }}</strong>
                         </div>
                     </div>
                 </div>
@@ -162,7 +164,7 @@
                                 <td>{{ loop.index }}</td>
                                 <td>{{ vendor.name }}</td>
                                 <td>{{ vendor.count }}회</td>
-                                <td class="text-end text-danger">{{ vendor.total | abs | currency }}</td>
+                                <td class="text-end text-danger">₩{{ "{:,.0f}".format(vendor.total | abs) }}</td>
                             </tr>
                             {% else %}
                             <tr>
@@ -210,9 +212,9 @@
                             {% set rate = (actual / budget * 100) if budget > 0 else 0 %}
                             <tr>
                                 <td>{{ dept.name }}</td>
-                                <td class="text-end">{{ budget | currency }}</td>
-                                <td class="text-end text-danger">{{ actual | currency }}</td>
-                                <td class="text-end {{ diff | amount_color }}">{{ diff | currency }}</td>
+                                <td class="text-end">₩{{ "{:,.0f}".format(budget) }}</td>
+                                <td class="text-end text-danger">₩{{ "{:,.0f}".format(actual) }}</td>
+                                <td class="text-end {% if diff > 0 %}text-success{% elif diff < 0 %}text-danger{% else %}text-muted{% endif %}">₩{{ "{:,.0f}".format(diff) }}</td>
                                 <td class="text-center">
                                     <div class="progress" style="width: 100px;">
                                         <div class="progress-bar {% if rate > 100 %}bg-danger{% elif rate > 90 %}bg-warning{% else %}bg-success{% endif %}" 

@@ -582,8 +582,7 @@ def reports():
     """보고서"""
     # 현금흐름 차트 데이터 (최근 12개월)
     end_date = date.today()
-    start_date = end_date.replace(month=1 if end_date.month == 12 else end_date.month + 1, 
-                                  year=end_date.year - 1 if end_date.month == 12 else end_date.year)
+    start_date = end_date.replace(year=end_date.year - 1)
     
     # 월별 현금흐름
     monthly_flow_raw = db.session.query(
