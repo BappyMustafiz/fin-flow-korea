@@ -71,7 +71,9 @@
                     </h5>
                 </div>
                 <div class="card-body">
-                    <canvas id="cashflowChart" height="300"></canvas>
+                    <div style="height: 300px;">
+                    <canvas id="cashflowChart"></canvas>
+                </div>
                 </div>
             </div>
         </div>
@@ -128,7 +130,9 @@
                 </h5>
             </div>
             <div class="card-body">
-                <canvas id="deptSpendingChart" height="300"></canvas>
+                <div style="height: 300px;">
+                    <canvas id="deptSpendingChart"></canvas>
+                </div>
             </div>
         </div>
     </div>
@@ -291,6 +295,7 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     initializeReports();
@@ -372,9 +377,9 @@ function initDeptSpendingChart() {
         new Chart(ctx, {
             type: 'doughnut',
             data: {
-                labels: deptData.map(d => d[0]),
+                labels: deptData.map(d => d.name),
                 datasets: [{
-                    data: deptData.map(d => Math.abs(d[1])),
+                    data: deptData.map(d => Math.abs(d.total)),
                     backgroundColor: [
                         '#007bff', // 밝은 파랑
                         '#dc3545', // 빨강
