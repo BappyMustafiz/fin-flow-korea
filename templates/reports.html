@@ -469,7 +469,7 @@ function exportReport(format) {
     const url = `/reports/export?${params.toString()}`;
     const link = document.createElement('a');
     link.href = url;
-    link.download = `재무리포트_${new Date().toISOString().split('T')[0]}.${format}`;
+    link.download = `financial_report_${new Date().toISOString().split('T')[0]}.${format}`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

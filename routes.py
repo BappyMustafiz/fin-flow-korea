@@ -1066,7 +1066,7 @@ def export_csv(data, report_type, start_date, end_date):
     # 응답 생성
     response = make_response(output.getvalue())
     response.headers['Content-Type'] = 'text/csv; charset=utf-8'
-    response.headers['Content-Disposition'] = f'attachment; filename=재무리포트_{start_date}_{end_date}.csv'
+    response.headers['Content-Disposition'] = f'attachment; filename="financial_report_{start_date}_{end_date}.csv"'
     
     return response
 
@@ -1096,7 +1096,7 @@ def export_excel(data, report_type, start_date, end_date):
     # 응답 생성
     response = make_response(output.getvalue())
     response.headers['Content-Type'] = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    response.headers['Content-Disposition'] = f'attachment; filename=재무리포트_{start_date}_{end_date}.xlsx'
+    response.headers['Content-Disposition'] = f'attachment; filename="financial_report_{start_date}_{end_date}.xlsx"'
     
     return response
 
@@ -1167,7 +1167,7 @@ def export_pdf(data, report_type, start_date, end_date):
     buffer.seek(0)
     response = make_response(buffer.getvalue())
     response.headers['Content-Type'] = 'application/pdf'
-    response.headers['Content-Disposition'] = f'attachment; filename=재무리포트_{start_date}_{end_date}.pdf'
+    response.headers['Content-Disposition'] = f'attachment; filename="financial_report_{start_date}_{end_date}.pdf"'
     
     return response
 
