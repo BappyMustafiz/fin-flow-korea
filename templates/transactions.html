@@ -65,9 +65,10 @@
     justify-content: space-between;
 }
 
+/* 자동 반응형 그리드 - 카드 최소 크기 기준으로 자동 조정 */
 #grid-view {
-    display: flex !important;
-    flex-wrap: wrap !important;
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)) !important;
     gap: 1rem !important;
     padding: 0 !important;
     margin: 0 !important;
@@ -75,44 +76,22 @@
 }
 
 #grid-view .grid-item {
-    flex: 0 0 calc(20% - 0.8rem) !important;
-    width: calc(20% - 0.8rem) !important;
-    max-width: calc(20% - 0.8rem) !important;
+    width: 100% !important;
     margin: 0 !important;
     padding: 0 !important;
     box-sizing: border-box !important;
 }
 
-/* 반응형 */
-@media (max-width: 1399px) {
-    #grid-view .grid-item {
-        flex: 0 0 calc(25% - 0.75rem) !important;
-        width: calc(25% - 0.75rem) !important;
-        max-width: calc(25% - 0.75rem) !important;
+/* 작은 화면에서는 최소 크기 조정 */
+@media (max-width: 768px) {
+    #grid-view {
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) !important;
     }
 }
 
-@media (max-width: 1199px) {
-    #grid-view .grid-item {
-        flex: 0 0 calc(33.333% - 0.67rem) !important;
-        width: calc(33.333% - 0.67rem) !important;
-        max-width: calc(33.333% - 0.67rem) !important;
-    }
-}
-
-@media (max-width: 767px) {
-    #grid-view .grid-item {
-        flex: 0 0 calc(50% - 0.5rem) !important;
-        width: calc(50% - 0.5rem) !important;
-        max-width: calc(50% - 0.5rem) !important;
-    }
-}
-
-@media (max-width: 575px) {
-    #grid-view .grid-item {
-        flex: 0 0 100% !important;
-        width: 100% !important;
-        max-width: 100% !important;
+@media (max-width: 480px) {
+    #grid-view {
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)) !important;
     }
 }
 </style>
@@ -651,19 +630,10 @@ function switchView(view) {
     } else if (view === 'grid') {
         listView.style.display = 'none';
         gridView.style.display = 'grid';
-        gridView.classList.add('grid-container');
-        gridView.style.gridTemplateColumns = 'repeat(5, 1fr)';
+        gridView.style.gridTemplateColumns = 'repeat(auto-fit, minmax(250px, 1fr))';
         gridView.style.gap = '1rem';
         gridBtn.classList.add('active');
         listBtn.classList.remove('active');
-        
-        // 그리드 아이템들 강제 스타일 적용
-        const gridItems = gridView.querySelectorAll('.grid-item');
-        gridItems.forEach(item => {
-            item.style.width = '100%';
-            item.style.margin = '0';
-            item.style.padding = '0';
-        });
         
         // 로컬스토리지에 보기 설정 저장
         localStorage.setItem('transactionView', 'grid');
