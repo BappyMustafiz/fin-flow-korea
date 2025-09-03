@@ -65,50 +65,42 @@
     justify-content: space-between;
 }
 
-/* 그리드 컨테이너 강제 설정 */
-#grid-view {
-    display: flex !important;
-    flex-wrap: wrap !important;
+.grid-container {
+    display: grid !important;
+    grid-template-columns: repeat(5, 1fr) !important;
     gap: 1rem !important;
+    padding: 0 !important;
+    margin: 0 !important;
 }
 
-#grid-view > div {
-    flex: 0 0 calc(20% - 1rem) !important;
-    max-width: calc(20% - 1rem) !important;
-    width: calc(20% - 1rem) !important;
-    margin-bottom: 1rem !important;
+.grid-item {
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
 }
 
-/* 반응형 */
+/* 반응형 그리드 */
 @media (max-width: 1399px) {
-    #grid-view > div {
-        flex: 0 0 calc(25% - 1rem) !important;
-        max-width: calc(25% - 1rem) !important;
-        width: calc(25% - 1rem) !important;
+    .grid-container {
+        grid-template-columns: repeat(4, 1fr) !important;
     }
 }
 
 @media (max-width: 1199px) {
-    #grid-view > div {
-        flex: 0 0 calc(33.333% - 1rem) !important;
-        max-width: calc(33.333% - 1rem) !important;
-        width: calc(33.333% - 1rem) !important;
+    .grid-container {
+        grid-template-columns: repeat(3, 1fr) !important;
     }
 }
 
 @media (max-width: 767px) {
-    #grid-view > div {
-        flex: 0 0 calc(50% - 1rem) !important;
-        max-width: calc(50% - 1rem) !important;
-        width: calc(50% - 1rem) !important;
+    .grid-container {
+        grid-template-columns: repeat(2, 1fr) !important;
     }
 }
 
 @media (max-width: 575px) {
-    #grid-view > div {
-        flex: 0 0 100% !important;
-        max-width: 100% !important;
-        width: 100% !important;
+    .grid-container {
+        grid-template-columns: 1fr !important;
     }
 }
 </style>
@@ -378,9 +370,9 @@
 </div>
 
 <!-- Transactions Grid View -->
-<div class="row" id="grid-view" style="display: none;">
+<div id="grid-view" class="grid-container" style="display: none;">
     {% for transaction in transactions %}
-    <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6 mb-4">
+    <div class="grid-item">
         <div class="card h-100 transaction-card">
             <div class="card-body">
                 <!-- 체크박스와 거래처 정보 -->
