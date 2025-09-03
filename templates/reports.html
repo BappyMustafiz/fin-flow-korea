@@ -49,9 +49,22 @@
                         </button>
                     </div>
                     <div class="col-md-1">
-                        <button type="button" class="btn btn-outline-secondary" onclick="exportReport()">
-                            <i data-feather="download" class="me-1"></i>내보내기
-                        </button>
+                        <div class="dropdown">
+                            <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                <i data-feather="download" class="me-1"></i>내보내기
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#" onclick="exportReport('pdf')">
+                                    <i data-feather="file-text" class="me-2" style="width: 14px; height: 14px;"></i>PDF
+                                </a></li>
+                                <li><a class="dropdown-item" href="#" onclick="exportReport('excel')">
+                                    <i data-feather="grid" class="me-2" style="width: 14px; height: 14px;"></i>Excel
+                                </a></li>
+                                <li><a class="dropdown-item" href="#" onclick="exportReport('csv')">
+                                    <i data-feather="file" class="me-2" style="width: 14px; height: 14px;"></i>CSV
+                                </a></li>
+                            </ul>
+                        </div>
                     </div>
                 </form>
             </div>
@@ -435,15 +448,35 @@ function generateReport() {
     }, 2000);
 }
 
-function exportReport() {
-    // 리포트 내보내기 로직
+function exportReport(format) {
     const reportType = document.getElementById('reportType').value;
-    showToast(`${reportType} 리포트를 내보내고 있습니다...`, 'info');
+    const startDate = document.getElementById('startDate').value;
+    const endDate = document.getElementById('endDate').value;
+    const period = document.getElementById('period').value;
     
-    // 실제로는 파일 다운로드 처리
+    // 내보내기 URL 생성
+    const params = new URLSearchParams({
+        type: reportType,
+        start_date: startDate,
+        end_date: endDate,
+        period: period,
+        format: format
+    });
+    
+    showToast(`${format.toUpperCase()} 형식으로 내보내고 있습니다...`, 'info');
+    
+    // 파일 다운로드
+    const url = `/reports/export?${params.toString()}`;
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `재무리포트_${new Date().toISOString().split('T')[0]}.${format}`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
     setTimeout(() => {
         showToast('리포트 파일이 다운로드되었습니다.', 'success');
-    }, 1500);
+    }, 1000);
 }
 
 function showToast(message, type = 'success') {

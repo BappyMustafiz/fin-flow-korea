@@ -956,6 +956,221 @@ def add_vendor():
         flash(f'공급업체 추가 중 오류가 발생했습니다: {str(e)}', 'error')
         return redirect(url_for('contracts'))
 
+@app.route('/reports/export')
+@login_required
+def export_reports():
+    """리포트 내보내기"""
+    try:
+        from datetime import date, datetime
+        import io
+        from flask import make_response
+        
+        # 파라미터 가져오기
+        report_type = request.args.get('type', 'cashflow')
+        start_date_str = request.args.get('start_date')
+        end_date_str = request.args.get('end_date')
+        period = request.args.get('period', 'monthly')
+        export_format = request.args.get('format', 'pdf')
+        
+        # 날짜 처리
+        if start_date_str and end_date_str:
+            start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+        else:
+            end_date = date.today()
+            start_date = end_date.replace(year=end_date.year - 1)
+        
+        # 데이터 조회
+        from models import Transaction, Department, Vendor
+        from sqlalchemy import func, extract
+        
+        # 월별 현금흐름 데이터
+        monthly_income_raw = db.session.query(
+            extract('year', Transaction.transaction_date).label('year'),
+            extract('month', Transaction.transaction_date).label('month'),
+            func.sum(Transaction.amount).label('total')
+        ).filter(
+            Transaction.transaction_date >= start_date,
+            Transaction.transaction_date <= end_date,
+            Transaction.amount > 0
+        ).group_by(
+            extract('year', Transaction.transaction_date),
+            extract('month', Transaction.transaction_date)
+        ).order_by('year', 'month').all()
+        
+        monthly_expense_raw = db.session.query(
+            extract('year', Transaction.transaction_date).label('year'),
+            extract('month', Transaction.transaction_date).label('month'),
+            func.sum(Transaction.amount).label('total')
+        ).filter(
+            Transaction.transaction_date >= start_date,
+            Transaction.transaction_date <= end_date,
+            Transaction.amount < 0
+        ).group_by(
+            extract('year', Transaction.transaction_date),
+            extract('month', Transaction.transaction_date)
+        ).order_by('year', 'month').all()
+        
+        # 데이터 정리
+        income_dict = {(int(row.year), int(row.month)): float(row.total or 0) for row in monthly_income_raw}
+        expense_dict = {(int(row.year), int(row.month)): float(row.total or 0) for row in monthly_expense_raw}
+        
+        all_months = set(income_dict.keys()) | set(expense_dict.keys())
+        monthly_data = []
+        for year, month in sorted(all_months):
+            income = income_dict.get((year, month), 0)
+            expense = expense_dict.get((year, month), 0)
+            monthly_data.append({
+                'period': f'{year}-{month:02d}',
+                'income': income,
+                'expense': abs(expense),
+                'net': income + expense
+            })
+        
+        # 파일 생성
+        if export_format == 'csv':
+            return export_csv(monthly_data, report_type, start_date, end_date)
+        elif export_format == 'excel':
+            return export_excel(monthly_data, report_type, start_date, end_date)
+        elif export_format == 'pdf':
+            return export_pdf(monthly_data, report_type, start_date, end_date)
+        else:
+            flash('지원하지 않는 형식입니다.', 'error')
+            return redirect(url_for('reports'))
+            
+    except Exception as e:
+        flash(f'내보내기 중 오류가 발생했습니다: {str(e)}', 'error')
+        return redirect(url_for('reports'))
+
+def export_csv(data, report_type, start_date, end_date):
+    """CSV 내보내기"""
+    import csv
+    import io
+    from flask import make_response
+    
+    output = io.StringIO()
+    writer = csv.writer(output)
+    
+    # 헤더
+    writer.writerow(['기간', '수입(원)', '지출(원)', '순현금흐름(원)'])
+    
+    # 데이터
+    for row in data:
+        writer.writerow([
+            row['period'],
+            f"{row['income']:,.0f}",
+            f"{row['expense']:,.0f}",
+            f"{row['net']:,.0f}"
+        ])
+    
+    # 응답 생성
+    response = make_response(output.getvalue())
+    response.headers['Content-Type'] = 'text/csv; charset=utf-8'
+    response.headers['Content-Disposition'] = f'attachment; filename=재무리포트_{start_date}_{end_date}.csv'
+    
+    return response
+
+def export_excel(data, report_type, start_date, end_date):
+    """Excel 내보내기"""
+    import pandas as pd
+    import io
+    from flask import make_response
+    
+    # DataFrame 생성
+    df = pd.DataFrame([
+        {
+            '기간': row['period'],
+            '수입(원)': row['income'],
+            '지출(원)': row['expense'],
+            '순현금흐름(원)': row['net']
+        } for row in data
+    ])
+    
+    # Excel 파일 생성
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, sheet_name='재무리포트', index=False)
+    
+    output.seek(0)
+    
+    # 응답 생성
+    response = make_response(output.getvalue())
+    response.headers['Content-Type'] = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    response.headers['Content-Disposition'] = f'attachment; filename=재무리포트_{start_date}_{end_date}.xlsx'
+    
+    return response
+
+def export_pdf(data, report_type, start_date, end_date):
+    """PDF 내보내기"""
+    from reportlab.lib.pagesizes import A4
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib import colors
+    from reportlab.lib.units import inch
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+    import io
+    from flask import make_response
+    
+    # 메모리에 PDF 생성
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4)
+    
+    # 스타일
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle(
+        'CustomTitle',
+        parent=styles['Heading1'],
+        fontSize=16,
+        spaceAfter=30,
+        alignment=1  # 중앙 정렬
+    )
+    
+    # 내용 생성
+    story = []
+    
+    # 제목
+    title = Paragraph(f"재무 리포트 ({start_date} ~ {end_date})", title_style)
+    story.append(title)
+    story.append(Spacer(1, 12))
+    
+    # 테이블 데이터
+    table_data = [['기간', '수입(원)', '지출(원)', '순현금흐름(원)']]
+    
+    for row in data:
+        table_data.append([
+            row['period'],
+            f"{row['income']:,.0f}",
+            f"{row['expense']:,.0f}",
+            f"{row['net']:,.0f}"
+        ])
+    
+    # 테이블 생성
+    table = Table(table_data)
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 12),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black)
+    ]))
+    
+    story.append(table)
+    
+    # PDF 빌드
+    doc.build(story)
+    
+    # 응답 생성
+    buffer.seek(0)
+    response = make_response(buffer.getvalue())
+    response.headers['Content-Type'] = 'application/pdf'
+    response.headers['Content-Disposition'] = f'attachment; filename=재무리포트_{start_date}_{end_date}.pdf'
+    
+    return response
+
 @app.route('/budgets')
 @login_required
 def budgets():
