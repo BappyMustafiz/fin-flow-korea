@@ -269,6 +269,32 @@ def accounts():
                          departments=departments,
                          institutions=institutions)
 
+@app.route('/account/add', methods=['POST'])
+@login_required
+def add_account():
+    """계좌 추가"""
+    try:
+        # 새 계좌 생성
+        account = Account()
+        account.institution_id = request.form.get('institution_id')
+        account.account_name = request.form.get('account_name')
+        account.account_number = request.form.get('account_number')
+        account.account_type = request.form.get('account_type')
+        account.balance = float(request.form.get('balance', 0))
+        account.currency = request.form.get('currency', 'KRW')
+        account.department_id = request.form.get('department_id') or None
+        account.is_active = True
+        
+        db.session.add(account)
+        db.session.commit()
+        
+        flash('계좌가 성공적으로 추가되었습니다.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'계좌 추가 중 오류가 발생했습니다: {str(e)}', 'error')
+    
+    return redirect(url_for('accounts'))
+
 @app.route('/transactions')
 @login_required
 def transactions():
