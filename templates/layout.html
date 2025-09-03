@@ -20,7 +20,7 @@
         <div class="container-fluid">
             <a class="navbar-brand fw-bold" href="{{ url_for('dashboard') }}">
                 <i data-feather="trending-up" class="me-2"></i>
-                회계시스템
+                {{ get_text('brand') }}
             </a>
             
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
@@ -31,83 +31,105 @@
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('dashboard') }}">
-                            <i data-feather="home" class="me-1"></i>대시보드
+                            <i data-feather="home" class="me-1"></i>{{ get_text('dashboard') }}
                         </a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('connections') }}">
-                            <i data-feather="link" class="me-1"></i>연결 관리
+                            <i data-feather="link" class="me-1"></i>{{ get_text('connections') }}
                         </a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('accounts') }}">
-                            <i data-feather="credit-card" class="me-1"></i>계정 관리
+                            <i data-feather="credit-card" class="me-1"></i>{{ get_text('accounts') }}
                         </a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('transactions') }}">
-                            <i data-feather="list" class="me-1"></i>거래 내역
+                            <i data-feather="list" class="me-1"></i>{{ get_text('transactions') }}
                         </a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('rules') }}">
-                            <i data-feather="settings" class="me-1"></i>분류 규칙
+                            <i data-feather="settings" class="me-1"></i>{{ get_text('rules') }}
                         </a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('contracts') }}">
-                            <i data-feather="file-text" class="me-1"></i>계약 관리
+                            <i data-feather="file-text" class="me-1"></i>{{ get_text('contracts') }}
                         </a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('departments') }}">
-                            <i data-feather="home" class="me-1"></i>부서 관리
+                            <i data-feather="home" class="me-1"></i>{{ get_text('departments') }}
                         </a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('budgets') }}">
-                            <i data-feather="dollar-sign" class="me-1"></i>예산 관리
+                            <i data-feather="dollar-sign" class="me-1"></i>{{ get_text('budgets') }}
                         </a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('reports') }}">
-                            <i data-feather="bar-chart-2" class="me-1"></i>리포트
+                            <i data-feather="bar-chart-2" class="me-1"></i>{{ get_text('reports') }}
                         </a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('settings') }}">
-                            <i data-feather="bell" class="me-1"></i>알림/설정
+                            <i data-feather="bell" class="me-1"></i>{{ get_text('settings') }}
                         </a>
                     </li>
                 </ul>
                 
                 <ul class="navbar-nav">
-                    <li class="nav-item dropdown">
+                    <!-- 언어 선택 드롭다운 -->
+                    <li class="nav-item dropdown me-2">
                         <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                            <i data-feather="user" class="me-1"></i>관리자
+                            <i data-feather="globe" class="me-1"></i>
+                            {% if current_lang == 'ko' %}한국어{% else %}English{% endif %}
                         </a>
                         <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="#">프로필</a></li>
+                            <li>
+                                <a class="dropdown-item {% if current_lang == 'ko' %}active{% endif %}" 
+                                   href="{{ url_for('set_language', language='ko') }}">
+                                    🇰🇷 한국어
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item {% if current_lang == 'en' %}active{% endif %}" 
+                                   href="{{ url_for('set_language', language='en') }}">
+                                    🇺🇸 English
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+                    
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                            <i data-feather="user" class="me-1"></i>{{ get_text('profile') }}
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#">{{ get_text('profile') }}</a></li>
                             <li><hr class="dropdown-divider"></li>
-                            <li><h6 class="dropdown-header">관리자 메뉴</h6></li>
+                            <li><h6 class="dropdown-header">{{ get_text('admin_menu') }}</h6></li>
                             <li><a class="dropdown-item" href="{{ url_for('users') }}">
-                                <i data-feather="users" class="me-2"></i>계정 관리
+                                <i data-feather="users" class="me-2"></i>{{ get_text('users') }}
                             </a></li>
                             <li><a class="dropdown-item" href="{{ url_for('audit') }}">
-                                <i data-feather="eye" class="me-2"></i>감사 로그
+                                <i data-feather="eye" class="me-2"></i>{{ get_text('audit') }}
                             </a></li>
                             <li><a class="dropdown-item" href="{{ url_for('init_data') }}">
-                                <i data-feather="database" class="me-2"></i>샘플 데이터
+                                <i data-feather="database" class="me-2"></i>{{ get_text('sample_data') }}
                             </a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item text-danger" href="{{ url_for('logout') }}">
-                                <i data-feather="log-out" class="me-2"></i>로그아웃
+                                <i data-feather="log-out" class="me-2"></i>{{ get_text('logout') }}
                             </a></li>
                         </ul>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link text-danger fw-bold" href="{{ url_for('logout') }}">
-                            <i data-feather="log-out" class="me-1"></i>로그아웃
+                            <i data-feather="log-out" class="me-1"></i>{{ get_text('logout') }}
                         </a>
                     </li>
                 </ul>

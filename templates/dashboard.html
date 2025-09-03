@@ -5,8 +5,8 @@
 {% block content %}
 <div class="row mb-4">
     <div class="col-12">
-        <h1 class="h3 mb-0">대시보드</h1>
-        <p class="text-muted">실시간 재무 현황 및 주요 지표</p>
+        <h1 class="h3 mb-0">{{ get_text('dashboard') }}</h1>
+        <p class="text-muted">{{ get_text('real_time_financial_status') }}</p>
     </div>
 </div>
 
@@ -17,10 +17,10 @@
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <h5 class="card-title mb-0">이번달 수입</h5>
+                        <h5 class="card-title mb-0">{{ get_text('current_month_income') }}</h5>
                         <h3 class="mb-0">{{ current_income | currency }}</h3>
                         <small class="text-muted">
-                            전월: {{ last_income | currency }}
+                            {{ get_text('last_month') }}: {{ last_income | currency }}
                         </small>
                     </div>
                     <div class="kpi-icon">
@@ -36,7 +36,7 @@
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <h5 class="card-title mb-0">이번달 지출</h5>
+                        <h5 class="card-title mb-0">{{ get_text('current_month_expense') }}</h5>
                         <h3 class="mb-0">{{ current_expense | currency }}</h3>
                         <small class="text-muted">
                             전월: {{ last_expense | currency }}
@@ -55,7 +55,7 @@
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <h5 class="card-title mb-0">당월 수지</h5>
+                        <h5 class="card-title mb-0">{{ get_text('current_balance') }}</h5>
                         <h3 class="mb-0 {{ (current_income - current_expense) | amount_color }}">
                             {{ (current_income - current_expense) | currency }}
                         </h3>
@@ -76,11 +76,11 @@
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <h5 class="card-title mb-0">미분류 거래</h5>
+                        <h5 class="card-title mb-0">{{ get_text('unclassified_transactions') }}</h5>
                         <h3 class="mb-0">{{ unclassified_count }}건</h3>
                         <small class="text-muted">
                             <a href="{{ url_for('transactions', status='pending') }}" class="text-decoration-none">
-                                분류 작업 하기
+                                {{ get_text('classify_now') }}
                             </a>
                         </small>
                     </div>
@@ -100,7 +100,7 @@
             <div class="card-header">
                 <h5 class="card-title mb-0">
                     <i data-feather="bar-chart-2" class="me-2"></i>
-                    최근 7일 현금흐름
+                    {{ get_text('recent_7_days_cashflow') }}
                 </h5>
             </div>
             <div class="card-body">
@@ -114,7 +114,7 @@
             <div class="card-header">
                 <h5 class="card-title mb-0">
                     <i data-feather="pie-chart" class="me-2"></i>
-                    부서별 지출 현황
+                    {{ get_text('department_expense_status') }}
                 </h5>
             </div>
             <div class="card-body">
@@ -132,9 +132,9 @@
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="card-title mb-0">
                     <i data-feather="list" class="me-2"></i>
-                    최근 거래 내역
+                    {{ get_text('recent_transactions') }}
                 </h5>
-                <a href="{{ url_for('transactions') }}" class="btn btn-sm btn-outline-primary">전체 보기</a>
+                <a href="{{ url_for('transactions') }}" class="btn btn-sm btn-outline-primary">{{ get_text('view_all') }}</a>
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
@@ -170,7 +170,7 @@
                             {% else %}
                             <tr>
                                 <td colspan="5" class="text-center text-muted py-4">
-                                    거래 내역이 없습니다.
+                                    {{ get_text('no_transactions') }}
                                 </td>
                             </tr>
                             {% endfor %}
@@ -187,9 +187,9 @@
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="card-title mb-0">
                     <i data-feather="bell" class="me-2"></i>
-                    최근 알림
+                    {{ get_text('recent_alerts') }}
                 </h5>
-                <a href="{{ url_for('settings') }}" class="btn btn-sm btn-outline-primary">전체 보기</a>
+                <a href="{{ url_for('settings') }}" class="btn btn-sm btn-outline-primary">{{ get_text('view_all') }}</a>
             </div>
             <div class="card-body">
                 {% for alert in recent_alerts %}
@@ -214,7 +214,7 @@
                 {% else %}
                 <div class="text-center text-muted py-4">
                     <i data-feather="check-circle" class="mb-2" style="width: 48px; height: 48px;"></i>
-                    <p class="mb-0">새로운 알림이 없습니다.</p>
+                    <p class="mb-0">{{ get_text('no_alerts') }}</p>
                 </div>
                 {% endfor %}
             </div>

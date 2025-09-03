@@ -8,6 +8,111 @@ from models import (Institution, Account, Transaction, Category, Department,
 import json
 import re
 
+# 언어 텍스트 사전
+TEXTS = {
+    'ko': {
+        # 네비게이션
+        'brand': '회계시스템',
+        'dashboard': '대시보드',
+        'connections': '연결 관리',
+        'accounts': '계정 관리',
+        'transactions': '거래 내역',
+        'rules': '분류 규칙',
+        'contracts': '계약 관리',
+        'departments': '부서 관리',
+        'budgets': '예산 관리',
+        'reports': '리포트',
+        'settings': '알림/설정',
+        'users': '계정 관리',
+        'audit': '감사 로그',
+        'sample_data': '샘플 데이터',
+        'logout': '로그아웃',
+        'profile': '프로필',
+        'admin_menu': '관리자 메뉴',
+        
+        # 대시보드
+        'real_time_financial_status': '실시간 재무 현황 및 주요 지표',
+        'current_month_income': '이번달 수입',
+        'current_month_expense': '이번달 지출',
+        'current_balance': '당월 수지',
+        'unclassified_transactions': '미분류 거래',
+        'last_month': '전월',
+        'classify_now': '분류 작업 하기',
+        'recent_7_days_cashflow': '최근 7일 현금흐름',
+        'department_expense_status': '부서별 지출 현황',
+        'recent_transactions': '최근 거래 내역',
+        'recent_alerts': '최근 알림',
+        'view_all': '전체 보기',
+        'no_transactions': '거래 내역이 없습니다.',
+        'no_alerts': '새로운 알림이 없습니다.',
+        
+        # 공통
+        'language': '언어'
+    },
+    'en': {
+        # 네비게이션
+        'brand': 'Accounting System',
+        'dashboard': 'Dashboard',
+        'connections': 'Connections',
+        'accounts': 'Accounts',
+        'transactions': 'Transactions',
+        'rules': 'Rules',
+        'contracts': 'Contracts',
+        'departments': 'Departments',
+        'budgets': 'Budgets',
+        'reports': 'Reports',
+        'settings': 'Settings',
+        'users': 'Users',
+        'audit': 'Audit Log',
+        'sample_data': 'Sample Data',
+        'logout': 'Logout',
+        'profile': 'Profile',
+        'admin_menu': 'Admin Menu',
+        
+        # 대시보드
+        'real_time_financial_status': 'Real-time Financial Status & Key Metrics',
+        'current_month_income': 'Current Month Income',
+        'current_month_expense': 'Current Month Expenses',
+        'current_balance': 'Current Balance',
+        'unclassified_transactions': 'Unclassified Transactions',
+        'last_month': 'Last Month',
+        'classify_now': 'Classify Now',
+        'recent_7_days_cashflow': 'Recent 7 Days Cash Flow',
+        'department_expense_status': 'Department Expense Status',
+        'recent_transactions': 'Recent Transactions',
+        'recent_alerts': 'Recent Alerts',
+        'view_all': 'View All',
+        'no_transactions': 'No transactions available.',
+        'no_alerts': 'No new alerts.',
+        
+        # 공통
+        'language': 'Language'
+    }
+}
+
+def get_text(key, lang=None):
+    """언어별 텍스트 반환"""
+    if lang is None:
+        lang = session.get('language', 'ko')
+    return TEXTS.get(lang, TEXTS['ko']).get(key, key)
+
+# 템플릿에서 사용할 수 있도록 컨텍스트 프로세서 등록
+@app.context_processor
+def inject_language():
+    """템플릿에 언어 관련 함수 주입"""
+    return dict(
+        get_text=get_text,
+        current_lang=session.get('language', 'ko')
+    )
+
+@app.route('/set-language/<language>')
+def set_language(language):
+    """언어 설정"""
+    if language in ['ko', 'en']:
+        session['language'] = language
+        flash(get_text('language_changed', language), 'success')
+    return redirect(request.referrer or url_for('dashboard'))
+
 # 인증 라우트들
 @app.route('/login', methods=['GET', 'POST'])
 @app.route('/fresh-login', methods=['GET', 'POST'])
