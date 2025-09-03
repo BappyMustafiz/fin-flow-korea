@@ -1,0 +1,321 @@
+{% extends "layout.html" %}
+
+{% block title %}계약 관리{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i data-feather="file-text" class="me-2"></i>계약 관리</h2>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addContractModal">
+        <i data-feather="plus" class="me-2"></i>새 계약 추가
+    </button>
+</div>
+
+<!-- Contract Stats -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <i data-feather="file-text" class="text-primary mb-2" style="width: 48px; height: 48px;"></i>
+                <h4 class="text-primary">{{ contracts|length }}</h4>
+                <p class="text-muted mb-0">전체 계약</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <i data-feather="check-circle" class="text-success mb-2" style="width: 48px; height: 48px;"></i>
+                <h4 class="text-success">{{ contracts | selectattr('status', 'equalto', 'active') | list | length }}</h4>
+                <p class="text-muted mb-0">활성 계약</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <i data-feather="clock" class="text-warning mb-2" style="width: 48px; height: 48px;"></i>
+                <h4 class="text-warning">{{ contracts | selectattr('status', 'equalto', 'expired') | list | length }}</h4>
+                <p class="text-muted mb-0">만료 계약</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <i data-feather="dollar-sign" class="text-info mb-2" style="width: 48px; height: 48px;"></i>
+                <h4 class="text-info">{{ (contracts | sum(attribute='contract_amount') | default(0) / 1000000) | round(1) }}M</h4>
+                <p class="text-muted mb-0">총 계약금액</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Contracts Table -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="card-title mb-0">계약 목록</h5>
+    </div>
+    <div class="card-body">
+        {% if contracts %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>계약명</th>
+                        <th>공급업체</th>
+                        <th>부서</th>
+                        <th>계약금액</th>
+                        <th>계약기간</th>
+                        <th>상태</th>
+                        <th>작업</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for contract in contracts %}
+                    <tr>
+                        <td>
+                            <strong>{{ contract.name }}</strong>
+                            {% if contract.description %}
+                            <br><small class="text-muted">{{ contract.description[:50] }}{% if contract.description|length > 50 %}...{% endif %}</small>
+                            {% endif %}
+                        </td>
+                        <td>{{ contract.vendor.name if contract.vendor else '-' }}</td>
+                        <td>{{ contract.department.name if contract.department else '-' }}</td>
+                        <td>₩{{ "{:,.0f}".format(contract.contract_amount) }}</td>
+                        <td>
+                            {{ contract.start_date.strftime('%Y-%m-%d') }}<br>
+                            <small class="text-muted">~ {{ contract.end_date.strftime('%Y-%m-%d') }}</small>
+                        </td>
+                        <td>
+                            {% if contract.status == 'active' %}
+                                <span class="badge bg-success">활성</span>
+                            {% elif contract.status == 'expired' %}
+                                <span class="badge bg-danger">만료</span>
+                            {% elif contract.status == 'terminated' %}
+                                <span class="badge bg-secondary">종료</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary" onclick="editContract({{ contract.id }}, '{{ contract.name }}', {{ contract.vendor_id }}, {{ contract.department_id }}, {{ contract.contract_amount }}, '{{ contract.start_date }}', '{{ contract.end_date }}', '{{ contract.description }}', '{{ contract.status }}')">
+                                <i data-feather="edit" style="width: 14px; height: 14px;"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i data-feather="file-text" class="text-muted mb-3" style="width: 64px; height: 64px;"></i>
+            <p class="text-muted">등록된 계약이 없습니다. 첫 번째 계약을 추가해보세요.</p>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addContractModal">
+                <i data-feather="plus" class="me-2"></i>계약 추가하기
+            </button>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Add Contract Modal -->
+<div class="modal fade" id="addContractModal" tabindex="-1" aria-labelledby="addContractModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addContractModalLabel">
+                    <i data-feather="plus" class="me-2"></i>새 계약 추가
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="/contracts/add" method="POST">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="contractName" class="form-label">계약명 *</label>
+                                <input type="text" class="form-control" id="contractName" name="name" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="contractVendor" class="form-label">공급업체 *</label>
+                                <select class="form-select" id="contractVendor" name="vendor_id" required>
+                                    <option value="">공급업체를 선택하세요</option>
+                                    {% for vendor in vendors %}
+                                    <option value="{{ vendor.id }}">{{ vendor.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="contractDepartment" class="form-label">담당부서 *</label>
+                                <select class="form-select" id="contractDepartment" name="department_id" required>
+                                    <option value="">부서를 선택하세요</option>
+                                    {% for department in departments %}
+                                    <option value="{{ department.id }}">{{ department.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="contractAmount" class="form-label">계약금액 (원) *</label>
+                                <input type="number" class="form-control" id="contractAmount" name="contract_amount" required min="0" step="10000">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="contractStartDate" class="form-label">계약시작일 *</label>
+                                <input type="date" class="form-control" id="contractStartDate" name="start_date" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="contractEndDate" class="form-label">계약종료일 *</label>
+                                <input type="date" class="form-control" id="contractEndDate" name="end_date" required>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="contractDescription" class="form-label">계약설명</label>
+                        <textarea class="form-control" id="contractDescription" name="description" rows="3" placeholder="계약에 대한 추가 설명을 입력하세요"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                    <button type="submit" class="btn btn-primary">계약 추가</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Contract Modal -->
+<div class="modal fade" id="editContractModal" tabindex="-1" aria-labelledby="editContractModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editContractModalLabel">
+                    <i data-feather="edit" class="me-2"></i>계약 수정
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="editContractForm" method="POST">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="editContractName" class="form-label">계약명 *</label>
+                                <input type="text" class="form-control" id="editContractName" name="name" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="editContractVendor" class="form-label">공급업체 *</label>
+                                <select class="form-select" id="editContractVendor" name="vendor_id" required>
+                                    {% for vendor in vendors %}
+                                    <option value="{{ vendor.id }}">{{ vendor.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="editContractDepartment" class="form-label">담당부서 *</label>
+                                <select class="form-select" id="editContractDepartment" name="department_id" required>
+                                    {% for department in departments %}
+                                    <option value="{{ department.id }}">{{ department.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="editContractAmount" class="form-label">계약금액 (원) *</label>
+                                <input type="number" class="form-control" id="editContractAmount" name="contract_amount" required min="0" step="10000">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="editContractStartDate" class="form-label">계약시작일 *</label>
+                                <input type="date" class="form-control" id="editContractStartDate" name="start_date" required>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="editContractEndDate" class="form-label">계약종료일 *</label>
+                                <input type="date" class="form-control" id="editContractEndDate" name="end_date" required>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="editContractStatus" class="form-label">상태</label>
+                                <select class="form-select" id="editContractStatus" name="status">
+                                    <option value="active">활성</option>
+                                    <option value="expired">만료</option>
+                                    <option value="terminated">종료</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="editContractDescription" class="form-label">계약설명</label>
+                        <textarea class="form-control" id="editContractDescription" name="description" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                    <button type="submit" class="btn btn-primary">수정 완료</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+feather.replace();
+
+function editContract(id, name, vendorId, departmentId, amount, startDate, endDate, description, status) {
+    document.getElementById('editContractForm').action = `/contracts/${id}/edit`;
+    document.getElementById('editContractName').value = name;
+    document.getElementById('editContractVendor').value = vendorId;
+    document.getElementById('editContractDepartment').value = departmentId;
+    document.getElementById('editContractAmount').value = amount;
+    document.getElementById('editContractStartDate').value = startDate;
+    document.getElementById('editContractEndDate').value = endDate;
+    document.getElementById('editContractDescription').value = description;
+    document.getElementById('editContractStatus').value = status;
+    
+    const modal = new bootstrap.Modal(document.getElementById('editContractModal'));
+    modal.show();
+    
+    setTimeout(() => feather.replace(), 100);
+}
+
+// 계약 종료일이 시작일보다 빠르지 않도록 검증
+document.getElementById('contractStartDate').addEventListener('change', function() {
+    document.getElementById('contractEndDate').min = this.value;
+});
+
+document.getElementById('editContractStartDate').addEventListener('change', function() {
+    document.getElementById('editContractEndDate').min = this.value;
+});
+</script>
+{% endblock %}

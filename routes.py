@@ -801,6 +801,132 @@ def edit_alert_setting():
         flash(f'알림 설정 수정 중 오류가 발생했습니다: {str(e)}', 'error')
         return redirect(url_for('alerts'))
 
+@app.route('/contracts')
+@login_required
+def contracts():
+    """계약 관리"""
+    from models import Contract, Vendor, Department
+    contracts = Contract.query.order_by(desc(Contract.created_at)).all()
+    vendors = Vendor.query.all()
+    departments = Department.query.all()
+    return render_template('contracts.html', contracts=contracts, vendors=vendors, departments=departments)
+
+@app.route('/contracts/add', methods=['POST'])
+@login_required
+def add_contract():
+    """계약 추가"""
+    try:
+        from models import Contract
+        
+        name = request.form.get('name')
+        vendor_id = request.form.get('vendor_id')
+        department_id = request.form.get('department_id')
+        contract_amount = request.form.get('contract_amount')
+        start_date_str = request.form.get('start_date')
+        end_date_str = request.form.get('end_date')
+        description = request.form.get('description', '')
+        
+        if not all([name, vendor_id, department_id, contract_amount, start_date_str, end_date_str]):
+            flash('필수 정보가 누락되었습니다.', 'error')
+            return redirect(url_for('contracts'))
+        
+        # 날짜 변환
+        from datetime import datetime
+        start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+        end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+        
+        contract = Contract(
+            name=name,
+            vendor_id=int(vendor_id),
+            department_id=int(department_id),
+            contract_amount=float(contract_amount),
+            start_date=start_date,
+            end_date=end_date,
+            description=description
+        )
+        
+        db.session.add(contract)
+        db.session.commit()
+        
+        flash(f'계약 "{name}"이 추가되었습니다.', 'success')
+        return redirect(url_for('contracts'))
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'계약 추가 중 오류가 발생했습니다: {str(e)}', 'error')
+        return redirect(url_for('contracts'))
+
+@app.route('/contracts/<int:contract_id>/edit', methods=['POST'])
+@login_required
+def edit_contract(contract_id):
+    """계약 수정"""
+    try:
+        from models import Contract
+        
+        contract = Contract.query.get_or_404(contract_id)
+        
+        contract.name = request.form.get('name', contract.name)
+        contract.vendor_id = int(request.form.get('vendor_id', contract.vendor_id))
+        contract.department_id = int(request.form.get('department_id', contract.department_id))
+        contract.contract_amount = float(request.form.get('contract_amount', contract.contract_amount))
+        
+        start_date_str = request.form.get('start_date')
+        end_date_str = request.form.get('end_date')
+        
+        if start_date_str:
+            from datetime import datetime
+            contract.start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+        
+        if end_date_str:
+            from datetime import datetime
+            contract.end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+        
+        contract.description = request.form.get('description', contract.description)
+        contract.status = request.form.get('status', contract.status)
+        
+        db.session.commit()
+        
+        flash(f'계약 "{contract.name}"이 수정되었습니다.', 'success')
+        return redirect(url_for('contracts'))
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'계약 수정 중 오류가 발생했습니다: {str(e)}', 'error')
+        return redirect(url_for('contracts'))
+
+@app.route('/budgets')
+@login_required
+def budgets():
+    """예산 관리"""
+    from models import Department
+    departments = Department.query.all()
+    return render_template('budgets.html', departments=departments)
+
+@app.route('/budgets/update', methods=['POST'])
+@login_required
+def update_budgets():
+    """예산 업데이트"""
+    try:
+        from models import Department
+        
+        for dept_id, budget_str in request.form.items():
+            if dept_id.startswith('budget_'):
+                department_id = int(dept_id.replace('budget_', ''))
+                budget_amount = float(budget_str) if budget_str else 0
+                
+                department = Department.query.get(department_id)
+                if department:
+                    department.budget = budget_amount
+        
+        db.session.commit()
+        flash('예산이 성공적으로 업데이트되었습니다.', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'예산 업데이트 중 오류가 발생했습니다: {str(e)}', 'error')
+    
+    return redirect(url_for('budgets'))
+
 # API 엔드포인트들
 
 @app.route('/users')
