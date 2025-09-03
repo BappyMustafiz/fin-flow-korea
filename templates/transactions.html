@@ -65,9 +65,9 @@
     justify-content: space-between;
 }
 
-#grid-view.grid-container {
-    display: grid !important;
-    grid-template-columns: repeat(5, 1fr) !important;
+#grid-view {
+    display: flex !important;
+    flex-wrap: wrap !important;
     gap: 1rem !important;
     padding: 0 !important;
     margin: 0 !important;
@@ -75,41 +75,44 @@
 }
 
 #grid-view .grid-item {
-    width: 100% !important;
+    flex: 0 0 calc(20% - 0.8rem) !important;
+    width: calc(20% - 0.8rem) !important;
+    max-width: calc(20% - 0.8rem) !important;
     margin: 0 !important;
     padding: 0 !important;
-    display: block !important;
+    box-sizing: border-box !important;
 }
 
-/* Bootstrap 클래스 무시 */
-#grid-view .grid-item[class*="col-"] {
-    flex: none !important;
-    max-width: none !important;
-    width: 100% !important;
-}
-
-/* 반응형 그리드 */
+/* 반응형 */
 @media (max-width: 1399px) {
-    #grid-view.grid-container {
-        grid-template-columns: repeat(4, 1fr) !important;
+    #grid-view .grid-item {
+        flex: 0 0 calc(25% - 0.75rem) !important;
+        width: calc(25% - 0.75rem) !important;
+        max-width: calc(25% - 0.75rem) !important;
     }
 }
 
 @media (max-width: 1199px) {
-    #grid-view.grid-container {
-        grid-template-columns: repeat(3, 1fr) !important;
+    #grid-view .grid-item {
+        flex: 0 0 calc(33.333% - 0.67rem) !important;
+        width: calc(33.333% - 0.67rem) !important;
+        max-width: calc(33.333% - 0.67rem) !important;
     }
 }
 
 @media (max-width: 767px) {
-    #grid-view.grid-container {
-        grid-template-columns: repeat(2, 1fr) !important;
+    #grid-view .grid-item {
+        flex: 0 0 calc(50% - 0.5rem) !important;
+        width: calc(50% - 0.5rem) !important;
+        max-width: calc(50% - 0.5rem) !important;
     }
 }
 
 @media (max-width: 575px) {
-    #grid-view.grid-container {
-        grid-template-columns: 1fr !important;
+    #grid-view .grid-item {
+        flex: 0 0 100% !important;
+        width: 100% !important;
+        max-width: 100% !important;
     }
 }
 </style>
