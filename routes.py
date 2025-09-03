@@ -760,6 +760,47 @@ def delete_alert_setting(setting_id):
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)}), 400
 
+@app.route('/alerts/settings/edit', methods=['POST'])
+@login_required
+def edit_alert_setting():
+    """알림 설정 수정"""
+    try:
+        from models import AlertSetting
+        
+        setting_id = request.form.get('setting_id')
+        name = request.form.get('name')
+        condition_type = request.form.get('condition_type')
+        condition_value = request.form.get('condition_value')
+        condition = request.form.get('condition')
+        severity = request.form.get('severity', 'info')
+        channel = request.form.get('channel', 'app')
+        
+        if not all([setting_id, name, condition]):
+            flash('필수 정보가 누락되었습니다.', 'error')
+            return redirect(url_for('alerts'))
+        
+        setting = AlertSetting.query.get_or_404(setting_id)
+        
+        # 조건이 비어있으면 자동 생성
+        if not condition and condition_type and condition_value:
+            from utils import generate_condition_from_type
+            condition = generate_condition_from_type(condition_type, condition_value)
+        
+        setting.name = name
+        setting.condition = condition
+        setting.severity = severity
+        setting.channel = channel
+        
+        db.session.commit()
+        
+        flash(f'알림 설정 "{name}"이 수정되었습니다.', 'success')
+        return redirect(url_for('alerts'))
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'알림 설정 수정 중 오류가 발생했습니다: {str(e)}', 'error')
+        return redirect(url_for('alerts'))
+
 # API 엔드포인트들
 
 @app.route('/users')

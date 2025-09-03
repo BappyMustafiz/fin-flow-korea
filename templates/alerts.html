@@ -194,10 +194,19 @@
                                 </div>
                             </div>
                             <div class="btn-group-vertical btn-group-sm">
-                                <button class="btn btn-outline-primary btn-sm" onclick="toggleAlertSetting({{ setting.id }})">
+                                <button class="btn btn-outline-secondary btn-sm" 
+                                        onclick="editAlertSetting({{ setting.id }}, 
+                                                {{ setting.name|tojson }}, 
+                                                {{ setting.condition|tojson }}, 
+                                                '{{ setting.severity }}', 
+                                                '{{ setting.channel }}')" 
+                                        title="수정">
+                                    <i data-feather="edit-2" style="width: 12px; height: 12px;"></i>
+                                </button>
+                                <button class="btn btn-outline-primary btn-sm" onclick="toggleAlertSetting({{ setting.id }})" title="활성화/비활성화">
                                     <i data-feather="{% if setting.is_active %}pause{% else %}play{% endif %}" style="width: 12px; height: 12px;"></i>
                                 </button>
-                                <button class="btn btn-outline-danger btn-sm" onclick="deleteAlertSetting({{ setting.id }})">
+                                <button class="btn btn-outline-danger btn-sm" onclick="deleteAlertSetting({{ setting.id }})" title="삭제">
                                     <i data-feather="trash-2" style="width: 12px; height: 12px;"></i>
                                 </button>
                             </div>
@@ -376,6 +385,93 @@
         </div>
     </div>
 </div>
+
+<!-- Edit Alert Setting Modal -->
+<div class="modal fade" id="editAlertModal" tabindex="-1" aria-labelledby="editAlertModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editAlertModalLabel">
+                    <i data-feather="edit-2" class="me-2"></i>
+                    알림 설정 수정
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="/alerts/settings/edit" method="POST">
+                <div class="modal-body">
+                    <input type="hidden" name="setting_id" id="editSettingId">
+                    
+                    <div class="mb-3">
+                        <label for="editAlertName" class="form-label">알림 이름 *</label>
+                        <input type="text" class="form-control" id="editAlertName" name="name" required 
+                               placeholder="예: 스타벅스 결제 알림">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="editConditionType" class="form-label">조건 유형 *</label>
+                        <select class="form-select" id="editConditionType" name="condition_type" required onchange="updateEditConditionInput()">
+                            <option value="">조건 유형을 선택하세요</option>
+                            <option value="counterparty_contains">거래처 포함</option>
+                            <option value="counterparty_equals">거래처 일치</option>
+                            <option value="description_contains">거래내용 포함</option>
+                            <option value="description_equals">거래내용 일치</option>
+                            <option value="amount_greater">금액 초과</option>
+                            <option value="amount_less">금액 미만</option>
+                            <option value="custom">직접 입력</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="editConditionValue" class="form-label">조건 값 *</label>
+                        <input type="text" class="form-control" id="editConditionValue" name="condition_value" required 
+                               placeholder="조건에 맞는 값을 입력하세요">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="editCondition" class="form-label">완성된 조건</label>
+                        <input type="text" class="form-control" id="editCondition" name="condition" readonly 
+                               placeholder="위 설정에 따라 자동으로 생성됩니다">
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label for="editSeverity" class="form-label">중요도</label>
+                            <select class="form-select" id="editSeverity" name="severity">
+                                <option value="info">정보</option>
+                                <option value="warning">경고</option>
+                                <option value="critical">위험</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="editChannel" class="form-label">알림 방식</label>
+                            <select class="form-select" id="editChannel" name="channel">
+                                <option value="app">앱 내 알림</option>
+                                <option value="email">이메일</option>
+                                <option value="sms">SMS</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-3">
+                        <small class="text-muted">
+                            <strong>조건 작성 예시:</strong><br>
+                            • counterparty contains 스타벅스<br>
+                            • amount > 500000<br>
+                            • description equals 급여<br>
+                            • counterparty regex ^KB.*은행$
+                        </small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i data-feather="save" class="me-1"></i>수정 완료
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -521,6 +617,106 @@ function deleteAlertSetting(settingId) {
         });
     }
 }
+
+function editAlertSetting(settingId, name, condition, severity, channel) {
+    // 모달에 데이터 설정
+    document.getElementById('editSettingId').value = settingId;
+    document.getElementById('editAlertName').value = name;
+    document.getElementById('editCondition').value = condition;
+    document.getElementById('editSeverity').value = severity;
+    document.getElementById('editChannel').value = channel;
+    
+    // 조건을 파싱해서 타입과 값 설정
+    parseConditionForEdit(condition);
+    
+    // 모달 표시
+    const modal = new bootstrap.Modal(document.getElementById('editAlertModal'));
+    modal.show();
+    
+    // 아이콘 새로고침
+    setTimeout(() => feather.replace(), 100);
+}
+
+function parseConditionForEdit(condition) {
+    const conditionTypeSelect = document.getElementById('editConditionType');
+    const conditionValueInput = document.getElementById('editConditionValue');
+    
+    // 조건 파싱 로직
+    if (condition.includes('counterparty contains ')) {
+        conditionTypeSelect.value = 'counterparty_contains';
+        conditionValueInput.value = condition.replace('counterparty contains ', '');
+    } else if (condition.includes('counterparty equals ')) {
+        conditionTypeSelect.value = 'counterparty_equals';
+        conditionValueInput.value = condition.replace('counterparty equals ', '');
+    } else if (condition.includes('description contains ')) {
+        conditionTypeSelect.value = 'description_contains';
+        conditionValueInput.value = condition.replace('description contains ', '');
+    } else if (condition.includes('description equals ')) {
+        conditionTypeSelect.value = 'description_equals';
+        conditionValueInput.value = condition.replace('description equals ', '');
+    } else if (condition.includes('amount > ')) {
+        conditionTypeSelect.value = 'amount_greater';
+        conditionValueInput.value = condition.replace('amount > ', '');
+    } else if (condition.includes('amount < ')) {
+        conditionTypeSelect.value = 'amount_less';
+        conditionValueInput.value = condition.replace('amount < ', '');
+    } else {
+        conditionTypeSelect.value = 'custom';
+        conditionValueInput.value = condition;
+    }
+    
+    updateEditConditionInput();
+}
+
+function updateEditConditionInput() {
+    const conditionType = document.getElementById('editConditionType').value;
+    const conditionValue = document.getElementById('editConditionValue').value;
+    const conditionInput = document.getElementById('editCondition');
+    const valueInput = document.getElementById('editConditionValue');
+    
+    // 조건 타입에 따라 placeholder 변경
+    switch(conditionType) {
+        case 'counterparty_contains':
+            valueInput.placeholder = '예: 스타벅스';
+            if (conditionValue) conditionInput.value = `counterparty contains ${conditionValue}`;
+            break;
+        case 'counterparty_equals':
+            valueInput.placeholder = '예: KB국민은행';
+            if (conditionValue) conditionInput.value = `counterparty equals ${conditionValue}`;
+            break;
+        case 'description_contains':
+            valueInput.placeholder = '예: 급여';
+            if (conditionValue) conditionInput.value = `description contains ${conditionValue}`;
+            break;
+        case 'description_equals':
+            valueInput.placeholder = '예: 월급여';
+            if (conditionValue) conditionInput.value = `description equals ${conditionValue}`;
+            break;
+        case 'amount_greater':
+            valueInput.placeholder = '예: 500000';
+            if (conditionValue) conditionInput.value = `amount > ${conditionValue}`;
+            break;
+        case 'amount_less':
+            valueInput.placeholder = '예: 100000';
+            if (conditionValue) conditionInput.value = `amount < ${conditionValue}`;
+            break;
+        case 'custom':
+            valueInput.placeholder = '직접 조건을 입력하세요';
+            conditionInput.value = conditionValue;
+            break;
+        default:
+            valueInput.placeholder = '조건에 맞는 값을 입력하세요';
+            conditionInput.value = '';
+    }
+}
+
+// 수정 모달의 조건 값 변경 시 실시간 업데이트
+document.addEventListener('DOMContentLoaded', function() {
+    const editConditionValue = document.getElementById('editConditionValue');
+    if (editConditionValue) {
+        editConditionValue.addEventListener('input', updateEditConditionInput);
+    }
+});
 
 function showToast(message, type = 'success') {
     const toast = document.createElement('div');
