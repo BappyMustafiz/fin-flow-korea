@@ -1,0 +1,224 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i data-feather="home" class="me-2"></i>부서 관리</h1>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addDepartmentModal">
+        <i data-feather="plus" class="me-1"></i>부서 추가
+    </button>
+</div>
+
+<!-- 통계 카드 -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <i data-feather="home" class="text-primary mb-2" style="width: 48px; height: 48px;"></i>
+                <h4 class="text-primary">{{ departments|length }}</h4>
+                <p class="text-muted mb-0">총 부서</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <i data-feather="dollar-sign" class="text-success mb-2" style="width: 48px; height: 48px;"></i>
+                <h4 class="text-success">{{ ((departments | sum(attribute='budget') | default(0) | float) / 1000000) | round(1) }}M</h4>
+                <p class="text-muted mb-0">총 예산</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <i data-feather="users" class="text-info mb-2" style="width: 48px; height: 48px;"></i>
+                <h4 class="text-info">{{ departments | selectattr('users') | map(attribute='users') | sum | length if departments | selectattr('users') else 0 }}</h4>
+                <p class="text-muted mb-0">총 직원</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <i data-feather="trending-up" class="text-warning mb-2" style="width: 48px; height: 48px;"></i>
+                <h4 class="text-warning">{{ ((departments | sum(attribute='budget') | default(0) | float) / departments|length / 1000000) | round(1) if departments else 0 }}M</h4>
+                <p class="text-muted mb-0">평균 예산</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 부서 목록 -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="card-title mb-0">부서 목록</h5>
+    </div>
+    <div class="card-body">
+        {% if departments %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>부서명</th>
+                        <th>설명</th>
+                        <th>예산</th>
+                        <th>직원 수</th>
+                        <th>생성일</th>
+                        <th>작업</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for department in departments %}
+                    <tr>
+                        <td>
+                            <strong>{{ department.name }}</strong>
+                        </td>
+                        <td>
+                            <span class="text-muted">{{ department.description or '-' }}</span>
+                        </td>
+                        <td>
+                            <span class="text-success">₩{{ "{:,.0f}".format(department.budget or 0) }}</span>
+                        </td>
+                        <td>
+                            <span class="badge bg-info">{{ department.users|length if department.users else 0 }}명</span>
+                        </td>
+                        <td>
+                            <small class="text-muted">{{ department.created_at.strftime('%Y-%m-%d') if department.created_at else '-' }}</small>
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary me-1" 
+                                    onclick="editDepartment({{ department.id }}, '{{ department.name }}', '{{ department.description or '' }}')">
+                                <i data-feather="edit-2"></i>
+                            </button>
+                            {% if not department.users or department.users|length == 0 %}
+                            <button class="btn btn-sm btn-outline-danger" 
+                                    onclick="deleteDepartment({{ department.id }}, '{{ department.name }}')">
+                                <i data-feather="trash-2"></i>
+                            </button>
+                            {% else %}
+                            <button class="btn btn-sm btn-outline-secondary" disabled 
+                                    title="직원이 있는 부서는 삭제할 수 없습니다">
+                                <i data-feather="trash-2"></i>
+                            </button>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i data-feather="home" style="width: 64px; height: 64px;" class="text-muted mb-3"></i>
+            <h5 class="text-muted">등록된 부서가 없습니다</h5>
+            <p class="text-muted">첫 번째 부서를 추가해보세요.</p>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addDepartmentModal">
+                <i data-feather="plus" class="me-1"></i>부서 추가
+            </button>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- 부서 추가 모달 -->
+<div class="modal fade" id="addDepartmentModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">부서 추가</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('add_department') }}" method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="name" class="form-label">부서명 *</label>
+                        <input type="text" class="form-control" id="name" name="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="description" class="form-label">설명</label>
+                        <textarea class="form-control" id="description" name="description" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                    <button type="submit" class="btn btn-primary">추가</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 부서 수정 모달 -->
+<div class="modal fade" id="editDepartmentModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">부서 수정</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="editForm" method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="editName" class="form-label">부서명 *</label>
+                        <input type="text" class="form-control" id="editName" name="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editDescription" class="form-label">설명</label>
+                        <textarea class="form-control" id="editDescription" name="description" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                    <button type="submit" class="btn btn-primary">수정</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 삭제 확인 모달 -->
+<div class="modal fade" id="deleteDepartmentModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-danger">부서 삭제</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>정말로 <strong id="deleteDeptName"></strong> 부서를 삭제하시겠습니까?</p>
+                <p class="text-danger"><small>이 작업은 되돌릴 수 없습니다.</small></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                <form id="deleteForm" method="POST" class="d-inline">
+                    <button type="submit" class="btn btn-danger">삭제</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Feather Icons 초기화
+feather.replace();
+
+// 부서 수정 모달 열기
+function editDepartment(id, name, description) {
+    document.getElementById('editName').value = name;
+    document.getElementById('editDescription').value = description;
+    document.getElementById('editForm').action = '/departments/' + id + '/edit';
+    
+    var modal = new bootstrap.Modal(document.getElementById('editDepartmentModal'));
+    modal.show();
+}
+
+// 부서 삭제 모달 열기
+function deleteDepartment(id, name) {
+    document.getElementById('deleteDeptName').textContent = name;
+    document.getElementById('deleteForm').action = '/departments/' + id + '/delete';
+    
+    var modal = new bootstrap.Modal(document.getElementById('deleteDepartmentModal'));
+    modal.show();
+}
+</script>
+{% endblock %}

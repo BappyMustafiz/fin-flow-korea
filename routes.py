@@ -927,6 +927,108 @@ def update_budgets():
     
     return redirect(url_for('budgets'))
 
+@app.route('/departments')
+@login_required
+def departments():
+    """부서 관리"""
+    from models import Department
+    departments = Department.query.all()
+    return render_template('departments.html', departments=departments)
+
+@app.route('/departments/add', methods=['POST'])
+@login_required
+def add_department():
+    """부서 추가"""
+    try:
+        from models import Department
+        
+        name = request.form.get('name', '').strip()
+        description = request.form.get('description', '').strip()
+        
+        if not name:
+            flash('부서명은 필수입니다.', 'error')
+            return redirect(url_for('departments'))
+        
+        # 중복 체크
+        existing = Department.query.filter_by(name=name).first()
+        if existing:
+            flash('이미 존재하는 부서명입니다.', 'error')
+            return redirect(url_for('departments'))
+        
+        department = Department(name=name, description=description)
+        db.session.add(department)
+        db.session.commit()
+        
+        flash(f'부서 "{name}"이 추가되었습니다.', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'부서 추가 중 오류가 발생했습니다: {str(e)}', 'error')
+    
+    return redirect(url_for('departments'))
+
+@app.route('/departments/<int:dept_id>/edit', methods=['POST'])
+@login_required
+def edit_department(dept_id):
+    """부서 수정"""
+    try:
+        from models import Department
+        
+        department = Department.query.get_or_404(dept_id)
+        name = request.form.get('name', '').strip()
+        description = request.form.get('description', '').strip()
+        
+        if not name:
+            flash('부서명은 필수입니다.', 'error')
+            return redirect(url_for('departments'))
+        
+        # 중복 체크 (자기 자신 제외)
+        existing = Department.query.filter(
+            Department.name == name, 
+            Department.id != dept_id
+        ).first()
+        if existing:
+            flash('이미 존재하는 부서명입니다.', 'error')
+            return redirect(url_for('departments'))
+        
+        department.name = name
+        department.description = description
+        db.session.commit()
+        
+        flash(f'부서 "{name}"이 수정되었습니다.', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'부서 수정 중 오류가 발생했습니다: {str(e)}', 'error')
+    
+    return redirect(url_for('departments'))
+
+@app.route('/departments/<int:dept_id>/delete', methods=['POST'])
+@login_required
+def delete_department(dept_id):
+    """부서 삭제"""
+    try:
+        from models import Department, User
+        
+        department = Department.query.get_or_404(dept_id)
+        
+        # 부서에 속한 사용자가 있는지 확인
+        users_count = User.query.filter_by(department_id=dept_id).count()
+        if users_count > 0:
+            flash(f'부서에 {users_count}명의 사용자가 있어 삭제할 수 없습니다.', 'error')
+            return redirect(url_for('departments'))
+        
+        db.session.delete(department)
+        db.session.commit()
+        
+        flash(f'부서 "{department.name}"이 삭제되었습니다.', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'부서 삭제 중 오류가 발생했습니다: {str(e)}', 'error')
+    
+    return redirect(url_for('departments'))
+
 # API 엔드포인트들
 
 @app.route('/users')
