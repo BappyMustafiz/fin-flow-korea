@@ -1204,13 +1204,13 @@ def export_pdf(data, report_type, start_date, end_date):
     avg_income = total_income / len(data) if data else 0
     avg_expense = total_expense / len(data) if data else 0
     
-    # HTML 템플릿 - 현재 화면과 동일한 스타일
+    # HTML 템플릿 - 영어 버전
     html_content = f"""
     <!DOCTYPE html>
-    <html lang="ko">
+    <html lang="en">
     <head>
         <meta charset="UTF-8">
-        <title>재무 리포트</title>
+        <title>Financial Report</title>
         <style>
             @page {{
                 size: A4;
@@ -1367,62 +1367,62 @@ def export_pdf(data, report_type, start_date, end_date):
     <body>
         <div class="container">
             <div class="header">
-                <h1>한국형 오픈뱅킹 회계시스템</h1>
-                <p><strong>재무 리포트</strong></p>
-                <p>기간: {start_date} ~ {end_date}</p>
-                <p>생성일시: {datetime.now().strftime('%Y년 %m월 %d일 %H시 %M분')}</p>
+                <h1>Korean Open Banking Accounting System</h1>
+                <p><strong>Financial Report</strong></p>
+                <p>Period: {start_date} ~ {end_date}</p>
+                <p>Generated: {datetime.now().strftime('%Y-%m-%d %H:%M')}</p>
             </div>
             
             <div class="section">
-                <div class="section-title">💰 재무 요약</div>
+                <div class="section-title">💰 Financial Summary</div>
                 <div class="summary-grid">
                     <div class="summary-card">
-                        <h3>총 수입</h3>
-                        <div class="value positive">{total_income:,.0f}원</div>
+                        <h3>Total Income</h3>
+                        <div class="value positive">{total_income:,.0f} KRW</div>
                     </div>
                     <div class="summary-card">
-                        <h3>총 지출</h3>
-                        <div class="value negative">{total_expense:,.0f}원</div>
+                        <h3>Total Expenses</h3>
+                        <div class="value negative">{total_expense:,.0f} KRW</div>
                     </div>
                     <div class="summary-card {'positive' if net_flow >= 0 else 'negative'}">
-                        <h3>순현금흐름</h3>
-                        <div class="value">{net_flow:,.0f}원</div>
+                        <h3>Net Cash Flow</h3>
+                        <div class="value">{net_flow:,.0f} KRW</div>
                     </div>
                     <div class="summary-card">
-                        <h3>분석 기간</h3>
-                        <div class="value">{len(data)}개월</div>
+                        <h3>Analysis Period</h3>
+                        <div class="value">{len(data)} months</div>
                     </div>
                 </div>
                 
                 <div class="monthly-summary">
-                    <h4>📊 월평균 분석</h4>
+                    <h4>📊 Monthly Average Analysis</h4>
                     <div class="summary-row">
-                        <span>평균 월 수입:</span>
-                        <span class="positive-amount">{avg_income:,.0f}원</span>
+                        <span>Average Monthly Income:</span>
+                        <span class="positive-amount">{avg_income:,.0f} KRW</span>
                     </div>
                     <div class="summary-row">
-                        <span>평균 월 지출:</span>
-                        <span class="negative-amount">{avg_expense:,.0f}원</span>
+                        <span>Average Monthly Expenses:</span>
+                        <span class="negative-amount">{avg_expense:,.0f} KRW</span>
                     </div>
                     <div class="summary-row">
-                        <span>평균 월 순수익:</span>
-                        <span class="{'positive-amount' if (avg_income - avg_expense) >= 0 else 'negative-amount'}">{avg_income - avg_expense:,.0f}원</span>
+                        <span>Average Monthly Net Profit:</span>
+                        <span class="{'positive-amount' if (avg_income - avg_expense) >= 0 else 'negative-amount'}">{avg_income - avg_expense:,.0f} KRW</span>
                     </div>
                 </div>
             </div>
             
             <div class="section">
-                <div class="section-title">📈 월별 상세 내역</div>
+                <div class="section-title">📈 Monthly Details</div>
                 <div class="table-wrapper">
                     <table class="data-table">
                         <thead>
                             <tr>
-                                <th>기간</th>
-                                <th>수입</th>
-                                <th>지출</th>
-                                <th>순현금흐름</th>
-                                <th>수입 비중</th>
-                                <th>지출 비중</th>
+                                <th>Period</th>
+                                <th>Income</th>
+                                <th>Expenses</th>
+                                <th>Net Cash Flow</th>
+                                <th>Income Ratio</th>
+                                <th>Expense Ratio</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -1437,9 +1437,9 @@ def export_pdf(data, report_type, start_date, end_date):
         html_content += f"""
                             <tr>
                                 <td><strong>{row['period']}</strong></td>
-                                <td class="positive-amount">{row['income']:,.0f}원</td>
-                                <td class="negative-amount">{row['expense']:,.0f}원</td>
-                                <td class="{net_class}">{row['net']:,.0f}원</td>
+                                <td class="positive-amount">{row['income']:,.0f} KRW</td>
+                                <td class="negative-amount">{row['expense']:,.0f} KRW</td>
+                                <td class="{net_class}">{row['net']:,.0f} KRW</td>
                                 <td>{income_ratio:.1f}%</td>
                                 <td>{expense_ratio:.1f}%</td>
                             </tr>
@@ -1447,13 +1447,13 @@ def export_pdf(data, report_type, start_date, end_date):
     
     # 분석 의견 생성
     if net_flow > 0:
-        analysis_status = "양호"
+        analysis_status = "Good"
         analysis_icon = "✅"
-        analysis_text = f"분석 기간 동안 <strong>{net_flow:,.0f}원</strong>의 순현금 유입이 발생했습니다."
+        analysis_text = f"During the analysis period, there was a net cash inflow of <strong>{net_flow:,.0f} KRW</strong>."
     else:
-        analysis_status = "주의"
+        analysis_status = "Caution"
         analysis_icon = "⚠️"
-        analysis_text = f"분석 기간 동안 <strong>{abs(net_flow):,.0f}원</strong>의 순현금 유출이 발생했습니다."
+        analysis_text = f"During the analysis period, there was a net cash outflow of <strong>{abs(net_flow):,.0f} KRW</strong>."
     
     # 추가 분석
     best_month = max(data, key=lambda x: x['net'])['period'] if data else 'N/A'
@@ -1466,25 +1466,25 @@ def export_pdf(data, report_type, start_date, end_date):
             </div>
             
             <div class="section">
-                <div class="section-title">📋 재무 분석 의견</div>
+                <div class="section-title">📋 Financial Analysis Report</div>
                 <div class="monthly-summary">
-                    <h4>{analysis_icon} 전체 재무 상태: {analysis_status}</h4>
+                    <h4>{analysis_icon} Overall Financial Status: {analysis_status}</h4>
                     <div style="margin: 15px 0; font-size: 14px; line-height: 1.8;">
                         {analysis_text}
                     </div>
                     
                     <div style="margin-top: 20px;">
-                        <h4>🔍 주요 지표 분석</h4>
+                        <h4>🔍 Key Metrics Analysis</h4>
                         <div class="summary-row">
-                            <span>최고 실적 월:</span>
+                            <span>Best Performance Month:</span>
                             <span class="positive-amount">{best_month}</span>
                         </div>
                         <div class="summary-row">
-                            <span>최저 실적 월:</span>
+                            <span>Worst Performance Month:</span>
                             <span class="negative-amount">{worst_month}</span>
                         </div>
                         <div class="summary-row">
-                            <span>수입 대비 지출 비율:</span>
+                            <span>Expense to Income Ratio:</span>
                             <span>{(total_expense/total_income*100) if total_income > 0 else 0:.1f}%</span>
                         </div>
                     </div>
@@ -1492,8 +1492,8 @@ def export_pdf(data, report_type, start_date, end_date):
             </div>
             
             <div class="footer">
-                <p>본 리포트는 한국형 오픈뱅킹 회계시스템에서 자동 생성되었습니다.</p>
-                <p>데이터 정확성을 위해 정기적인 검토를 권장합니다.</p>
+                <p>This report was automatically generated by the Korean Open Banking Accounting System.</p>
+                <p>Regular review is recommended for data accuracy.</p>
             </div>
         </div>
     </body>
