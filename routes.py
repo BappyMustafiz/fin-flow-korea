@@ -1192,18 +1192,10 @@ def export_excel(data, report_type, start_date, end_date):
     return response
 
 def export_pdf(data, report_type, start_date, end_date):
-    """PDF 내보내기 - WeasyPrint 사용"""
+    """PDF 내보내기 - 현재 화면 기반"""
     import weasyprint
-    import matplotlib.pyplot as plt
-    import matplotlib.font_manager as fm
-    import io
-    import base64
     from flask import make_response
     from datetime import datetime
-    
-    # matplotlib 한글 폰트 설정
-    plt.rcParams['font.family'] = ['DejaVu Sans', 'Noto Sans CJK KR', 'Malgun Gothic', 'AppleGothic']
-    plt.rcParams['axes.unicode_minus'] = False
     
     # 요약 정보 계산
     total_income = sum(row['income'] for row in data)
@@ -1212,55 +1204,7 @@ def export_pdf(data, report_type, start_date, end_date):
     avg_income = total_income / len(data) if data else 0
     avg_expense = total_expense / len(data) if data else 0
     
-    # 차트 생성
-    chart_base64 = ""
-    try:
-        # 1. 월별 수입/지출 막대 차트
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 6))
-        
-        periods = [row['period'] for row in data]
-        incomes = [row['income'] for row in data]
-        expenses = [row['expense'] for row in data]
-        
-        # 막대 차트
-        x_pos = range(len(periods))
-        ax1.bar([p - 0.2 for p in x_pos], incomes, 0.4, label='수입', color='#28a745', alpha=0.8)
-        ax1.bar([p + 0.2 for p in x_pos], expenses, 0.4, label='지출', color='#dc3545', alpha=0.8)
-        ax1.set_xlabel('기간')
-        ax1.set_ylabel('금액(원)')
-        ax1.set_title('월별 수입/지출 비교')
-        ax1.set_xticks(x_pos)
-        ax1.set_xticklabels(periods, rotation=45)
-        ax1.legend()
-        ax1.grid(True, alpha=0.3)
-        
-        # 순현금흐름 선 차트
-        net_flows = [row['net'] for row in data]
-        ax2.plot(periods, net_flows, marker='o', linewidth=2, markersize=6, color='#007bff')
-        ax2.axhline(y=0, color='red', linestyle='--', alpha=0.7)
-        ax2.set_xlabel('기간')
-        ax2.set_ylabel('순현금흐름(원)')
-        ax2.set_title('월별 순현금흐름 추이')
-        ax2.grid(True, alpha=0.3)
-        plt.xticks(rotation=45)
-        
-        plt.tight_layout()
-        
-        # 이미지를 base64로 변환
-        img_buffer = io.BytesIO()
-        plt.savefig(img_buffer, format='png', dpi=150, bbox_inches='tight')
-        img_buffer.seek(0)
-        chart_base64 = base64.b64encode(img_buffer.getvalue()).decode()
-        plt.close()
-        
-    except Exception as e:
-        chart_base64 = ""
-    
-    # 추가 분석
-    max_income_month = max(data, key=lambda x: x['income'])['period'] if data else 'N/A'
-    max_expense_month = max(data, key=lambda x: x['expense'])['period'] if data else 'N/A'
-    
-    # HTML 템플릿
+    # HTML 템플릿 - 현재 화면과 동일한 스타일
     html_content = f"""
     <!DOCTYPE html>
     <html lang="ko">
@@ -1270,167 +1214,286 @@ def export_pdf(data, report_type, start_date, end_date):
         <style>
             @page {{
                 size: A4;
-                margin: 2cm;
+                margin: 1.5cm;
+            }}
+            * {{
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
             }}
             body {{
-                font-family: 'Noto Sans KR', 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+                font-family: 'Segoe UI', Arial, sans-serif;
                 line-height: 1.6;
                 color: #333;
+                background-color: white;
+            }}
+            .container {{
+                max-width: 100%;
+                padding: 20px;
             }}
             .header {{
                 text-align: center;
                 margin-bottom: 30px;
-                border-bottom: 2px solid #007bff;
                 padding-bottom: 20px;
+                border-bottom: 3px solid #0d6efd;
             }}
-            .title {{
-                font-size: 24px;
-                font-weight: bold;
-                color: #007bff;
+            .header h1 {{
+                color: #0d6efd;
+                font-size: 28px;
                 margin-bottom: 10px;
+                font-weight: bold;
             }}
-            .subtitle {{
-                font-size: 18px;
+            .header p {{
                 color: #666;
-                margin-bottom: 5px;
-            }}
-            .date {{
-                font-size: 12px;
-                color: #999;
+                font-size: 16px;
+                margin: 5px 0;
             }}
             .section {{
-                margin: 30px 0;
+                margin: 25px 0;
+                page-break-inside: avoid;
             }}
             .section-title {{
-                font-size: 16px;
-                font-weight: bold;
-                color: #28a745;
-                border-left: 4px solid #28a745;
-                padding-left: 10px;
-                margin-bottom: 15px;
-            }}
-            .summary-table {{
-                width: 100%;
-                border-collapse: collapse;
-                margin-bottom: 20px;
-            }}
-            .summary-table th, .summary-table td {{
-                border: 1px solid #ddd;
-                padding: 12px;
-                text-align: center;
-            }}
-            .summary-table th {{
-                background-color: #f8f9fa;
-                font-weight: bold;
-            }}
-            .detail-table {{
-                width: 100%;
-                border-collapse: collapse;
-                font-size: 11px;
-            }}
-            .detail-table th, .detail-table td {{
-                border: 1px solid #ddd;
-                padding: 8px;
-                text-align: center;
-            }}
-            .detail-table th {{
-                background-color: #28a745;
+                background: linear-gradient(135deg, #198754, #20c997);
                 color: white;
+                padding: 12px 20px;
+                font-size: 18px;
+                font-weight: bold;
+                margin-bottom: 15px;
+                border-radius: 8px;
+            }}
+            .summary-grid {{
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 20px;
+                margin-bottom: 30px;
+            }}
+            .summary-card {{
+                background: #f8f9fa;
+                border: 1px solid #e9ecef;
+                border-radius: 10px;
+                padding: 20px;
+                text-align: center;
+            }}
+            .summary-card h3 {{
+                color: #0d6efd;
+                font-size: 14px;
+                margin-bottom: 10px;
+                text-transform: uppercase;
+            }}
+            .summary-card .value {{
+                font-size: 24px;
+                font-weight: bold;
+                color: #333;
+            }}
+            .summary-card.positive .value {{
+                color: #198754;
+            }}
+            .summary-card.negative .value {{
+                color: #dc3545;
+            }}
+            .table-wrapper {{
+                background: white;
+                border-radius: 10px;
+                overflow: hidden;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            }}
+            .data-table {{
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 13px;
+            }}
+            .data-table thead th {{
+                background: #198754;
+                color: white;
+                padding: 15px 10px;
+                text-align: center;
+                font-weight: bold;
+                border: none;
+            }}
+            .data-table tbody td {{
+                padding: 12px 10px;
+                text-align: center;
+                border-bottom: 1px solid #e9ecef;
+            }}
+            .data-table tbody tr:nth-child(even) {{
+                background-color: #f8f9fa;
+            }}
+            .data-table tbody tr:hover {{
+                background-color: #e3f2fd;
+            }}
+            .positive-amount {{
+                color: #198754;
                 font-weight: bold;
             }}
-            .detail-table tbody tr:nth-child(even) {{
-                background-color: #f8f9fa;
+            .negative-amount {{
+                color: #dc3545;
+                font-weight: bold;
             }}
-            .chart-container {{
-                text-align: center;
-                margin: 20px 0;
-            }}
-            .chart-img {{
-                max-width: 100%;
-                height: auto;
-            }}
-            .analysis {{
-                background-color: #f8f9fa;
+            .monthly-summary {{
+                background: linear-gradient(135deg, #f8f9fa, #e9ecef);
                 padding: 20px;
-                border-radius: 5px;
-                border-left: 4px solid #007bff;
+                border-radius: 10px;
+                margin-bottom: 20px;
+                border-left: 5px solid #0d6efd;
+            }}
+            .monthly-summary h4 {{
+                color: #0d6efd;
+                margin-bottom: 15px;
+                font-size: 16px;
+            }}
+            .summary-row {{
+                display: flex;
+                justify-content: space-between;
+                margin: 8px 0;
+                padding: 5px 0;
+                border-bottom: 1px dotted #ccc;
+            }}
+            .summary-row:last-child {{
+                border-bottom: none;
+                font-weight: bold;
+                font-size: 16px;
+                color: #0d6efd;
+            }}
+            .footer {{
+                margin-top: 30px;
+                padding-top: 20px;
+                border-top: 2px solid #e9ecef;
+                text-align: center;
+                color: #666;
+                font-size: 12px;
             }}
         </style>
     </head>
     <body>
-        <div class="header">
-            <div class="title">한국형 오픈뱅킹 회계시스템</div>
-            <div class="subtitle">재무 리포트 ({start_date} ~ {end_date})</div>
-            <div class="date">생성일시: {datetime.now().strftime('%Y년 %m월 %d일 %H:%M')}</div>
-        </div>
-        
-        <div class="section">
-            <div class="section-title">재무 요약</div>
-            <table class="summary-table">
-                <tr><th>항목</th><th>금액</th></tr>
-                <tr><td>총 수입</td><td>{total_income:,.0f}원</td></tr>
-                <tr><td>총 지출</td><td>{total_expense:,.0f}원</td></tr>
-                <tr><td>순현금흐름</td><td>{net_flow:,.0f}원</td></tr>
-                <tr><td>평균 월 수입</td><td>{avg_income:,.0f}원</td></tr>
-                <tr><td>평균 월 지출</td><td>{avg_expense:,.0f}원</td></tr>
-                <tr><td>분석 기간</td><td>{len(data)}개월</td></tr>
-            </table>
-        </div>
-        
-        {f'<div class="section"><div class="section-title">재무 차트</div><div class="chart-container"><img src="data:image/png;base64,{chart_base64}" class="chart-img" alt="재무 차트"></div></div>' if chart_base64 else ''}
-        
-        <div class="section">
-            <div class="section-title">월별 상세 내역</div>
-            <table class="detail-table">
-                <thead>
-                    <tr>
-                        <th>기간</th>
-                        <th>수입(원)</th>
-                        <th>지출(원)</th>
-                        <th>순현금흐름(원)</th>
-                        <th>수입비중(%)</th>
-                        <th>지출비중(%)</th>
-                    </tr>
-                </thead>
-                <tbody>
+        <div class="container">
+            <div class="header">
+                <h1>한국형 오픈뱅킹 회계시스템</h1>
+                <p><strong>재무 리포트</strong></p>
+                <p>기간: {start_date} ~ {end_date}</p>
+                <p>생성일시: {datetime.now().strftime('%Y년 %m월 %d일 %H시 %M분')}</p>
+            </div>
+            
+            <div class="section">
+                <div class="section-title">💰 재무 요약</div>
+                <div class="summary-grid">
+                    <div class="summary-card">
+                        <h3>총 수입</h3>
+                        <div class="value positive">{total_income:,.0f}원</div>
+                    </div>
+                    <div class="summary-card">
+                        <h3>총 지출</h3>
+                        <div class="value negative">{total_expense:,.0f}원</div>
+                    </div>
+                    <div class="summary-card {'positive' if net_flow >= 0 else 'negative'}">
+                        <h3>순현금흐름</h3>
+                        <div class="value">{net_flow:,.0f}원</div>
+                    </div>
+                    <div class="summary-card">
+                        <h3>분석 기간</h3>
+                        <div class="value">{len(data)}개월</div>
+                    </div>
+                </div>
+                
+                <div class="monthly-summary">
+                    <h4>📊 월평균 분석</h4>
+                    <div class="summary-row">
+                        <span>평균 월 수입:</span>
+                        <span class="positive-amount">{avg_income:,.0f}원</span>
+                    </div>
+                    <div class="summary-row">
+                        <span>평균 월 지출:</span>
+                        <span class="negative-amount">{avg_expense:,.0f}원</span>
+                    </div>
+                    <div class="summary-row">
+                        <span>평균 월 순수익:</span>
+                        <span class="{'positive-amount' if (avg_income - avg_expense) >= 0 else 'negative-amount'}">{avg_income - avg_expense:,.0f}원</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="section">
+                <div class="section-title">📈 월별 상세 내역</div>
+                <div class="table-wrapper">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>기간</th>
+                                <th>수입</th>
+                                <th>지출</th>
+                                <th>순현금흐름</th>
+                                <th>수입 비중</th>
+                                <th>지출 비중</th>
+                            </tr>
+                        </thead>
+                        <tbody>
     """
     
     # 상세 데이터 추가
     for row in data:
         income_ratio = (row['income'] / total_income * 100) if total_income > 0 else 0
         expense_ratio = (row['expense'] / total_expense * 100) if total_expense > 0 else 0
+        net_class = 'positive-amount' if row['net'] >= 0 else 'negative-amount'
         
         html_content += f"""
-                    <tr>
-                        <td>{row['period']}</td>
-                        <td>{row['income']:,.0f}</td>
-                        <td>{row['expense']:,.0f}</td>
-                        <td>{row['net']:,.0f}</td>
-                        <td>{income_ratio:.1f}%</td>
-                        <td>{expense_ratio:.1f}%</td>
-                    </tr>
+                            <tr>
+                                <td><strong>{row['period']}</strong></td>
+                                <td class="positive-amount">{row['income']:,.0f}원</td>
+                                <td class="negative-amount">{row['expense']:,.0f}원</td>
+                                <td class="{net_class}">{row['net']:,.0f}원</td>
+                                <td>{income_ratio:.1f}%</td>
+                                <td>{expense_ratio:.1f}%</td>
+                            </tr>
         """
     
-    # 분석 의견
+    # 분석 의견 생성
     if net_flow > 0:
-        analysis_text = f"분석 기간 동안 {net_flow:,.0f}원의 순현금 유입이 발생했습니다. 재무 상태가 양호합니다."
+        analysis_status = "양호"
+        analysis_icon = "✅"
+        analysis_text = f"분석 기간 동안 <strong>{net_flow:,.0f}원</strong>의 순현금 유입이 발생했습니다."
     else:
-        analysis_text = f"분석 기간 동안 {abs(net_flow):,.0f}원의 순현금 유출이 발생했습니다. 지출 관리가 필요합니다."
+        analysis_status = "주의"
+        analysis_icon = "⚠️"
+        analysis_text = f"분석 기간 동안 <strong>{abs(net_flow):,.0f}원</strong>의 순현금 유출이 발생했습니다."
     
-    if avg_income > avg_expense:
-        analysis_text += f"<br><br>월 평균 수입({avg_income:,.0f}원)이 지출({avg_expense:,.0f}원)보다 많아 안정적인 현금흐름을 보이고 있습니다."
-    
-    analysis_text += f"<br><br>• 수입이 가장 많았던 달: {max_income_month}<br>• 지출이 가장 많았던 달: {max_expense_month}"
+    # 추가 분석
+    best_month = max(data, key=lambda x: x['net'])['period'] if data else 'N/A'
+    worst_month = min(data, key=lambda x: x['net'])['period'] if data else 'N/A'
     
     html_content += f"""
-                </tbody>
-            </table>
-        </div>
-        
-        <div class="section">
-            <div class="section-title">재무 분석 의견</div>
-            <div class="analysis">
-                {analysis_text}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="section">
+                <div class="section-title">📋 재무 분석 의견</div>
+                <div class="monthly-summary">
+                    <h4>{analysis_icon} 전체 재무 상태: {analysis_status}</h4>
+                    <div style="margin: 15px 0; font-size: 14px; line-height: 1.8;">
+                        {analysis_text}
+                    </div>
+                    
+                    <div style="margin-top: 20px;">
+                        <h4>🔍 주요 지표 분석</h4>
+                        <div class="summary-row">
+                            <span>최고 실적 월:</span>
+                            <span class="positive-amount">{best_month}</span>
+                        </div>
+                        <div class="summary-row">
+                            <span>최저 실적 월:</span>
+                            <span class="negative-amount">{worst_month}</span>
+                        </div>
+                        <div class="summary-row">
+                            <span>수입 대비 지출 비율:</span>
+                            <span>{(total_expense/total_income*100) if total_income > 0 else 0:.1f}%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="footer">
+                <p>본 리포트는 한국형 오픈뱅킹 회계시스템에서 자동 생성되었습니다.</p>
+                <p>데이터 정확성을 위해 정기적인 검토를 권장합니다.</p>
             </div>
         </div>
     </body>
