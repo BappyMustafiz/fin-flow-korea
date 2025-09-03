@@ -2,7 +2,7 @@ modules = ["python-3.11", "postgresql-16", "python3"]
 
 [nix]
 channel = "stable-25_05"
-packages = ["freetype", "glibcLocales", "openssl", "postgresql"]
+packages = ["cairo", "ffmpeg-full", "fontconfig", "freetype", "ghostscript", "glib", "glibcLocales", "gobject-introspection", "gtk3", "harfbuzz", "openssl", "pango", "pkg-config", "postgresql", "qhull", "tcl", "tk"]
 
 [deployment]
 deploymentTarget = "autoscale"

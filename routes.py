@@ -1192,163 +1192,256 @@ def export_excel(data, report_type, start_date, end_date):
     return response
 
 def export_pdf(data, report_type, start_date, end_date):
-    """PDF 내보내기"""
-    from reportlab.lib.pagesizes import A4, letter
-    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
-    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-    from reportlab.lib import colors
-    from reportlab.lib.units import inch, cm
-    from reportlab.pdfbase import pdfmetrics
-    from reportlab.pdfbase.ttfonts import TTFont
-    from reportlab.graphics.shapes import Drawing
-    from reportlab.graphics.charts.barcharts import VerticalBarChart
-    from reportlab.graphics.charts.piecharts import Pie
+    """PDF 내보내기 - WeasyPrint 사용"""
+    import weasyprint
+    import matplotlib.pyplot as plt
+    import matplotlib.font_manager as fm
     import io
+    import base64
     from flask import make_response
     from datetime import datetime
     
-    # PDF에서는 한글 지원이 어려우므로 영문으로 출력
-    korean_font = 'Helvetica'
+    # matplotlib 한글 폰트 설정
+    plt.rcParams['font.family'] = ['DejaVu Sans', 'Noto Sans CJK KR', 'Malgun Gothic', 'AppleGothic']
+    plt.rcParams['axes.unicode_minus'] = False
     
-    # 메모리에 PDF 생성
-    buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=2*cm, leftMargin=2*cm, topMargin=2*cm, bottomMargin=2*cm)
-    
-    # 스타일 정의
-    styles = getSampleStyleSheet()
-    
-    title_style = ParagraphStyle(
-        'CustomTitle',
-        parent=styles['Heading1'],
-        fontName=korean_font,
-        fontSize=20,
-        spaceAfter=30,
-        alignment=1,  # 중앙 정렬
-        textColor=colors.darkblue
-    )
-    
-    heading_style = ParagraphStyle(
-        'CustomHeading',
-        parent=styles['Heading2'],
-        fontName=korean_font,
-        fontSize=14,
-        spaceAfter=12,
-        spaceBefore=20,
-        textColor=colors.darkgreen
-    )
-    
-    normal_style = ParagraphStyle(
-        'CustomNormal',
-        parent=styles['Normal'],
-        fontName=korean_font,
-        fontSize=10,
-        spaceAfter=6
-    )
-    
-    # 내용 생성
-    story = []
-    
-    # 제목 - 영문으로 출력
-    title = Paragraph("Korean Open Banking Accounting System", title_style)
-    story.append(title)
-    subtitle = Paragraph(f"Financial Report ({start_date} ~ {end_date})", heading_style)
-    story.append(subtitle)
-    generation_info = Paragraph(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M')}", normal_style)
-    story.append(generation_info)
-    story.append(Spacer(1, 20))
-    
-    # 요약 정보
+    # 요약 정보 계산
     total_income = sum(row['income'] for row in data)
     total_expense = sum(row['expense'] for row in data)
     net_flow = total_income - total_expense
     avg_income = total_income / len(data) if data else 0
     avg_expense = total_expense / len(data) if data else 0
     
-    summary_heading = Paragraph("== Financial Summary ==", heading_style)
-    story.append(summary_heading)
+    # 차트 생성
+    chart_base64 = ""
+    try:
+        # 1. 월별 수입/지출 막대 차트
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 6))
+        
+        periods = [row['period'] for row in data]
+        incomes = [row['income'] for row in data]
+        expenses = [row['expense'] for row in data]
+        
+        # 막대 차트
+        x_pos = range(len(periods))
+        ax1.bar([p - 0.2 for p in x_pos], incomes, 0.4, label='수입', color='#28a745', alpha=0.8)
+        ax1.bar([p + 0.2 for p in x_pos], expenses, 0.4, label='지출', color='#dc3545', alpha=0.8)
+        ax1.set_xlabel('기간')
+        ax1.set_ylabel('금액(원)')
+        ax1.set_title('월별 수입/지출 비교')
+        ax1.set_xticks(x_pos)
+        ax1.set_xticklabels(periods, rotation=45)
+        ax1.legend()
+        ax1.grid(True, alpha=0.3)
+        
+        # 순현금흐름 선 차트
+        net_flows = [row['net'] for row in data]
+        ax2.plot(periods, net_flows, marker='o', linewidth=2, markersize=6, color='#007bff')
+        ax2.axhline(y=0, color='red', linestyle='--', alpha=0.7)
+        ax2.set_xlabel('기간')
+        ax2.set_ylabel('순현금흐름(원)')
+        ax2.set_title('월별 순현금흐름 추이')
+        ax2.grid(True, alpha=0.3)
+        plt.xticks(rotation=45)
+        
+        plt.tight_layout()
+        
+        # 이미지를 base64로 변환
+        img_buffer = io.BytesIO()
+        plt.savefig(img_buffer, format='png', dpi=150, bbox_inches='tight')
+        img_buffer.seek(0)
+        chart_base64 = base64.b64encode(img_buffer.getvalue()).decode()
+        plt.close()
+        
+    except Exception as e:
+        chart_base64 = ""
     
-    summary_data = [
-        ['Item', 'Amount'],
-        ['Total Income', f'{total_income:,.0f} KRW'],
-        ['Total Expense', f'{total_expense:,.0f} KRW'],
-        ['Net Cash Flow', f'{net_flow:,.0f} KRW'],
-        ['Avg Monthly Income', f'{avg_income:,.0f} KRW'],
-        ['Avg Monthly Expense', f'{avg_expense:,.0f} KRW'],
-        ['Analysis Period', f'{len(data)} months']
-    ]
+    # 추가 분석
+    max_income_month = max(data, key=lambda x: x['income'])['period'] if data else 'N/A'
+    max_expense_month = max(data, key=lambda x: x['expense'])['period'] if data else 'N/A'
     
-    summary_table = Table(summary_data, colWidths=[4*cm, 6*cm])
-    summary_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.lightblue),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
-        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-        ('FONTNAME', (0, 0), (-1, 0), korean_font),
-        ('FONTNAME', (0, 1), (-1, -1), korean_font),
-        ('FONTSIZE', (0, 0), (-1, -1), 10),
-        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-        ('BACKGROUND', (0, 1), (-1, -1), colors.lightgrey),
-        ('GRID', (0, 0), (-1, -1), 1, colors.black)
-    ]))
+    # HTML 템플릿
+    html_content = f"""
+    <!DOCTYPE html>
+    <html lang="ko">
+    <head>
+        <meta charset="UTF-8">
+        <title>재무 리포트</title>
+        <style>
+            @page {{
+                size: A4;
+                margin: 2cm;
+            }}
+            body {{
+                font-family: 'Noto Sans KR', 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+                line-height: 1.6;
+                color: #333;
+            }}
+            .header {{
+                text-align: center;
+                margin-bottom: 30px;
+                border-bottom: 2px solid #007bff;
+                padding-bottom: 20px;
+            }}
+            .title {{
+                font-size: 24px;
+                font-weight: bold;
+                color: #007bff;
+                margin-bottom: 10px;
+            }}
+            .subtitle {{
+                font-size: 18px;
+                color: #666;
+                margin-bottom: 5px;
+            }}
+            .date {{
+                font-size: 12px;
+                color: #999;
+            }}
+            .section {{
+                margin: 30px 0;
+            }}
+            .section-title {{
+                font-size: 16px;
+                font-weight: bold;
+                color: #28a745;
+                border-left: 4px solid #28a745;
+                padding-left: 10px;
+                margin-bottom: 15px;
+            }}
+            .summary-table {{
+                width: 100%;
+                border-collapse: collapse;
+                margin-bottom: 20px;
+            }}
+            .summary-table th, .summary-table td {{
+                border: 1px solid #ddd;
+                padding: 12px;
+                text-align: center;
+            }}
+            .summary-table th {{
+                background-color: #f8f9fa;
+                font-weight: bold;
+            }}
+            .detail-table {{
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 11px;
+            }}
+            .detail-table th, .detail-table td {{
+                border: 1px solid #ddd;
+                padding: 8px;
+                text-align: center;
+            }}
+            .detail-table th {{
+                background-color: #28a745;
+                color: white;
+                font-weight: bold;
+            }}
+            .detail-table tbody tr:nth-child(even) {{
+                background-color: #f8f9fa;
+            }}
+            .chart-container {{
+                text-align: center;
+                margin: 20px 0;
+            }}
+            .chart-img {{
+                max-width: 100%;
+                height: auto;
+            }}
+            .analysis {{
+                background-color: #f8f9fa;
+                padding: 20px;
+                border-radius: 5px;
+                border-left: 4px solid #007bff;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <div class="title">한국형 오픈뱅킹 회계시스템</div>
+            <div class="subtitle">재무 리포트 ({start_date} ~ {end_date})</div>
+            <div class="date">생성일시: {datetime.now().strftime('%Y년 %m월 %d일 %H:%M')}</div>
+        </div>
+        
+        <div class="section">
+            <div class="section-title">재무 요약</div>
+            <table class="summary-table">
+                <tr><th>항목</th><th>금액</th></tr>
+                <tr><td>총 수입</td><td>{total_income:,.0f}원</td></tr>
+                <tr><td>총 지출</td><td>{total_expense:,.0f}원</td></tr>
+                <tr><td>순현금흐름</td><td>{net_flow:,.0f}원</td></tr>
+                <tr><td>평균 월 수입</td><td>{avg_income:,.0f}원</td></tr>
+                <tr><td>평균 월 지출</td><td>{avg_expense:,.0f}원</td></tr>
+                <tr><td>분석 기간</td><td>{len(data)}개월</td></tr>
+            </table>
+        </div>
+        
+        {f'<div class="section"><div class="section-title">재무 차트</div><div class="chart-container"><img src="data:image/png;base64,{chart_base64}" class="chart-img" alt="재무 차트"></div></div>' if chart_base64 else ''}
+        
+        <div class="section">
+            <div class="section-title">월별 상세 내역</div>
+            <table class="detail-table">
+                <thead>
+                    <tr>
+                        <th>기간</th>
+                        <th>수입(원)</th>
+                        <th>지출(원)</th>
+                        <th>순현금흐름(원)</th>
+                        <th>수입비중(%)</th>
+                        <th>지출비중(%)</th>
+                    </tr>
+                </thead>
+                <tbody>
+    """
     
-    story.append(summary_table)
-    story.append(Spacer(1, 20))
-    
-    # 월별 상세 데이터
-    detail_heading = Paragraph("== Monthly Details ==", heading_style)
-    story.append(detail_heading)
-    
-    detail_data = [['Period', 'Income(KRW)', 'Expense(KRW)', 'Net Flow(KRW)', 'Income(%)', 'Expense(%)']]
-    
+    # 상세 데이터 추가
     for row in data:
         income_ratio = (row['income'] / total_income * 100) if total_income > 0 else 0
         expense_ratio = (row['expense'] / total_expense * 100) if total_expense > 0 else 0
         
-        detail_data.append([
-            row['period'],
-            f"{row['income']:,.0f}",
-            f"{row['expense']:,.0f}",
-            f"{row['net']:,.0f}",
-            f"{income_ratio:.1f}%",
-            f"{expense_ratio:.1f}%"
-        ])
-    
-    detail_table = Table(detail_data, colWidths=[2.5*cm, 2.5*cm, 2.5*cm, 2.5*cm, 2*cm, 2*cm])
-    detail_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.darkgreen),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-        ('FONTNAME', (0, 0), (-1, -1), korean_font),
-        ('FONTSIZE', (0, 0), (-1, 0), 9),
-        ('FONTSIZE', (0, 1), (-1, -1), 8),
-        ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
-        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.lightgrey]),
-        ('GRID', (0, 0), (-1, -1), 1, colors.black)
-    ]))
-    
-    story.append(detail_table)
-    story.append(Spacer(1, 20))
+        html_content += f"""
+                    <tr>
+                        <td>{row['period']}</td>
+                        <td>{row['income']:,.0f}</td>
+                        <td>{row['expense']:,.0f}</td>
+                        <td>{row['net']:,.0f}</td>
+                        <td>{income_ratio:.1f}%</td>
+                        <td>{expense_ratio:.1f}%</td>
+                    </tr>
+        """
     
     # 분석 의견
-    analysis_heading = Paragraph("== Financial Analysis ==", heading_style)
-    story.append(analysis_heading)
-    
     if net_flow > 0:
-        analysis_text = f"During the analysis period, there was a net cash inflow of {net_flow:,.0f} KRW. Financial status is healthy."
+        analysis_text = f"분석 기간 동안 {net_flow:,.0f}원의 순현금 유입이 발생했습니다. 재무 상태가 양호합니다."
     else:
-        analysis_text = f"During the analysis period, there was a net cash outflow of {abs(net_flow):,.0f} KRW. Expense management is needed."
+        analysis_text = f"분석 기간 동안 {abs(net_flow):,.0f}원의 순현금 유출이 발생했습니다. 지출 관리가 필요합니다."
     
     if avg_income > avg_expense:
-        analysis_text += f" Monthly average income ({avg_income:,.0f} KRW) exceeds expenses ({avg_expense:,.0f} KRW), showing stable cash flow."
+        analysis_text += f"<br><br>월 평균 수입({avg_income:,.0f}원)이 지출({avg_expense:,.0f}원)보다 많아 안정적인 현금흐름을 보이고 있습니다."
     
-    analysis_para = Paragraph(analysis_text, normal_style)
-    story.append(analysis_para)
+    analysis_text += f"<br><br>• 수입이 가장 많았던 달: {max_income_month}<br>• 지출이 가장 많았던 달: {max_expense_month}"
     
-    # PDF 빌드
-    doc.build(story)
+    html_content += f"""
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="section">
+            <div class="section-title">재무 분석 의견</div>
+            <div class="analysis">
+                {analysis_text}
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    
+    # WeasyPrint로 PDF 생성
+    pdf_bytes = weasyprint.HTML(string=html_content).write_pdf()
     
     # 응답 생성
-    buffer.seek(0)
-    response = make_response(buffer.getvalue())
+    response = make_response(pdf_bytes)
     response.headers['Content-Type'] = 'application/pdf'
     response.headers['Content-Disposition'] = f'attachment; filename="financial_report_{start_date}_{end_date}.pdf"'
     
