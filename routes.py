@@ -440,6 +440,64 @@ def connect_institution(institution_code):
     flash(f'{institution.name} 연결이 완료되었습니다.', 'success')
     return redirect(url_for('connections'))
 
+
+@app.route('/disconnect-institution/<int:consent_id>', methods=['POST'])
+@login_required
+def disconnect_institution(consent_id):
+    """금융기관 연결 해제"""
+    try:
+        consent = Consent.query.get(consent_id)
+        if not consent:
+            return jsonify({'success': False, 'error': '연결을 찾을 수 없습니다.'})
+        
+        # 연결 상태를 철회로 변경
+        consent.status = 'revoked'
+        consent.revoked_at = datetime.now()
+        db.session.commit()
+        
+        return jsonify({
+            'success': True, 
+            'message': f'{consent.institution.name} 연결이 해제되었습니다.'
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+
+@app.route('/refresh-connection/<int:consent_id>', methods=['POST'])
+@login_required
+def refresh_connection(consent_id):
+    """연결 동기화/재연결"""
+    try:
+        consent = Consent.query.get(consent_id)
+        if not consent:
+            return jsonify({'success': False, 'error': '연결을 찾을 수 없습니다.'})
+        
+        # 동기화 시뮬레이션
+        if consent.status == 'active':
+            # 만료일 연장
+            consent.expires_at = datetime.now() + timedelta(days=180)
+            consent.updated_at = datetime.now()
+            db.session.commit()
+            
+            return jsonify({
+                'success': True, 
+                'message': f'{consent.institution.name} 연결이 갱신되었습니다.'
+            })
+        else:
+            # 비활성 상태인 경우 재연결
+            consent.status = 'active'
+            consent.expires_at = datetime.now() + timedelta(days=180)
+            consent.updated_at = datetime.now()
+            db.session.commit()
+            
+            return jsonify({
+                'success': True, 
+                'message': f'{consent.institution.name} 연결이 재활성화되었습니다.'
+            })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+
 @app.route('/accounts')
 @login_required
 def accounts():

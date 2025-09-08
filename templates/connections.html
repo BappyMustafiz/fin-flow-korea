@@ -165,10 +165,14 @@
                                 <td>
                                     <div class="btn-group btn-group-sm">
                                         {% if consent.status == 'active' %}
-                                            <button class="btn btn-outline-warning" title="연결 해제">
+                                            <button class="btn btn-outline-warning" 
+                                                    title="연결 해제" 
+                                                    onclick="disconnectInstitution({{ consent.id }})">
                                                 <i data-feather="x"></i>
                                             </button>
-                                            <button class="btn btn-outline-primary" title="동기화">
+                                            <button class="btn btn-outline-primary" 
+                                                    title="동기화" 
+                                                    onclick="refreshConnection({{ consent.id }})">
                                                 <i data-feather="refresh-cw"></i>
                                             </button>
                                         {% else %}
@@ -234,5 +238,55 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 });
+
+// 연결 해제 기능
+function disconnectInstitution(consentId) {
+    if (confirm('정말로 이 연결을 해제하시겠습니까?')) {
+        fetch(`/disconnect-institution/${consentId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                window.location.reload();
+            } else {
+                alert('오류: ' + data.error);
+            }
+        })
+        .catch(error => {
+            alert('연결 해제 중 오류가 발생했습니다.');
+            console.error('Error:', error);
+        });
+    }
+}
+
+// 연결 갱신/동기화 기능
+function refreshConnection(consentId) {
+    if (confirm('연결을 갱신하시겠습니까?')) {
+        fetch(`/refresh-connection/${consentId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                window.location.reload();
+            } else {
+                alert('오류: ' + data.error);
+            }
+        })
+        .catch(error => {
+            alert('연결 갱신 중 오류가 발생했습니다.');
+            console.error('Error:', error);
+        });
+    }
+}
 </script>
 {% endblock %}
