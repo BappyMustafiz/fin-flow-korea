@@ -698,12 +698,14 @@ function createVendorTable(data) {
     
     let html = '';
     data.forEach((vendor, index) => {
+        const colorClass = vendor.total >= 0 ? 'text-success' : 'text-danger';
+        const sign = vendor.total >= 0 ? '+' : '';
         html += `
             <tr>
                 <td>${index + 1}</td>
                 <td>${vendor.name}</td>
                 <td>${vendor.count}회</td>
-                <td class="text-end text-danger">₩${vendor.total.toLocaleString()}</td>
+                <td class="text-end ${colorClass}">${sign}₩${vendor.total.toLocaleString()}</td>
             </tr>
         `;
     });
@@ -723,7 +725,7 @@ function createVendorChart(data) {
         data: {
             labels: topVendors.map(item => item.name),
             datasets: [{
-                data: topVendors.map(item => item.total),
+                data: topVendors.map(item => Math.abs(item.total)), // 절댓값으로 차트 표시
                 backgroundColor: colors
             }]
         },
@@ -737,9 +739,11 @@ function createVendorChart(data) {
                 tooltip: {
                     callbacks: {
                         label: function(context) {
+                            const originalValue = topVendors[context.dataIndex].total;
+                            const sign = originalValue >= 0 ? '+' : '';
                             const total = context.dataset.data.reduce((a, b) => a + b, 0);
                             const percentage = ((context.parsed / total) * 100).toFixed(1);
-                            return context.label + ': ₩' + context.parsed.toLocaleString() + ' (' + percentage + '%)';
+                            return context.label + ': ' + sign + '₩' + originalValue.toLocaleString() + ' (' + percentage + '%)';
                         }
                     }
                 }
@@ -759,7 +763,7 @@ function createCategoryChart(data) {
         data: {
             labels: data.map(item => item.name),
             datasets: [{
-                data: data.map(item => item.total),
+                data: data.map(item => Math.abs(item.total)), // 절댓값으로 차트 표시
                 backgroundColor: colors
             }]
         },
@@ -773,9 +777,11 @@ function createCategoryChart(data) {
                 tooltip: {
                     callbacks: {
                         label: function(context) {
+                            const originalValue = data[context.dataIndex].total;
+                            const sign = originalValue >= 0 ? '+' : '';
                             const total = context.dataset.data.reduce((a, b) => a + b, 0);
                             const percentage = ((context.parsed / total) * 100).toFixed(1);
-                            return context.label + ': ₩' + context.parsed.toLocaleString() + ' (' + percentage + '%)';
+                            return context.label + ': ' + sign + '₩' + originalValue.toLocaleString() + ' (' + percentage + '%)';
                         }
                     }
                 }
@@ -799,15 +805,17 @@ function createCategoryTable(data) {
         return;
     }
     
-    const total = data.reduce((sum, item) => sum + item.total, 0);
+    const totalAbs = data.reduce((sum, item) => sum + Math.abs(item.total), 0);
     let html = '';
     data.forEach(category => {
-        const percentage = total > 0 ? (category.total / total * 100).toFixed(1) : 0;
+        const percentage = totalAbs > 0 ? (Math.abs(category.total) / totalAbs * 100).toFixed(1) : 0;
+        const colorClass = category.total >= 0 ? 'text-success' : 'text-danger';
+        const sign = category.total >= 0 ? '+' : '';
         html += `
             <tr>
                 <td>${category.name}</td>
                 <td>${category.count}건</td>
-                <td class="text-end text-danger">₩${category.total.toLocaleString()}</td>
+                <td class="text-end ${colorClass}">${sign}₩${category.total.toLocaleString()}</td>
                 <td class="text-end">${percentage}%</td>
             </tr>
         `;

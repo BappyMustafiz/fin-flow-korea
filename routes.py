@@ -1081,42 +1081,40 @@ def reports_data():
             data['department'] = dept_spending
             
         elif report_type == 'vendor':
-            # 거래처별 분석
-            vendor_spending_raw = db.session.query(
+            # 거래처별 분석 (수익과 지출 모두 포함)
+            vendor_analysis_raw = db.session.query(
                 Vendor.name,
                 func.sum(Transaction.amount).label('total'),
                 func.count(Transaction.id).label('count')
             ).join(Transaction).filter(
                 Transaction.transaction_date >= start_date,
-                Transaction.transaction_date <= end_date,
-                Transaction.amount < 0
-            ).group_by(Vendor.name).order_by(func.sum(Transaction.amount)).limit(20).all()
+                Transaction.transaction_date <= end_date
+            ).group_by(Vendor.name).order_by(func.sum(Transaction.amount).desc()).limit(20).all()
             
             vendor_data = [{
                 'name': row.name, 
-                'total': float(abs(row.total or 0)), 
+                'total': float(row.total or 0), 
                 'count': row.count
-            } for row in vendor_spending_raw]
+            } for row in vendor_analysis_raw]
             data['vendor'] = vendor_data
             
         elif report_type == 'category':
-            # 카테고리별 분석
+            # 카테고리별 분석 (수익과 지출 모두 포함)
             from models import Category
-            category_spending_raw = db.session.query(
+            category_analysis_raw = db.session.query(
                 Category.name,
                 func.sum(Transaction.amount).label('total'),
                 func.count(Transaction.id).label('count')
             ).join(Transaction).filter(
                 Transaction.transaction_date >= start_date,
-                Transaction.transaction_date <= end_date,
-                Transaction.amount < 0
-            ).group_by(Category.name).all()
+                Transaction.transaction_date <= end_date
+            ).group_by(Category.name).order_by(func.sum(Transaction.amount).desc()).all()
             
             category_data = [{
                 'name': row.name, 
-                'total': float(abs(row.total or 0)), 
+                'total': float(row.total or 0), 
                 'count': row.count
-            } for row in category_spending_raw]
+            } for row in category_analysis_raw]
             data['category'] = category_data
         
         print(f"Reports data response: {data}")
