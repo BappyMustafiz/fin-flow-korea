@@ -276,6 +276,7 @@ fetch('/api/dashboard/chart-data')
 
 // 부서별 지출 차트
 const deptData = {{ dept_expenses | tojson }};
+console.log('Department data:', deptData);
 if (deptData && deptData.length > 0) {
     const deptCtx = document.getElementById('deptExpenseChart').getContext('2d');
     new Chart(deptCtx, {

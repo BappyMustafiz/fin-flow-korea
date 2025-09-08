@@ -383,18 +383,23 @@ def dashboard():
     # 최근 알림 (5건)
     recent_alerts = Alert.query.filter_by(is_read=False).order_by(desc(Alert.created_at)).limit(5).all()
     
-    # 부서별 지출 현황 (이번달, 이체 제외)
+    # 부서별 지출 현황 (최근 3개월로 확장하여 데이터 확보)
+    from datetime import timedelta
+    three_months_ago = current_month - timedelta(days=90)
+    
     dept_expenses_raw = db.session.query(
         Department.name,
         func.sum(Transaction.amount).label('total')
     ).join(Transaction).filter(
         Transaction.amount < 0,
         Transaction.transaction_type != 'transfer',
-        func.date(Transaction.transaction_date) >= current_month
+        func.date(Transaction.transaction_date) >= three_months_ago
     ).group_by(Department.name).all()
     
     # Convert to JSON serializable format
     dept_expenses = [{'name': row.name, 'total': float(abs(row.total or 0))} for row in dept_expenses_raw]
+    
+    print(f"Dashboard - Department expenses data: {dept_expenses}")
     
     return render_template('dashboard.html',
                          current_income=current_income,
