@@ -1166,40 +1166,6 @@ def edit_contract(contract_id):
         flash(f'계약 수정 중 오류가 발생했습니다: {str(e)}', 'error')
         return redirect(url_for('contracts'))
 
-@app.route('/vendors/add', methods=['POST'])
-@login_required
-def add_vendor():
-    """공급업체 추가"""
-    try:
-        from models import Vendor
-        
-        name = request.form.get('name')
-        business_number = request.form.get('business_number', '')
-        contact_info = request.form.get('contact_info', '')
-        category_id = request.form.get('category_id')
-        
-        if not name:
-            flash('업체명은 필수입니다.', 'error')
-            return redirect(url_for('contracts'))
-        
-        vendor = Vendor(
-            name=name,
-            business_number=business_number,
-            contact_info=contact_info,
-            category_id=int(category_id) if category_id else None
-        )
-        
-        db.session.add(vendor)
-        db.session.commit()
-        
-        flash(f'공급업체 "{name}"이 추가되었습니다.', 'success')
-        return redirect(url_for('contracts'))
-        
-    except Exception as e:
-        db.session.rollback()
-        flash(f'공급업체 추가 중 오류가 발생했습니다: {str(e)}', 'error')
-        return redirect(url_for('contracts'))
-
 @app.route('/reports/export')
 @login_required
 def export_reports():
@@ -2122,6 +2088,132 @@ def delete_category(category_id):
         flash(f'분류 삭제 중 오류가 발생했습니다: {str(e)}', 'error')
     
     return redirect(url_for('categories'))
+
+
+@app.route('/vendors')
+@login_required
+def vendors():
+    """업체 관리"""
+    from models import Vendor, Category
+    vendors = Vendor.query.all()
+    categories = Category.query.all()
+    return render_template('vendors.html', vendors=vendors, categories=categories)
+
+
+@app.route('/vendors/add', methods=['POST'])
+@login_required
+def add_vendor():
+    """공급업체 추가"""
+    try:
+        from models import Vendor
+        
+        name = request.form.get('name', '').strip()
+        business_number = request.form.get('business_number', '').strip()
+        contact_info = request.form.get('contact_info', '').strip()
+        category_id = request.form.get('category_id')
+        
+        if not name:
+            flash('업체명은 필수입니다.', 'error')
+            return redirect(url_for('vendors'))
+        
+        # 중복 체크
+        existing = Vendor.query.filter_by(name=name).first()
+        if existing:
+            flash('이미 존재하는 업체명입니다.', 'error')
+            return redirect(url_for('vendors'))
+        
+        vendor = Vendor(
+            name=name,
+            business_number=business_number if business_number else None,
+            contact_info=contact_info if contact_info else None,
+            category_id=int(category_id) if category_id else None
+        )
+        
+        db.session.add(vendor)
+        db.session.commit()
+        
+        flash(f'공급업체 "{name}"이 추가되었습니다.', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'공급업체 추가 중 오류가 발생했습니다: {str(e)}', 'error')
+    
+    return redirect(url_for('vendors'))
+
+
+@app.route('/vendors/<int:vendor_id>/edit', methods=['POST'])
+@login_required
+def edit_vendor(vendor_id):
+    """업체 수정"""
+    try:
+        from models import Vendor
+        
+        vendor = Vendor.query.get_or_404(vendor_id)
+        name = request.form.get('name', '').strip()
+        business_number = request.form.get('business_number', '').strip()
+        contact_info = request.form.get('contact_info', '').strip()
+        category_id = request.form.get('category_id')
+        
+        if not name:
+            flash('업체명은 필수입니다.', 'error')
+            return redirect(url_for('vendors'))
+        
+        # 중복 체크 (자기 자신 제외)
+        existing = Vendor.query.filter(
+            Vendor.name == name, 
+            Vendor.id != vendor_id
+        ).first()
+        if existing:
+            flash('이미 존재하는 업체명입니다.', 'error')
+            return redirect(url_for('vendors'))
+        
+        vendor.name = name
+        vendor.business_number = business_number if business_number else None
+        vendor.contact_info = contact_info if contact_info else None
+        vendor.category_id = int(category_id) if category_id else None
+        db.session.commit()
+        
+        flash(f'업체 "{name}"이 수정되었습니다.', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'업체 수정 중 오류가 발생했습니다: {str(e)}', 'error')
+    
+    return redirect(url_for('vendors'))
+
+
+@app.route('/vendors/<int:vendor_id>/delete', methods=['POST'])
+@login_required
+def delete_vendor(vendor_id):
+    """업체 삭제"""
+    try:
+        from models import Vendor, Contract, Transaction
+        
+        vendor = Vendor.query.get_or_404(vendor_id)
+        
+        # 업체와 연결된 계약이 있는지 확인
+        contracts_count = Contract.query.filter_by(vendor_id=vendor_id).count()
+        if contracts_count > 0:
+            flash(f'업체에 {contracts_count}개의 계약이 있어 삭제할 수 없습니다.', 'error')
+            return redirect(url_for('vendors'))
+        
+        # 업체와 연결된 거래가 있는지 확인
+        transactions_count = Transaction.query.filter_by(vendor_id=vendor_id).count()
+        if transactions_count > 0:
+            flash(f'업체에 {transactions_count}개의 거래가 있어 삭제할 수 없습니다.', 'error')
+            return redirect(url_for('vendors'))
+        
+        vendor_name = vendor.name
+        db.session.delete(vendor)
+        db.session.commit()
+        
+        flash(f'업체 "{vendor_name}"이 삭제되었습니다.', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'업체 삭제 중 오류가 발생했습니다: {str(e)}', 'error')
+    
+    return redirect(url_for('vendors'))
 
 
 # API 엔드포인트들
