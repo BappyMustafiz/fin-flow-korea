@@ -972,8 +972,15 @@ def export_alerts_csv(alerts, start_date, end_date):
     import io
     from flask import make_response
     
-    output = io.StringIO()
-    writer = csv.writer(output)
+    # UTF-8 BOM을 포함한 BytesIO 사용
+    output = io.BytesIO()
+    
+    # UTF-8 BOM 추가 (Excel에서 한글 정상 표시를 위해)
+    output.write('\ufeff'.encode('utf-8'))
+    
+    # CSV 데이터를 문자열로 생성
+    csv_data = io.StringIO()
+    writer = csv.writer(csv_data)
     
     # 헤더 작성
     writer.writerow([
@@ -993,11 +1000,13 @@ def export_alerts_csv(alerts, start_date, end_date):
             alert.related_id or ''
         ])
     
+    # UTF-8로 인코딩해서 BytesIO에 추가
+    output.write(csv_data.getvalue().encode('utf-8'))
     output.seek(0)
     
     # 응답 생성
     response = make_response(output.getvalue())
-    response.headers['Content-Type'] = 'text/csv; charset=utf-8-sig'
+    response.headers['Content-Type'] = 'text/csv; charset=utf-8'
     filename = f'alerts_history_{start_date.strftime("%Y%m%d")}_{end_date.strftime("%Y%m%d")}.csv'
     response.headers['Content-Disposition'] = f'attachment; filename={filename}'
     
