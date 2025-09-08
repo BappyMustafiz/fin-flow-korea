@@ -2280,10 +2280,16 @@ def init_sample_data():
 def data_management():
     """데이터 관리 페이지"""
     accounts = Account.query.all()
+    categories = Category.query.all()
+    departments = Department.query.all()
+    vendors = Vendor.query.all()
     recent_uploads = []  # TODO: 업로드 기록 모델 추가 후 구현
     
     return render_template('data_management.html', 
                          accounts=accounts,
+                         categories=categories,
+                         departments=departments,
+                         vendors=vendors,
                          recent_uploads=recent_uploads)
 
 @app.route('/upload-transactions', methods=['POST'])
@@ -2296,6 +2302,13 @@ def upload_transactions():
         
         file = request.files['transaction_file']
         account_id = request.form.get('account_id')
+        
+        # 새로운 폼 필드들
+        default_transaction_type = request.form.get('default_transaction_type', '')
+        default_target_account = request.form.get('default_target_account', '')
+        default_category_id = request.form.get('default_category_id', '')
+        default_department_id = request.form.get('default_department_id', '')
+        default_vendor_id = request.form.get('default_vendor_id', '')
         
         if file.filename == '':
             return jsonify({'success': False, 'error': '파일이 선택되지 않았습니다.'})
@@ -2324,8 +2337,11 @@ def upload_transactions():
         else:
             df = pd.read_excel(file.stream)
         
-        # 필수 컬럼 확인
-        required_columns = ['거래일자', '거래유형', '금액', '거래처']
+        # 필수 컬럼 확인 (거래유형은 기본값이 있으면 선택사항)
+        if default_transaction_type:
+            required_columns = ['거래일자', '금액', '거래처']
+        else:
+            required_columns = ['거래일자', '거래유형', '금액', '거래처']
         missing_columns = [col for col in required_columns if col not in df.columns]
         
         if missing_columns:
@@ -2357,15 +2373,22 @@ def upload_transactions():
                 amount = float(str(row['금액']).replace(',', '').replace('원', ''))
                 transaction.amount = amount
                 
-                # 거래유형 처리
-                transaction_type = str(row['거래유형']).strip()
-                if transaction_type in ['입금', '수입']:
+                # 거래유형 처리 (파일에 있으면 사용, 없으면 기본값 사용)
+                if '거래유형' in df.columns and pd.notna(row['거래유형']):
+                    transaction_type = str(row['거래유형']).strip()
+                else:
+                    transaction_type = default_transaction_type
+                
+                if transaction_type in ['입금', '수입', 'deposit']:
                     transaction.transaction_type = 'credit'
-                elif transaction_type in ['출금', '지출']:
+                elif transaction_type in ['출금', '지출', 'withdrawal']:
                     transaction.transaction_type = 'debit'
                     transaction.amount = -abs(amount)  # 지출은 음수로
-                else:
+                elif transaction_type in ['이체', 'transfer']:
                     transaction.transaction_type = 'transfer'
+                    transaction.amount = -abs(amount)  # 이체도 음수 (보내는 쪽)
+                else:
+                    transaction.transaction_type = 'debit'  # 기본값
                 
                 # 거래처 정보
                 transaction.counterparty = str(row['거래처']).strip()
@@ -2376,8 +2399,53 @@ def upload_transactions():
                 else:
                     transaction.description = transaction.counterparty
                 
-                # 분류 상태는 초기에 pending으로 설정
-                transaction.classification_status = 'pending'
+                # 대상 계정 처리 (이체의 경우)
+                if transaction.transaction_type == 'transfer':
+                    if '대상계정' in df.columns and pd.notna(row['대상계정']):
+                        target_account_name = str(row['대상계정']).strip()
+                        transaction.description += f' (받는 계정: {target_account_name})'
+                    elif default_target_account:
+                        target_account = Account.query.get(default_target_account)
+                        if target_account:
+                            transaction.description += f' (받는 계정: {target_account.name})'
+                
+                # 분류 정보 처리 (이체가 아닌 경우만)
+                if transaction.transaction_type != 'transfer':
+                    # 카테고리
+                    if '분류' in df.columns and pd.notna(row['분류']):
+                        category_name = str(row['분류']).strip()
+                        category = Category.query.filter_by(name=category_name).first()
+                        if category:
+                            transaction.category_id = category.id
+                    elif default_category_id:
+                        transaction.category_id = default_category_id
+                    
+                    # 부서
+                    if '부서' in df.columns and pd.notna(row['부서']):
+                        dept_name = str(row['부서']).strip()
+                        department = Department.query.filter_by(name=dept_name).first()
+                        if department:
+                            transaction.department_id = department.id
+                    elif default_department_id:
+                        transaction.department_id = default_department_id
+                    
+                    # 업체
+                    if '업체' in df.columns and pd.notna(row['업체']):
+                        vendor_name = str(row['업체']).strip()
+                        vendor = Vendor.query.filter_by(name=vendor_name).first()
+                        if vendor:
+                            transaction.vendor_id = vendor.id
+                    elif default_vendor_id:
+                        transaction.vendor_id = default_vendor_id
+                    
+                    # 분류 상태 설정
+                    if transaction.category_id or transaction.department_id or transaction.vendor_id:
+                        transaction.classification_status = 'classified'
+                    else:
+                        transaction.classification_status = 'pending'
+                else:
+                    # 이체는 자동으로 분류됨
+                    transaction.classification_status = 'classified'
                 
                 db.session.add(transaction)
                 processed_count += 1
