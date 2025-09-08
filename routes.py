@@ -5,6 +5,7 @@ from sqlalchemy import func, desc, extract
 from app import app, db
 from models import (Institution, Account, Transaction, Category, Department, 
                    Vendor, MappingRule, Contract, AuditLog, Alert, Consent, User)
+from utils import apply_classification_rules
 import json
 import re
 import pandas as pd
@@ -2275,6 +2276,9 @@ def upload_transactions():
             return jsonify({'success': False, 'error': '유효하지 않은 계정입니다.'})
         
         # 파일 확장자 확인
+        if not file.filename:
+            return jsonify({'success': False, 'error': '파일명이 유효하지 않습니다.'})
+            
         filename = secure_filename(file.filename)
         file_ext = filename.rsplit('.', 1)[1].lower() if '.' in filename else ''
         
@@ -2308,7 +2312,8 @@ def upload_transactions():
                     # 거래시간이 있으면 결합
                     time_str = str(row['거래시간'])
                     if ':' in time_str:
-                        transaction_datetime = pd.to_datetime(f"{transaction_date.date()} {time_str}")
+                        date_str = transaction_date.strftime('%Y-%m-%d')
+                        transaction_datetime = pd.to_datetime(f"{date_str} {time_str}")
                         transaction.transaction_date = transaction_datetime
                     else:
                         transaction.transaction_date = transaction_date
@@ -2350,8 +2355,15 @@ def upload_transactions():
         
         db.session.commit()
         
-        # 자동 분류 규칙 적용
-        apply_classification_rules()
+        # 자동 분류 규칙 적용 (새로 추가된 거래들에 대해)
+        new_transactions = Transaction.query.filter(
+            Transaction.transaction_id.like(f'UPLOAD-{datetime.now().strftime("%Y%m%d%H%M%S")}%')
+        ).all()
+        
+        for transaction in new_transactions:
+            apply_classification_rules(transaction)
+        
+        db.session.commit()
         
         return jsonify({
             'success': True, 
