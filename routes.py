@@ -984,14 +984,19 @@ def reports_data():
             # 부서별 지출 현황
             dept_spending_raw = db.session.query(
                 Department.name,
-                func.sum(Transaction.amount).label('total')
+                func.sum(Transaction.amount).label('total'),
+                func.count(Transaction.id).label('count')
             ).join(Transaction).filter(
                 Transaction.transaction_date >= start_date,
                 Transaction.transaction_date <= end_date,
                 Transaction.amount < 0
             ).group_by(Department.name).all()
             
-            dept_spending = [{'name': row.name, 'total': float(abs(row.total or 0))} for row in dept_spending_raw]
+            dept_spending = [{
+                'name': row.name, 
+                'total': float(abs(row.total or 0)), 
+                'count': row.count
+            } for row in dept_spending_raw]
             data['department'] = dept_spending
             
         elif report_type == 'vendor':
