@@ -2285,22 +2285,22 @@ def data_management():
     vendors = Vendor.query.all()
     # 최근 업로드 기록 조회 (Transaction 모델을 활용)
     recent_uploads_query = db.session.query(
-        Transaction.id,
         func.date(Transaction.created_at).label('upload_date'),
-        Transaction.created_at,
+        func.max(Transaction.created_at).label('latest_time'),
         Transaction.account_id,
-        func.count(Transaction.id).label('processed_count')
+        func.count(Transaction.id).label('processed_count'),
+        func.max(Transaction.id).label('max_id')
     ).group_by(
         func.date(Transaction.created_at),
         Transaction.account_id
-    ).order_by(Transaction.created_at.desc()).limit(10)
+    ).order_by(func.max(Transaction.created_at).desc()).limit(10)
     
     recent_uploads = []
     for upload in recent_uploads_query:
         account = Account.query.get(upload.account_id)
         recent_uploads.append({
-            'id': upload.id,
-            'created_at': upload.created_at,
+            'id': upload.max_id,
+            'created_at': upload.latest_time,
             'filename': f"transactions_{upload.upload_date}.csv",
             'account': account,
             'processed_count': upload.processed_count,
