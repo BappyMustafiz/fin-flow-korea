@@ -641,8 +641,14 @@ function formatNumberWithCommas(value) {
     return numbers.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 }
 
-// 페이지 로드 시 이상 금액 필드에 이벤트 리스너 추가
+// 페이지 로드 시 설정값 로드 및 이벤트 리스너 추가
 document.addEventListener('DOMContentLoaded', function() {
+    // 서버에서 전달된 현재 설정값 로드
+    {% if current_settings %}
+    const currentSettings = {{ current_settings | tojsonfilter }};
+    loadCurrentSettings(currentSettings);
+    {% endif %}
+    
     const anomalyAmountField = document.getElementById('anomalyAmount');
     
     if (anomalyAmountField) {
@@ -665,6 +671,44 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+// 현재 설정값을 폼에 로드하는 함수
+function loadCurrentSettings(settings) {
+    // 예산 알림
+    if (settings.budgetAlert !== undefined) {
+        document.getElementById('budgetAlertEnabled').checked = settings.budgetAlert;
+    }
+    if (settings.budgetThreshold) {
+        document.getElementById('budgetThreshold').value = settings.budgetThreshold;
+    }
+    if (settings.budgetFrequency) {
+        document.getElementById('budgetFrequency').value = settings.budgetFrequency;
+    }
+    
+    // 계약 알림
+    if (settings.contractAlert !== undefined) {
+        document.getElementById('contractAlertEnabled').checked = settings.contractAlert;
+    }
+    if (settings.contractDays) {
+        document.getElementById('contractDays').value = settings.contractDays;
+    }
+    if (settings.contractFrequency) {
+        document.getElementById('contractFrequency').value = settings.contractFrequency;
+    }
+    
+    // 이상거래 알림
+    if (settings.anomalyAlert !== undefined) {
+        document.getElementById('anomalyAlertEnabled').checked = settings.anomalyAlert;
+    }
+    if (settings.anomalyAmount) {
+        // 천단위 콤마 포맷팅 적용
+        const formattedAmount = formatNumberWithCommas(settings.anomalyAmount);
+        document.getElementById('anomalyAmount').value = formattedAmount;
+    }
+    if (settings.immediateAlert !== undefined) {
+        document.getElementById('immediateAlert').checked = settings.immediateAlert;
+    }
+}
 
 function saveAlertSettings() {
     // 이상 금액에서 콤마 제거하고 숫자로 변환
@@ -696,6 +740,10 @@ function saveAlertSettings() {
     .then(data => {
         if (data.success) {
             showToast('알림 설정이 저장되었습니다.', 'success');
+            // 1초 후 페이지 새로고침하여 변경사항 반영
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
         } else {
             showToast('설정 저장 중 오류가 발생했습니다.', 'error');
         }

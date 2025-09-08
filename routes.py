@@ -1116,7 +1116,39 @@ def alerts():
     from models import AlertSetting
     alerts = Alert.query.order_by(desc(Alert.created_at)).limit(50).all()
     alert_settings = AlertSetting.query.order_by(desc(AlertSetting.created_at)).all()
-    return render_template('alerts.html', alerts=alerts, alert_settings=alert_settings)
+    
+    # 기존 시스템 설정값들 조회
+    current_settings = {
+        'budgetAlert': False,
+        'budgetThreshold': '80',
+        'budgetFrequency': 'weekly',
+        'contractAlert': False,
+        'contractDays': '30',
+        'contractFrequency': 'daily',
+        'anomalyAlert': False,
+        'anomalyAmount': '1000000',
+        'immediateAlert': True
+    }
+    
+    # 데이터베이스에서 현재 설정 불러오기
+    for setting in alert_settings:
+        if setting.alert_type == 'budget' and setting.is_active:
+            current_settings['budgetAlert'] = True
+            current_settings['budgetThreshold'] = setting.condition_value
+        elif setting.alert_type == 'contract' and setting.is_active:
+            current_settings['contractAlert'] = True
+            current_settings['contractDays'] = setting.condition_value
+        elif setting.alert_type == 'anomaly' and setting.is_active:
+            current_settings['anomalyAlert'] = True
+            # condition_value는 "10000,9999999999" 형태이므로 첫 번째 값만 가져옴
+            if ',' in setting.condition_value:
+                current_settings['anomalyAmount'] = setting.condition_value.split(',')[0]
+    
+    # 세션에서도 설정값 확인 (최신 설정 우선)
+    session_settings = session.get('alert_settings', {})
+    current_settings.update(session_settings)
+    
+    return render_template('alerts.html', alerts=alerts, alert_settings=alert_settings, current_settings=current_settings)
 
 
 @app.route('/alerts/export')
