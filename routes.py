@@ -1,4 +1,4 @@
-from flask import render_template, request, redirect, url_for, flash, jsonify, session, make_response
+from flask import render_template, request, redirect, url_for, flash, jsonify, session, make_response, send_file
 from flask_login import login_user, logout_user, login_required, current_user
 from datetime import datetime, timedelta, date
 from sqlalchemy import func, desc, extract
@@ -7,6 +7,11 @@ from models import (Institution, Account, Transaction, Category, Department,
                    Vendor, MappingRule, Contract, AuditLog, Alert, Consent, User)
 import json
 import re
+import pandas as pd
+import os
+import tempfile
+from werkzeug.utils import secure_filename
+import io
 
 # 언어 텍스트 사전
 TEXTS = {
@@ -2234,6 +2239,166 @@ def init_sample_data():
     
     db.session.add_all(sample_rules)
     db.session.commit()
+
+# 데이터 관리 라우트
+@app.route('/data-management')
+@login_required
+def data_management():
+    """데이터 관리 페이지"""
+    accounts = Account.query.all()
+    recent_uploads = []  # TODO: 업로드 기록 모델 추가 후 구현
+    
+    return render_template('data_management.html', 
+                         accounts=accounts,
+                         recent_uploads=recent_uploads)
+
+@app.route('/upload-transactions', methods=['POST'])
+@login_required
+def upload_transactions():
+    """파일 업로드 처리"""
+    try:
+        if 'transaction_file' not in request.files:
+            return jsonify({'success': False, 'error': '파일이 선택되지 않았습니다.'})
+        
+        file = request.files['transaction_file']
+        account_id = request.form.get('account_id')
+        
+        if file.filename == '':
+            return jsonify({'success': False, 'error': '파일이 선택되지 않았습니다.'})
+        
+        if not account_id:
+            return jsonify({'success': False, 'error': '계정을 선택해주세요.'})
+        
+        # 계정 확인
+        account = Account.query.get(account_id)
+        if not account:
+            return jsonify({'success': False, 'error': '유효하지 않은 계정입니다.'})
+        
+        # 파일 확장자 확인
+        filename = secure_filename(file.filename)
+        file_ext = filename.rsplit('.', 1)[1].lower() if '.' in filename else ''
+        
+        if file_ext not in ['csv', 'xls', 'xlsx']:
+            return jsonify({'success': False, 'error': '지원하지 않는 파일 형식입니다.'})
+        
+        # 파일 읽기
+        if file_ext == 'csv':
+            df = pd.read_csv(file.stream, encoding='utf-8')
+        else:
+            df = pd.read_excel(file.stream)
+        
+        # 필수 컬럼 확인
+        required_columns = ['거래일자', '거래유형', '금액', '거래처']
+        missing_columns = [col for col in required_columns if col not in df.columns]
+        
+        if missing_columns:
+            return jsonify({'success': False, 'error': f'필수 컬럼이 누락되었습니다: {", ".join(missing_columns)}'})
+        
+        # 데이터 처리 및 저장
+        processed_count = 0
+        for _, row in df.iterrows():
+            try:
+                transaction = Transaction()
+                transaction.account_id = account_id
+                transaction.transaction_id = f'UPLOAD-{datetime.now().strftime("%Y%m%d%H%M%S")}-{processed_count:04d}'
+                
+                # 거래일자 처리
+                transaction_date = pd.to_datetime(row['거래일자'])
+                if '거래시간' in df.columns and pd.notna(row['거래시간']):
+                    # 거래시간이 있으면 결합
+                    time_str = str(row['거래시간'])
+                    if ':' in time_str:
+                        transaction_datetime = pd.to_datetime(f"{transaction_date.date()} {time_str}")
+                        transaction.transaction_date = transaction_datetime
+                    else:
+                        transaction.transaction_date = transaction_date
+                else:
+                    transaction.transaction_date = transaction_date
+                
+                # 금액 처리
+                amount = float(str(row['금액']).replace(',', '').replace('원', ''))
+                transaction.amount = amount
+                
+                # 거래유형 처리
+                transaction_type = str(row['거래유형']).strip()
+                if transaction_type in ['입금', '수입']:
+                    transaction.transaction_type = 'credit'
+                elif transaction_type in ['출금', '지출']:
+                    transaction.transaction_type = 'debit'
+                    transaction.amount = -abs(amount)  # 지출은 음수로
+                else:
+                    transaction.transaction_type = 'transfer'
+                
+                # 거래처 정보
+                transaction.counterparty = str(row['거래처']).strip()
+                
+                # 메모 (선택사항)
+                if '메모' in df.columns and pd.notna(row['메모']):
+                    transaction.description = str(row['메모']).strip()
+                else:
+                    transaction.description = transaction.counterparty
+                
+                # 분류 상태는 초기에 pending으로 설정
+                transaction.classification_status = 'pending'
+                
+                db.session.add(transaction)
+                processed_count += 1
+                
+            except Exception as e:
+                print(f"Row processing error: {e}")
+                continue
+        
+        db.session.commit()
+        
+        # 자동 분류 규칙 적용
+        apply_classification_rules()
+        
+        return jsonify({
+            'success': True, 
+            'processed_count': processed_count,
+            'message': f'{processed_count}건의 거래가 성공적으로 업로드되었습니다.'
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': f'파일 처리 중 오류가 발생했습니다: {str(e)}'})
+
+@app.route('/download-sample/<format>')
+@login_required
+def download_sample(format):
+    """샘플 파일 다운로드"""
+    try:
+        # 샘플 데이터 생성
+        sample_data = {
+            '거래일자': ['2024-01-15', '2024-01-16', '2024-01-17'],
+            '거래시간': ['09:30:00', '14:15:30', '16:45:20'],
+            '거래유형': ['출금', '입금', '출금'],
+            '금액': [5500, 150000, 12000],
+            '거래처': ['스타벅스 강남점', '클라이언트 A', '오피스디포'],
+            '메모': ['커피 및 간식', '프로젝트 수수료', '사무용품 구매']
+        }
+        
+        df = pd.DataFrame(sample_data)
+        
+        # 임시 파일 생성
+        with tempfile.NamedTemporaryFile(delete=False, suffix=f'.{format}') as tmp_file:
+            if format == 'csv':
+                df.to_csv(tmp_file.name, index=False, encoding='utf-8-sig')
+                filename = 'bank_transactions_sample.csv'
+                mimetype = 'text/csv'
+            elif format == 'excel':
+                df.to_excel(tmp_file.name, index=False, engine='openpyxl')
+                filename = 'bank_transactions_sample.xlsx'
+                mimetype = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            else:
+                return jsonify({'error': '지원하지 않는 형식입니다.'}), 400
+            
+            return send_file(tmp_file.name, 
+                           as_attachment=True, 
+                           download_name=filename,
+                           mimetype=mimetype)
+                           
+    except Exception as e:
+        return jsonify({'error': f'샘플 파일 생성 중 오류가 발생했습니다: {str(e)}'}), 500
 
 def create_tables():
     """앱 시작시 테이블 생성 및 초기 데이터 로드"""

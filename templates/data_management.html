@@ -1,0 +1,236 @@
+{% extends "layout.html" %}
+
+{% block title %}{{ get_text('data_management') }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i data-feather="upload" class="me-2"></i>{{ get_text('data_management') }}</h2>
+</div>
+
+<!-- Upload Instructions -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i data-feather="info" class="me-2"></i>{{ get_text('upload_instructions') }}</h5>
+            </div>
+            <div class="card-body">
+                <ol class="mb-0">
+                    <li class="mb-2">{{ get_text('upload_guide_1') }}</li>
+                    <li class="mb-2">{{ get_text('upload_guide_2') }}</li>
+                    <li class="mb-2">{{ get_text('upload_guide_3') }}</li>
+                    <li class="mb-0">{{ get_text('upload_guide_4') }}</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- File Upload Section -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i data-feather="upload" class="me-2"></i>{{ get_text('data_import') }}</h5>
+            </div>
+            <div class="card-body">
+                <form action="{{ url_for('upload_transactions') }}" method="POST" enctype="multipart/form-data" id="uploadForm">
+                    <div class="mb-3">
+                        <label for="transaction_file" class="form-label">{{ get_text('upload_bank_transactions') }}</label>
+                        <p class="text-muted small mb-2">{{ get_text('supported_formats') }}</p>
+                        <input type="file" class="form-control" id="transaction_file" name="transaction_file" 
+                               accept=".csv,.xls,.xlsx" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="account_id" class="form-label">계정 선택 *</label>
+                        <select class="form-select" id="account_id" name="account_id" required>
+                            <option value="">계정을 선택하세요</option>
+                            {% for account in accounts %}
+                            <option value="{{ account.id }}">{{ account.name }} ({{ account.institution.name if account.institution else '' }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">
+                        <i data-feather="upload" class="me-2"></i>{{ get_text('upload') }}
+                    </button>
+                </form>
+                
+                <!-- Upload Progress -->
+                <div id="uploadProgress" class="mt-3" style="display: none;">
+                    <div class="progress">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                             role="progressbar" style="width: 0%"></div>
+                    </div>
+                    <small class="text-muted mt-1 d-block">파일을 처리 중입니다...</small>
+                </div>
+                
+                <!-- Upload Results -->
+                <div id="uploadResults" class="mt-3" style="display: none;"></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Sample Download Section -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i data-feather="download" class="me-2"></i>{{ get_text('sample_download') }}</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted mb-3">아래 샘플 파일을 다운로드하여 형식을 확인하세요.</p>
+                
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('download_sample', format='csv') }}" class="btn btn-outline-success">
+                        <i data-feather="file-text" class="me-2"></i>{{ get_text('download_csv_sample') }}
+                    </a>
+                    <a href="{{ url_for('download_sample', format='excel') }}" class="btn btn-outline-primary">
+                        <i data-feather="file" class="me-2"></i>{{ get_text('download_excel_sample') }}
+                    </a>
+                </div>
+                
+                <div class="mt-4">
+                    <h6>필수 컬럼:</h6>
+                    <ul class="small text-muted">
+                        <li><strong>거래일자</strong>: YYYY-MM-DD 형식</li>
+                        <li><strong>거래시간</strong>: HH:MM:SS 형식 (선택사항)</li>
+                        <li><strong>거래유형</strong>: 입금/출금/이체</li>
+                        <li><strong>금액</strong>: 숫자만 입력</li>
+                        <li><strong>거래처</strong>: 상대방 정보</li>
+                        <li><strong>메모</strong>: 거래 내용 (선택사항)</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Uploads History -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i data-feather="clock" class="me-2"></i>최근 업로드 기록</h5>
+            </div>
+            <div class="card-body">
+                {% if recent_uploads %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>업로드 시간</th>
+                                <th>파일명</th>
+                                <th>계정</th>
+                                <th>처리된 거래</th>
+                                <th>상태</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for upload in recent_uploads %}
+                            <tr>
+                                <td>{{ upload.created_at.strftime('%Y-%m-%d %H:%M') if upload.created_at else '-' }}</td>
+                                <td>{{ upload.filename or '-' }}</td>
+                                <td>{{ upload.account.name if upload.account else '-' }}</td>
+                                <td>{{ upload.processed_count or 0 }}건</td>
+                                <td>
+                                    {% if upload.status == 'completed' %}
+                                    <span class="badge bg-success">완료</span>
+                                    {% elif upload.status == 'failed' %}
+                                    <span class="badge bg-danger">실패</span>
+                                    {% else %}
+                                    <span class="badge bg-warning">처리중</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i data-feather="upload" style="width: 64px; height: 64px;" class="text-muted mb-3"></i>
+                    <h5 class="text-muted">업로드 기록이 없습니다</h5>
+                    <p class="text-muted">첫 번째 파일을 업로드해보세요.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('uploadForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const progressDiv = document.getElementById('uploadProgress');
+    const resultsDiv = document.getElementById('uploadResults');
+    const progressBar = progressDiv.querySelector('.progress-bar');
+    
+    // Show progress
+    progressDiv.style.display = 'block';
+    resultsDiv.style.display = 'none';
+    progressBar.style.width = '10%';
+    
+    // Simulate progress
+    let progress = 10;
+    const progressInterval = setInterval(() => {
+        progress += 10;
+        if (progress <= 90) {
+            progressBar.style.width = progress + '%';
+        }
+    }, 200);
+    
+    fetch(this.action, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        clearInterval(progressInterval);
+        progressBar.style.width = '100%';
+        
+        setTimeout(() => {
+            progressDiv.style.display = 'none';
+            resultsDiv.style.display = 'block';
+            
+            if (data.success) {
+                resultsDiv.innerHTML = `
+                    <div class="alert alert-success">
+                        <i data-feather="check-circle" class="me-2"></i>
+                        업로드 완료! ${data.processed_count}건의 거래가 처리되었습니다.
+                    </div>
+                `;
+                // Refresh page after 2 seconds
+                setTimeout(() => {
+                    window.location.reload();
+                }, 2000);
+            } else {
+                resultsDiv.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i data-feather="alert-circle" class="me-2"></i>
+                        업로드 실패: ${data.error}
+                    </div>
+                `;
+            }
+            
+            // Re-initialize feather icons
+            feather.replace();
+        }, 500);
+    })
+    .catch(error => {
+        clearInterval(progressInterval);
+        progressDiv.style.display = 'none';
+        resultsDiv.style.display = 'block';
+        resultsDiv.innerHTML = `
+            <div class="alert alert-danger">
+                <i data-feather="alert-circle" class="me-2"></i>
+                업로드 중 오류가 발생했습니다.
+            </div>
+        `;
+        feather.replace();
+    });
+});
+</script>
+{% endblock %}
