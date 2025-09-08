@@ -1425,6 +1425,87 @@ def save_alert_settings():
             anomaly_setting.is_active = True
             db.session.add(anomaly_setting)
         
+        # 사용자 정의 알림 처리
+        if 'customAlerts' in settings_data:
+            custom_alerts = settings_data['customAlerts']
+            
+            # 기존 사용자 정의 알림 삭제
+            existing_custom = AlertSetting.query.filter(
+                AlertSetting.alert_type == 'custom'
+            ).all()
+            for setting in existing_custom:
+                db.session.delete(setting)
+            
+            # 거래처 포함 알림
+            if custom_alerts.get('counterparty', {}).get('enabled') and custom_alerts['counterparty'].get('keyword'):
+                counterparty_setting = AlertSetting()
+                counterparty_setting.name = f"거래처 포함: {custom_alerts['counterparty']['keyword']}"
+                counterparty_setting.alert_type = "custom"
+                counterparty_setting.condition = f"counterparty contains {custom_alerts['counterparty']['keyword']}"
+                counterparty_setting.condition_type = "contains"
+                counterparty_setting.condition_field = "counterparty"
+                counterparty_setting.condition_value = custom_alerts['counterparty']['keyword']
+                counterparty_setting.severity = custom_alerts['counterparty'].get('severity', 'warning')
+                counterparty_setting.channel = custom_alerts['counterparty'].get('channel', 'app')
+                counterparty_setting.is_active = True
+                db.session.add(counterparty_setting)
+            
+            # 거래내용 일치 알림
+            if custom_alerts.get('description', {}).get('enabled') and custom_alerts['description'].get('keyword'):
+                description_setting = AlertSetting()
+                description_setting.name = f"거래내용 일치: {custom_alerts['description']['keyword']}"
+                description_setting.alert_type = "custom"
+                description_setting.condition = f"description equals {custom_alerts['description']['keyword']}"
+                description_setting.condition_type = "equals"
+                description_setting.condition_field = "description"
+                description_setting.condition_value = custom_alerts['description']['keyword']
+                description_setting.severity = custom_alerts['description'].get('severity', 'info')
+                description_setting.channel = custom_alerts['description'].get('channel', 'app')
+                description_setting.is_active = True
+                db.session.add(description_setting)
+            
+            # 금액 범위 알림
+            if custom_alerts.get('amount', {}).get('enabled') and custom_alerts['amount'].get('value1'):
+                amount_setting = AlertSetting()
+                amount_condition = custom_alerts['amount']['condition']
+                value1 = custom_alerts['amount']['value1']
+                value2 = custom_alerts['amount'].get('value2', '')
+                
+                if amount_condition == 'greater':
+                    amount_setting.name = f"금액 초과: {int(value1):,}원"
+                    amount_setting.condition = f"amount > {value1}"
+                    amount_setting.condition_value = f"{value1},9999999999"
+                elif amount_condition == 'less':
+                    amount_setting.name = f"금액 미만: {int(value1):,}원"
+                    amount_setting.condition = f"amount < {value1}"
+                    amount_setting.condition_value = f"0,{value1}"
+                elif amount_condition == 'between' and value2:
+                    amount_setting.name = f"금액 범위: {int(value1):,}~{int(value2):,}원"
+                    amount_setting.condition = f"amount range {value1},{value2}"
+                    amount_setting.condition_value = f"{value1},{value2}"
+                
+                amount_setting.alert_type = "custom"
+                amount_setting.condition_type = "amount_range"
+                amount_setting.condition_field = "amount"
+                amount_setting.severity = custom_alerts['amount'].get('severity', 'warning')
+                amount_setting.channel = custom_alerts['amount'].get('channel', 'app')
+                amount_setting.is_active = True
+                db.session.add(amount_setting)
+            
+            # 고급 패턴 알림
+            if custom_alerts.get('advanced', {}).get('enabled') and custom_alerts['advanced'].get('pattern'):
+                advanced_setting = AlertSetting()
+                advanced_setting.name = f"고급 패턴: {custom_alerts['advanced']['pattern'][:20]}..."
+                advanced_setting.alert_type = "custom"
+                advanced_setting.condition = f"{custom_alerts['advanced']['field']} regex {custom_alerts['advanced']['pattern']}"
+                advanced_setting.condition_type = "regex"
+                advanced_setting.condition_field = custom_alerts['advanced']['field']
+                advanced_setting.condition_value = custom_alerts['advanced']['pattern']
+                advanced_setting.severity = custom_alerts['advanced'].get('severity', 'critical')
+                advanced_setting.channel = custom_alerts['advanced'].get('channel', 'app')
+                advanced_setting.is_active = True
+                db.session.add(advanced_setting)
+        
         db.session.commit()
         
         # 세션에도 저장 (호환성 유지)

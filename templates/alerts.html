@@ -164,12 +164,169 @@
                             사용자 정의 알림 설정
                         </h6>
                         
-                        <!-- Add New Alert Button and Quick Actions -->
-                        <div class="mb-3">
+                        <!-- 거래처 텍스트 포함 알림 -->
+                        <div class="setting-section mb-3 p-3 border rounded">
+                            <div class="row align-items-center">
+                                <div class="col-md-3">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="counterpartyAlertEnabled">
+                                        <label class="form-check-label" for="counterpartyAlertEnabled">
+                                            거래처 포함 알림
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="counterpartyKeyword" class="form-label small">포함 키워드</label>
+                                    <input type="text" class="form-control form-control-sm" id="counterpartyKeyword" 
+                                           placeholder="예: 스타벅스, KB은행">
+                                </div>
+                                <div class="col-md-3">
+                                    <label for="counterpartySeverity" class="form-label small">중요도</label>
+                                    <select class="form-select form-select-sm" id="counterpartySeverity">
+                                        <option value="info">정보</option>
+                                        <option value="warning" selected>경고</option>
+                                        <option value="critical">위험</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <label for="counterpartyChannel" class="form-label small">알림 방식</label>
+                                    <select class="form-select form-select-sm" id="counterpartyChannel">
+                                        <option value="app" selected>앱</option>
+                                        <option value="email">이메일</option>
+                                        <option value="sms">SMS</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 거래내용 정확히 일치 알림 -->
+                        <div class="setting-section mb-3 p-3 border rounded">
+                            <div class="row align-items-center">
+                                <div class="col-md-3">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="descriptionAlertEnabled">
+                                        <label class="form-check-label" for="descriptionAlertEnabled">
+                                            거래내용 일치 알림
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="descriptionKeyword" class="form-label small">정확한 내용</label>
+                                    <input type="text" class="form-control form-control-sm" id="descriptionKeyword" 
+                                           placeholder="예: 급여, 임대료">
+                                </div>
+                                <div class="col-md-3">
+                                    <label for="descriptionSeverity" class="form-label small">중요도</label>
+                                    <select class="form-select form-select-sm" id="descriptionSeverity">
+                                        <option value="info" selected>정보</option>
+                                        <option value="warning">경고</option>
+                                        <option value="critical">위험</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <label for="descriptionChannel" class="form-label small">알림 방식</label>
+                                    <select class="form-select form-select-sm" id="descriptionChannel">
+                                        <option value="app" selected>앱</option>
+                                        <option value="email">이메일</option>
+                                        <option value="sms">SMS</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 금액 범위 알림 -->
+                        <div class="setting-section mb-3 p-3 border rounded">
+                            <div class="row align-items-center">
+                                <div class="col-md-3">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="amountAlertEnabled">
+                                        <label class="form-check-label" for="amountAlertEnabled">
+                                            금액 범위 알림
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-2">
+                                    <label for="amountCondition" class="form-label small">조건</label>
+                                    <select class="form-select form-select-sm" id="amountCondition">
+                                        <option value="greater">초과</option>
+                                        <option value="less">미만</option>
+                                        <option value="between">사이</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <label for="amountValue1" class="form-label small">금액 (원)</label>
+                                    <input type="text" class="form-control form-control-sm" id="amountValue1" 
+                                           placeholder="1,000,000">
+                                </div>
+                                <div class="col-md-2">
+                                    <label for="amountValue2" class="form-label small">~최대 (원)</label>
+                                    <input type="text" class="form-control form-control-sm" id="amountValue2" 
+                                           placeholder="5,000,000" style="display: none;">
+                                </div>
+                                <div class="col-md-2">
+                                    <label for="amountSeverity" class="form-label small">중요도</label>
+                                    <select class="form-select form-select-sm" id="amountSeverity">
+                                        <option value="info">정보</option>
+                                        <option value="warning" selected>경고</option>
+                                        <option value="critical">위험</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-1">
+                                    <label for="amountChannel" class="form-label small">알림</label>
+                                    <select class="form-select form-select-sm" id="amountChannel">
+                                        <option value="app" selected>앱</option>
+                                        <option value="email">이메일</option>
+                                        <option value="sms">SMS</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 고급 패턴 알림 -->
+                        <div class="setting-section mb-3 p-3 border rounded">
+                            <div class="row align-items-center">
+                                <div class="col-md-3">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="advancedAlertEnabled">
+                                        <label class="form-check-label" for="advancedAlertEnabled">
+                                            고급 패턴 알림
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="advancedPattern" class="form-label small">정규식 패턴</label>
+                                    <input type="text" class="form-control form-control-sm" id="advancedPattern" 
+                                           placeholder="예: ^KB.*은행$, .*카드.*">
+                                </div>
+                                <div class="col-md-2">
+                                    <label for="advancedField" class="form-label small">적용 필드</label>
+                                    <select class="form-select form-select-sm" id="advancedField">
+                                        <option value="counterparty" selected>거래처</option>
+                                        <option value="description">거래내용</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <label for="advancedSeverity" class="form-label small">중요도</label>
+                                    <select class="form-select form-select-sm" id="advancedSeverity">
+                                        <option value="info">정보</option>
+                                        <option value="warning">경고</option>
+                                        <option value="critical" selected>위험</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-1">
+                                    <label for="advancedChannel" class="form-label small">알림</label>
+                                    <select class="form-select form-select-sm" id="advancedChannel">
+                                        <option value="app" selected>앱</option>
+                                        <option value="email">이메일</option>
+                                        <option value="sms">SMS</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 빠른 작업 버튼들 -->
+                        <div class="mt-3">
                             <div class="d-flex flex-wrap gap-2 align-items-center">
-                                <button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#alertModal">
-                                    <i data-feather="plus" class="me-1"></i>새 알림 추가
-                                </button>
                                 <button class="btn btn-outline-secondary btn-sm" onclick="markAllAsRead()">
                                     <i data-feather="check" class="me-1"></i>모든 알림 읽음
                                 </button>
@@ -181,62 +338,6 @@
                                 </button>
                             </div>
                         </div>
-                        
-                        <!-- Custom Alert Settings List -->
-                        {% if alert_settings %}
-                            <div class="row">
-                                {% for setting in alert_settings %}
-                                {% if setting.alert_type == 'custom' %}
-                                <div class="col-md-6 mb-3">
-                                    <div class="card border {% if not setting.is_active %}bg-light{% endif %}">
-                                        <div class="card-body p-3">
-                                            <div class="d-flex justify-content-between align-items-start mb-2">
-                                                <h6 class="card-title mb-1">{{ setting.name }}</h6>
-                                                <div class="form-check form-switch">
-                                                    <input class="form-check-input" type="checkbox" 
-                                                           {% if setting.is_active %}checked{% endif %}
-                                                           onchange="toggleAlertSetting({{ setting.id }})">
-                                                </div>
-                                            </div>
-                                            <p class="card-text text-muted small mb-2">{{ setting.condition }}</p>
-                                            <div class="mb-2">
-                                                <span class="badge bg-{{ 'info' if setting.severity == 'info' else 'warning' if setting.severity == 'warning' else 'danger' }} me-1">
-                                                    {{ setting.severity.title() }}
-                                                </span>
-                                                <span class="badge bg-secondary">
-                                                    {{ setting.channel.title() }}
-                                                </span>
-                                            </div>
-                                            <div class="btn-group btn-group-sm">
-                                                <button class="btn btn-outline-secondary" 
-                                                        onclick="editAlertSetting({{ setting.id }}, {{ setting.name|tojson|safe }}, {{ setting.condition|tojson|safe }}, '{{ setting.severity }}', '{{ setting.channel }}')" 
-                                                        title="수정">
-                                                    <i data-feather="edit-2" style="width: 12px; height: 12px;"></i>
-                                                </button>
-                                                <button class="btn btn-outline-danger" onclick="deleteAlertSetting({{ setting.id }})" title="삭제">
-                                                    <i data-feather="trash-2" style="width: 12px; height: 12px;"></i>
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                {% endif %}
-                                {% endfor %}
-                            </div>
-                            {% if alert_settings|selectattr('alert_type', 'equalto', 'custom')|list|length == 0 %}
-                            <div class="text-center text-muted py-4">
-                                <i data-feather="bell-off" class="mb-2"></i>
-                                <p class="mb-0">아직 사용자 정의 알림이 없습니다.</p>
-                                <small>위의 "새 알림 추가" 버튼을 눌러 첫 번째 알림을 만들어보세요.</small>
-                            </div>
-                            {% endif %}
-                        {% else %}
-                            <div class="text-center text-muted py-4">
-                                <i data-feather="bell-off" class="mb-2"></i>
-                                <p class="mb-0">아직 사용자 정의 알림이 없습니다.</p>
-                                <small>위의 "새 알림 추가" 버튼을 눌러 첫 번째 알림을 만들어보세요.</small>
-                            </div>
-                        {% endif %}
                     </div>
                 </div>
                 
@@ -683,6 +784,9 @@ document.addEventListener('DOMContentLoaded', function() {
             e.target.select();
         });
     }
+    
+    // 사용자 정의 알림 설정 이벤트 리스너 추가
+    setupCustomAlertSettings();
 });
 
 // 현재 설정값을 폼에 로드하는 함수
@@ -721,6 +825,94 @@ function loadCurrentSettings(settings) {
     if (settings.immediateAlert !== undefined) {
         document.getElementById('immediateAlert').checked = settings.immediateAlert;
     }
+    
+    // 사용자 정의 알림 설정 로드
+    if (settings.customAlerts) {
+        const custom = settings.customAlerts;
+        
+        // 거래처 포함 알림
+        if (custom.counterparty) {
+            document.getElementById('counterpartyAlertEnabled').checked = custom.counterparty.enabled || false;
+            document.getElementById('counterpartyKeyword').value = custom.counterparty.keyword || '';
+            document.getElementById('counterpartySeverity').value = custom.counterparty.severity || 'warning';
+            document.getElementById('counterpartyChannel').value = custom.counterparty.channel || 'app';
+        }
+        
+        // 거래내용 일치 알림
+        if (custom.description) {
+            document.getElementById('descriptionAlertEnabled').checked = custom.description.enabled || false;
+            document.getElementById('descriptionKeyword').value = custom.description.keyword || '';
+            document.getElementById('descriptionSeverity').value = custom.description.severity || 'info';
+            document.getElementById('descriptionChannel').value = custom.description.channel || 'app';
+        }
+        
+        // 금액 범위 알림
+        if (custom.amount) {
+            document.getElementById('amountAlertEnabled').checked = custom.amount.enabled || false;
+            document.getElementById('amountCondition').value = custom.amount.condition || 'greater';
+            document.getElementById('amountValue1').value = formatNumberWithCommas(custom.amount.value1 || '');
+            document.getElementById('amountValue2').value = formatNumberWithCommas(custom.amount.value2 || '');
+            document.getElementById('amountSeverity').value = custom.amount.severity || 'warning';
+            document.getElementById('amountChannel').value = custom.amount.channel || 'app';
+            
+            // 조건에 따라 두 번째 필드 표시
+            const amountValue2Field = document.getElementById('amountValue2');
+            if (custom.amount.condition === 'between') {
+                amountValue2Field.style.display = 'block';
+                amountValue2Field.parentElement.style.display = 'block';
+            }
+        }
+        
+        // 고급 패턴 알림
+        if (custom.advanced) {
+            document.getElementById('advancedAlertEnabled').checked = custom.advanced.enabled || false;
+            document.getElementById('advancedPattern').value = custom.advanced.pattern || '';
+            document.getElementById('advancedField').value = custom.advanced.field || 'counterparty';
+            document.getElementById('advancedSeverity').value = custom.advanced.severity || 'critical';
+            document.getElementById('advancedChannel').value = custom.advanced.channel || 'app';
+        }
+    }
+}
+
+// 사용자 정의 알림 설정 초기화
+function setupCustomAlertSettings() {
+    // 금액 필드에 콤마 포맷팅 적용
+    const amountFields = ['amountValue1', 'amountValue2'];
+    amountFields.forEach(fieldId => {
+        const field = document.getElementById(fieldId);
+        if (field) {
+            field.addEventListener('input', function(e) {
+                const cursorPosition = e.target.selectionStart;
+                const oldValue = e.target.value;
+                const newValue = formatNumberWithCommas(oldValue);
+                
+                e.target.value = newValue;
+                
+                const commaChange = newValue.length - oldValue.length;
+                e.target.setSelectionRange(cursorPosition + commaChange, cursorPosition + commaChange);
+            });
+            
+            field.addEventListener('focus', function(e) {
+                e.target.select();
+            });
+        }
+    });
+    
+    // 금액 조건 변경 시 두 번째 입력 필드 표시/숨김
+    const amountCondition = document.getElementById('amountCondition');
+    const amountValue2 = document.getElementById('amountValue2');
+    
+    if (amountCondition && amountValue2) {
+        amountCondition.addEventListener('change', function() {
+            if (this.value === 'between') {
+                amountValue2.style.display = 'block';
+                amountValue2.parentElement.style.display = 'block';
+            } else {
+                amountValue2.style.display = 'none';
+                amountValue2.parentElement.style.display = 'none';
+            }
+        });
+    }
 }
 
 function saveAlertSettings() {
@@ -736,7 +928,38 @@ function saveAlertSettings() {
         contractFrequency: document.getElementById('contractFrequency').value,
         anomalyAlert: document.getElementById('anomalyAlertEnabled').checked,
         anomalyAmount: anomalyAmountValue,
-        immediateAlert: document.getElementById('immediateAlert').checked
+        immediateAlert: document.getElementById('immediateAlert').checked,
+        
+        // 사용자 정의 알림 설정
+        customAlerts: {
+            counterparty: {
+                enabled: document.getElementById('counterpartyAlertEnabled').checked,
+                keyword: document.getElementById('counterpartyKeyword').value,
+                severity: document.getElementById('counterpartySeverity').value,
+                channel: document.getElementById('counterpartyChannel').value
+            },
+            description: {
+                enabled: document.getElementById('descriptionAlertEnabled').checked,
+                keyword: document.getElementById('descriptionKeyword').value,
+                severity: document.getElementById('descriptionSeverity').value,
+                channel: document.getElementById('descriptionChannel').value
+            },
+            amount: {
+                enabled: document.getElementById('amountAlertEnabled').checked,
+                condition: document.getElementById('amountCondition').value,
+                value1: document.getElementById('amountValue1').value.replace(/,/g, ''),
+                value2: document.getElementById('amountValue2').value.replace(/,/g, ''),
+                severity: document.getElementById('amountSeverity').value,
+                channel: document.getElementById('amountChannel').value
+            },
+            advanced: {
+                enabled: document.getElementById('advancedAlertEnabled').checked,
+                pattern: document.getElementById('advancedPattern').value,
+                field: document.getElementById('advancedField').value,
+                severity: document.getElementById('advancedSeverity').value,
+                channel: document.getElementById('advancedChannel').value
+            }
+        }
     };
     
     console.log('Saving alert settings:', settings);
