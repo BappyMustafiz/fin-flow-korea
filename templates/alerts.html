@@ -143,8 +143,8 @@
                             </div>
                             <div class="col-md-4">
                                 <label for="anomalyAmount" class="form-label small">이상 금액 (원)</label>
-                                <input type="number" class="form-control form-control-sm" id="anomalyAmount" 
-                                       value="1000000" min="100000" step="100000">
+                                <input type="text" class="form-control form-control-sm" id="anomalyAmount" 
+                                       value="1,000,000" placeholder="예: 1,000,000">
                             </div>
                             <div class="col-md-4">
                                 <div class="form-check form-switch mt-4">
@@ -633,7 +633,43 @@ function clearOldAlerts() {
     }
 }
 
+// 천단위 콤마 포맷팅
+function formatNumberWithCommas(value) {
+    // 숫자가 아닌 문자 제거
+    const numbers = value.replace(/[^0-9]/g, '');
+    // 천단위 콤마 추가
+    return numbers.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
+// 페이지 로드 시 이상 금액 필드에 이벤트 리스너 추가
+document.addEventListener('DOMContentLoaded', function() {
+    const anomalyAmountField = document.getElementById('anomalyAmount');
+    
+    if (anomalyAmountField) {
+        // 입력 시 실시간 콤마 포맷팅
+        anomalyAmountField.addEventListener('input', function(e) {
+            const cursorPosition = e.target.selectionStart;
+            const oldValue = e.target.value;
+            const newValue = formatNumberWithCommas(oldValue);
+            
+            e.target.value = newValue;
+            
+            // 커서 위치 조정 (콤마 추가로 인한 위치 변경 보정)
+            const commaChange = newValue.length - oldValue.length;
+            e.target.setSelectionRange(cursorPosition + commaChange, cursorPosition + commaChange);
+        });
+        
+        // 포커스 시 모든 텍스트 선택
+        anomalyAmountField.addEventListener('focus', function(e) {
+            e.target.select();
+        });
+    }
+});
+
 function saveAlertSettings() {
+    // 이상 금액에서 콤마 제거하고 숫자로 변환
+    const anomalyAmountValue = document.getElementById('anomalyAmount').value.replace(/,/g, '');
+    
     const settings = {
         budgetAlert: document.getElementById('budgetAlertEnabled').checked,
         budgetThreshold: document.getElementById('budgetThreshold').value,
@@ -642,7 +678,7 @@ function saveAlertSettings() {
         contractDays: document.getElementById('contractDays').value,
         contractFrequency: document.getElementById('contractFrequency').value,
         anomalyAlert: document.getElementById('anomalyAlertEnabled').checked,
-        anomalyAmount: document.getElementById('anomalyAmount').value,
+        anomalyAmount: anomalyAmountValue,
         immediateAlert: document.getElementById('immediateAlert').checked
     };
     
