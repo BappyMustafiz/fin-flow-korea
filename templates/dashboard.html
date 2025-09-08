@@ -281,15 +281,18 @@ if (deptData && deptData.length > 0) {
     new Chart(deptCtx, {
         type: 'doughnut',
         data: {
-            labels: deptData.map(d => d[0]),
+            labels: deptData.map(d => d.name),
             datasets: [{
-                data: deptData.map(d => Math.abs(d[1])),
+                data: deptData.map(d => d.total),
                 backgroundColor: [
                     '#007bff',
                     '#28a745',
                     '#ffc107',
                     '#dc3545',
-                    '#6f42c1'
+                    '#6f42c1',
+                    '#20c997',
+                    '#fd7e14',
+                    '#e83e8c'
                 ]
             }]
         },
@@ -310,6 +313,13 @@ if (deptData && deptData.length > 0) {
             }
         }
     });
+} else {
+    // 데이터가 없을 때 안내 메시지 표시
+    const deptCtx = document.getElementById('deptExpenseChart').getContext('2d');
+    deptCtx.font = '14px Arial';
+    deptCtx.textAlign = 'center';
+    deptCtx.fillStyle = '#6c757d';
+    deptCtx.fillText('이번 달 부서별 지출 데이터가 없습니다.', deptCtx.canvas.width / 2, deptCtx.canvas.height / 2);
 }
 </script>
 {% endblock %}
