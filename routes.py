@@ -2148,7 +2148,7 @@ def categories():
     """분류 관리"""
     from models import Category
     categories = Category.query.all()
-    return render_template('categories.html', categories=categories, debug_message="카테고리 라우트 활성화됨")
+    return render_template('categories.html', categories=categories)
 
 
 @app.route('/categories/add', methods=['POST'])
@@ -2277,7 +2277,7 @@ def vendors():
     from models import Vendor, Category
     vendors = Vendor.query.all()
     categories = Category.query.all()
-    return render_template('vendors.html', vendors=vendors, categories=categories, debug_message="업체 라우트 활성화됨")
+    return render_template('vendors.html', vendors=vendors, categories=categories)
 
 
 @app.route('/vendors/add', methods=['POST'])
