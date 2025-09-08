@@ -3288,6 +3288,71 @@ def upload_transactions():
     except Exception as e:
         return jsonify({'success': False, 'error': f'파일 처리 중 오류가 발생했습니다: {str(e)}'})
 
+def check_and_create_anomaly_alerts(transaction):
+    """거래에 대해 이상거래 알림 확인 및 생성"""
+    try:
+        from models import AlertSetting, Alert
+        
+        # 활성화된 이상거래 알림 설정 조회
+        alert_settings = AlertSetting.query.filter(
+            AlertSetting.is_active == True,
+            AlertSetting.alert_type == 'anomaly'
+        ).all()
+        
+        for setting in alert_settings:
+            should_alert = False
+            alert_message = ""
+            
+            # 금액 기반 조건 확인
+            if setting.condition_type == 'amount_range' and setting.condition_field == 'amount':
+                # condition_value 형태: "10000,9999999999" (최소값,최대값)
+                try:
+                    min_amount, max_amount = setting.condition_value.split(',')
+                    min_amount = float(min_amount)
+                    max_amount = float(max_amount)
+                    
+                    transaction_amount = abs(transaction.amount)  # 절댓값으로 비교
+                    
+                    if min_amount <= transaction_amount <= max_amount:
+                        should_alert = True
+                        alert_message = f"이상 거래 감지: {transaction.counterparty}에서 {abs(transaction.amount):,.0f}원 거래가 발생했습니다."
+                        
+                except (ValueError, AttributeError):
+                    continue
+            
+            # contains 조건 확인
+            elif setting.condition_type == 'contains':
+                field_value = ""
+                if setting.condition_field == 'description':
+                    field_value = transaction.description or ""
+                elif setting.condition_field == 'counterparty':
+                    field_value = transaction.counterparty or ""
+                
+                if setting.condition_value.lower() in field_value.lower():
+                    should_alert = True
+                    alert_message = f"알림 조건 일치: {transaction.counterparty}에서 '{setting.condition_value}' 포함된 거래가 발생했습니다."
+            
+            # 알림 생성
+            if should_alert:
+                alert = Alert()
+                alert.title = f"[{setting.name}] 이상거래 감지"
+                alert.message = alert_message
+                alert.alert_type = 'anomaly'
+                alert.severity = setting.severity or 'warning'
+                alert.related_table = 'transaction'
+                alert.related_id = transaction.id
+                alert.is_read = False
+                
+                db.session.add(alert)
+                print(f"Anomaly alert created: {alert.title} - {alert.message}")
+        
+        db.session.commit()
+        
+    except Exception as e:
+        print(f"Error checking anomaly alerts: {str(e)}")
+        # 알림 생성 실패해도 거래 추가는 계속 진행
+
+
 @app.route('/add-transaction', methods=['POST'])
 @login_required
 def add_transaction():
@@ -3366,6 +3431,9 @@ def add_transaction():
         
         db.session.add(transaction)
         db.session.commit()
+        
+        # 이상거래 알림 확인 및 생성
+        check_and_create_anomaly_alerts(transaction)
         
         flash('거래가 성공적으로 추가되었습니다.', 'success')
         
