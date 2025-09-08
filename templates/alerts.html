@@ -645,7 +645,7 @@ function formatNumberWithCommas(value) {
 document.addEventListener('DOMContentLoaded', function() {
     // 서버에서 전달된 현재 설정값 로드
     {% if current_settings %}
-    const currentSettings = {{ current_settings | tojsonfilter }};
+    const currentSettings = {{ current_settings | tojson }};
     loadCurrentSettings(currentSettings);
     {% endif %}
     

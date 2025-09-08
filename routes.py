@@ -1505,6 +1505,7 @@ def edit_alert_setting():
     """알림 설정 수정"""
     try:
         from models import AlertSetting
+        from utils import parse_alert_condition, generate_condition_from_type
         
         setting_id = request.form.get('setting_id')
         name = request.form.get('name')
@@ -1514,21 +1515,35 @@ def edit_alert_setting():
         severity = request.form.get('severity', 'info')
         channel = request.form.get('channel', 'app')
         
-        if not all([setting_id, name, condition]):
+        print(f"Edit alert setting - ID: {setting_id}, Name: {name}, Type: {condition_type}, Value: {condition_value}, Condition: {condition}")
+        
+        if not setting_id or not name:
             flash('필수 정보가 누락되었습니다.', 'error')
             return redirect(url_for('alerts'))
         
         setting = AlertSetting.query.get_or_404(setting_id)
         
-        # 조건이 비어있으면 자동 생성
-        if not condition and condition_type and condition_value:
-            from utils import generate_condition_from_type
-            condition = generate_condition_from_type(condition_type, condition_value)
+        # 조건 생성 로직
+        final_condition = condition
+        if not final_condition and condition_type and condition_value:
+            final_condition = generate_condition_from_type(condition_type, condition_value)
+        
+        # 조건이 여전히 없으면 기본값 설정
+        if not final_condition:
+            final_condition = f"description contains {name}"
+        
+        # 조건 파싱하여 구조화된 필드 업데이트
+        parsed = parse_alert_condition(final_condition)
         
         setting.name = name
-        setting.condition = condition
+        setting.condition = final_condition
         setting.severity = severity
         setting.channel = channel
+        
+        if parsed:
+            setting.condition_type = parsed['type']
+            setting.condition_field = parsed['field']
+            setting.condition_value = parsed['value']
         
         db.session.commit()
         
@@ -1537,6 +1552,7 @@ def edit_alert_setting():
         
     except Exception as e:
         db.session.rollback()
+        print(f"Edit alert setting error: {str(e)}")
         flash(f'알림 설정 수정 중 오류가 발생했습니다: {str(e)}', 'error')
         return redirect(url_for('alerts'))
 

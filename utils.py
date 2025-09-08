@@ -70,6 +70,26 @@ def parse_alert_condition(condition_text):
     
     return None
 
+
+def generate_condition_from_type(condition_type, condition_value):
+    """
+    조건 유형과 값으로부터 조건 문자열 생성
+    """
+    if not condition_type or not condition_value:
+        return None
+    
+    condition_map = {
+        'counterparty_contains': f'counterparty contains {condition_value}',
+        'counterparty_equals': f'counterparty equals {condition_value}',
+        'description_contains': f'description contains {condition_value}',
+        'description_equals': f'description equals {condition_value}',
+        'amount_greater': f'amount > {condition_value}',
+        'amount_less': f'amount < {condition_value}',
+        'amount_range': f'amount range {condition_value}'  # condition_value should be "min,max" format
+    }
+    
+    return condition_map.get(condition_type, condition_value)
+
 def check_rule_condition(transaction, rule):
     """규칙 조건 확인"""
     field_value = getattr(transaction, rule.condition_field, '')
