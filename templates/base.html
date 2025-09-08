@@ -42,23 +42,8 @@
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('connections') }}">
-                            <i data-feather="link" class="me-1"></i>연결 관리
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('accounts') }}">
-                            <i data-feather="credit-card" class="me-1"></i>계정 관리
-                        </a>
-                    </li>
-                    <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('transactions') }}">
                             <i data-feather="list" class="me-1"></i>거래
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('rules') }}">
-                            <i data-feather="settings" class="me-1"></i>규칙
                         </a>
                     </li>
                     <li class="nav-item">
@@ -66,25 +51,44 @@
                             <i data-feather="pie-chart" class="me-1"></i>리포트
                         </a>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('alerts') }}">
-                            <i data-feather="bell" class="me-1"></i>알림
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i data-feather="settings" class="me-1"></i>관리
                         </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('categories') }}">
-                            <i data-feather="tag" class="me-1"></i>분류
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('departments') }}">
-                            <i data-feather="building" class="me-1"></i>부서
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('vendors') }}">
-                            <i data-feather="briefcase" class="me-1"></i>업체
-                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{{ url_for('connections') }}">
+                                <i data-feather="link" class="me-2"></i>연결 관리
+                            </a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('accounts') }}">
+                                <i data-feather="credit-card" class="me-2"></i>계정 관리
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{{ url_for('categories') }}">
+                                <i data-feather="tag" class="me-2"></i>분류 관리
+                            </a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('rules') }}">
+                                <i data-feather="sliders" class="me-2"></i>규칙 관리
+                            </a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('contracts') }}">
+                                <i data-feather="file-text" class="me-2"></i>계약 관리
+                            </a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('departments') }}">
+                                <i data-feather="building" class="me-2"></i>부서 관리
+                            </a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('vendors') }}">
+                                <i data-feather="briefcase" class="me-2"></i>업체 관리
+                            </a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('budget') }}">
+                                <i data-feather="dollar-sign" class="me-2"></i>예산 관리
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{{ url_for('data_management') }}">
+                                <i data-feather="database" class="me-2"></i>데이터 관리
+                            </a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('alerts') }}">
+                                <i data-feather="bell" class="me-2"></i>알림/설정
+                            </a></li>
+                        </ul>
                     </li>
                     {% if current_user.role == 'admin' %}
                     <li class="nav-item">
