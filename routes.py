@@ -2024,10 +2024,10 @@ def toggle_user_status(user_id):
         flash('자기 자신의 계정은 비활성화할 수 없습니다.', 'error')
         return redirect(url_for('users'))
     
-    user.is_active = not user.is_active
+    user.active = not user.active
     db.session.commit()
     
-    status = "활성화" if user.is_active else "비활성화"
+    status = "활성화" if user.active else "비활성화"
     flash(f'{user.name} 사용자가 {status}되었습니다.', 'success')
     return redirect(url_for('users'))
 
