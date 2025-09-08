@@ -914,7 +914,7 @@ def reports_data():
         report_type = request.args.get('type', 'cashflow')
         start_date_str = request.args.get('start_date')
         end_date_str = request.args.get('end_date')
-        period = request.args.get('period', 'monthly')
+        aggregation = request.args.get('aggregation', 'monthly')
         
         print(f"Reports data request - Type: {report_type}, Start: {start_date_str}, End: {end_date_str}")
         
@@ -1004,7 +1004,7 @@ def reports_data():
                 Transaction.transaction_date >= start_date,
                 Transaction.transaction_date <= end_date,
                 Transaction.amount < 0
-            ).group_by(Vendor.name).order_by(func.sum(Transaction.amount)).limit(10).all()
+            ).group_by(Vendor.name).order_by(func.sum(Transaction.amount)).limit(20).all()
             
             vendor_data = [{
                 'name': row.name, 
@@ -1012,6 +1012,26 @@ def reports_data():
                 'count': row.count
             } for row in vendor_spending_raw]
             data['vendor'] = vendor_data
+            
+        elif report_type == 'category':
+            # 카테고리별 분석
+            from models import Category
+            category_spending_raw = db.session.query(
+                Category.name,
+                func.sum(Transaction.amount).label('total'),
+                func.count(Transaction.id).label('count')
+            ).join(Transaction).filter(
+                Transaction.transaction_date >= start_date,
+                Transaction.transaction_date <= end_date,
+                Transaction.amount < 0
+            ).group_by(Category.name).all()
+            
+            category_data = [{
+                'name': row.name, 
+                'total': float(abs(row.total or 0)), 
+                'count': row.count
+            } for row in category_spending_raw]
+            data['category'] = category_data
         
         print(f"Reports data response: {data}")
         return jsonify({'success': True, 'data': data})
