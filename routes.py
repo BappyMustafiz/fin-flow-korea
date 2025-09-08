@@ -933,52 +933,133 @@ def reports_data():
         data = {}
         
         if report_type == 'cashflow':
-            # 현금흐름 데이터
-            monthly_income_raw = db.session.query(
-                extract('year', Transaction.transaction_date).label('year'),
-                extract('month', Transaction.transaction_date).label('month'),
-                func.sum(Transaction.amount).label('total')
-            ).filter(
-                Transaction.transaction_date >= start_date,
-                Transaction.transaction_date <= end_date,
-                Transaction.amount > 0
-            ).group_by(
-                extract('year', Transaction.transaction_date),
-                extract('month', Transaction.transaction_date)
-            ).order_by('year', 'month').all()
+            # 현금흐름 데이터 - 집계 단위에 따라 다르게 처리
             
-            monthly_expense_raw = db.session.query(
-                extract('year', Transaction.transaction_date).label('year'),
-                extract('month', Transaction.transaction_date).label('month'),
-                func.sum(Transaction.amount).label('total')
-            ).filter(
-                Transaction.transaction_date >= start_date,
-                Transaction.transaction_date <= end_date,
-                Transaction.amount < 0
-            ).group_by(
-                extract('year', Transaction.transaction_date),
-                extract('month', Transaction.transaction_date)
-            ).order_by('year', 'month').all()
+            if aggregation == 'daily':
+                # 일별 집계
+                income_raw = db.session.query(
+                    Transaction.transaction_date,
+                    func.sum(Transaction.amount).label('total')
+                ).filter(
+                    Transaction.transaction_date >= start_date,
+                    Transaction.transaction_date <= end_date,
+                    Transaction.amount > 0
+                ).group_by(Transaction.transaction_date).order_by(Transaction.transaction_date).all()
+                
+                expense_raw = db.session.query(
+                    Transaction.transaction_date,
+                    func.sum(Transaction.amount).label('total')
+                ).filter(
+                    Transaction.transaction_date >= start_date,
+                    Transaction.transaction_date <= end_date,
+                    Transaction.amount < 0
+                ).group_by(Transaction.transaction_date).order_by(Transaction.transaction_date).all()
+                
+                income_dict = {row.transaction_date: float(row.total or 0) for row in income_raw}
+                expense_dict = {row.transaction_date: abs(float(row.total or 0)) for row in expense_raw}
+                
+                all_dates = set(income_dict.keys()) | set(expense_dict.keys())
+                flow_data = []
+                
+                for date_key in sorted(all_dates):
+                    income = income_dict.get(date_key, 0)
+                    expense = expense_dict.get(date_key, 0)
+                    flow_data.append({
+                        'period': date_key.strftime('%Y-%m-%d'),
+                        'income': income,
+                        'expense': expense,
+                        'net': income - expense
+                    })
+                    
+            elif aggregation == 'weekly':
+                # 주별 집계
+                income_raw = db.session.query(
+                    extract('year', Transaction.transaction_date).label('year'),
+                    extract('week', Transaction.transaction_date).label('week'),
+                    func.sum(Transaction.amount).label('total')
+                ).filter(
+                    Transaction.transaction_date >= start_date,
+                    Transaction.transaction_date <= end_date,
+                    Transaction.amount > 0
+                ).group_by(
+                    extract('year', Transaction.transaction_date),
+                    extract('week', Transaction.transaction_date)
+                ).order_by('year', 'week').all()
+                
+                expense_raw = db.session.query(
+                    extract('year', Transaction.transaction_date).label('year'),
+                    extract('week', Transaction.transaction_date).label('week'),
+                    func.sum(Transaction.amount).label('total')
+                ).filter(
+                    Transaction.transaction_date >= start_date,
+                    Transaction.transaction_date <= end_date,
+                    Transaction.amount < 0
+                ).group_by(
+                    extract('year', Transaction.transaction_date),
+                    extract('week', Transaction.transaction_date)
+                ).order_by('year', 'week').all()
+                
+                income_dict = {(int(row.year), int(row.week)): float(row.total or 0) for row in income_raw}
+                expense_dict = {(int(row.year), int(row.week)): abs(float(row.total or 0)) for row in expense_raw}
+                
+                all_weeks = set(income_dict.keys()) | set(expense_dict.keys())
+                flow_data = []
+                
+                for year, week in sorted(all_weeks):
+                    income = income_dict.get((year, week), 0)
+                    expense = expense_dict.get((year, week), 0)
+                    flow_data.append({
+                        'period': f'{year}-W{week:02d}',
+                        'income': income,
+                        'expense': expense,
+                        'net': income - expense
+                    })
+                    
+            else:  # monthly (기본값)
+                # 월별 집계
+                income_raw = db.session.query(
+                    extract('year', Transaction.transaction_date).label('year'),
+                    extract('month', Transaction.transaction_date).label('month'),
+                    func.sum(Transaction.amount).label('total')
+                ).filter(
+                    Transaction.transaction_date >= start_date,
+                    Transaction.transaction_date <= end_date,
+                    Transaction.amount > 0
+                ).group_by(
+                    extract('year', Transaction.transaction_date),
+                    extract('month', Transaction.transaction_date)
+                ).order_by('year', 'month').all()
+                
+                expense_raw = db.session.query(
+                    extract('year', Transaction.transaction_date).label('year'),
+                    extract('month', Transaction.transaction_date).label('month'),
+                    func.sum(Transaction.amount).label('total')
+                ).filter(
+                    Transaction.transaction_date >= start_date,
+                    Transaction.transaction_date <= end_date,
+                    Transaction.amount < 0
+                ).group_by(
+                    extract('year', Transaction.transaction_date),
+                    extract('month', Transaction.transaction_date)
+                ).order_by('year', 'month').all()
+                
+                income_dict = {(int(row.year), int(row.month)): float(row.total or 0) for row in income_raw}
+                expense_dict = {(int(row.year), int(row.month)): abs(float(row.total or 0)) for row in expense_raw}
+                
+                all_months = set(income_dict.keys()) | set(expense_dict.keys())
+                flow_data = []
+                
+                for year, month in sorted(all_months):
+                    income = income_dict.get((year, month), 0)
+                    expense = expense_dict.get((year, month), 0)
+                    flow_data.append({
+                        'period': f'{year}-{month:02d}',
+                        'income': income,
+                        'expense': expense,
+                        'net': income - expense
+                    })
             
-            # 수입과 지출 데이터 처리
-            income_dict = {(int(row.year), int(row.month)): float(row.total or 0) for row in monthly_income_raw}
-            expense_dict = {(int(row.year), int(row.month)): abs(float(row.total or 0)) for row in monthly_expense_raw}
-            
-            # 모든 월 생성
-            all_months = set(income_dict.keys()) | set(expense_dict.keys())
-            monthly_flow = []
-            
-            for year, month in sorted(all_months):
-                income = income_dict.get((year, month), 0)
-                expense = expense_dict.get((year, month), 0)
-                monthly_flow.append({
-                    'period': f'{year}-{month:02d}',
-                    'income': income,
-                    'expense': expense,
-                    'net': income - expense
-                })
-            
-            data['cashflow'] = monthly_flow
+            data['cashflow'] = flow_data
             
         elif report_type == 'department':
             # 부서별 지출 현황
