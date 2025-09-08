@@ -71,6 +71,19 @@ TEXTS = {
         'upload_guide_3': '3. 파일을 선택하고 업로드 버튼을 클릭하세요',
         'upload_guide_4': '4. 업로드된 거래 데이터는 자동으로 분류됩니다',
         
+        # 거래 관리
+        'add_transaction': '거래 추가',
+        'transaction_type': '거래 유형',
+        'deposit': '입금',
+        'withdrawal': '출금',
+        'transfer': '이체',
+        'amount': '금액',
+        'counterparty': '거래처',
+        'memo': '메모',
+        'transaction_date': '거래일자',
+        'add': '추가',
+        'cancel': '취소',
+        
         # 공통
         'language': '언어'
     },
@@ -128,6 +141,19 @@ TEXTS = {
         'upload_guide_2': '2. Organize your data according to the sample file format below',
         'upload_guide_3': '3. Select your file and click the upload button',
         'upload_guide_4': '4. Uploaded transaction data will be automatically classified',
+        
+        # 거래 관리
+        'add_transaction': 'Add Transaction',
+        'transaction_type': 'Transaction Type',
+        'deposit': 'Deposit',
+        'withdrawal': 'Withdrawal',
+        'transfer': 'Transfer',
+        'amount': 'Amount',
+        'counterparty': 'Counterparty',
+        'memo': 'Memo',
+        'transaction_date': 'Transaction Date',
+        'add': 'Add',
+        'cancel': 'Cancel',
         
         # 공통
         'language': 'Language'

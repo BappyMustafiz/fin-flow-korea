@@ -99,11 +99,11 @@
 {% endblock %}
 
 {% block content %}
-<div class="row mb-4">
-    <div class="col-12">
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
         <h1 class="h3 mb-0">거래 내역</h1>
         {% if selected_account %}
-            <p class="text-muted">
+            <p class="text-muted mb-0">
                 <strong>{{ selected_account.institution.name }}</strong> - {{ selected_account.account_name }} 
                 ({{ selected_account.account_number }}) 계좌의 거래 내역
             </p>
@@ -113,8 +113,13 @@
                 </a>
             </div>
         {% else %}
-            <p class="text-muted">거래 내역 조회 및 분류 관리</p>
+            <p class="text-muted mb-0">거래 내역 조회 및 분류 관리</p>
         {% endif %}
+    </div>
+    <div>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addTransactionModal">
+            <i data-feather="plus" class="me-2"></i>{{ get_text('add_transaction') }}
+        </button>
     </div>
 </div>
 
@@ -904,5 +909,136 @@ function viewDetails(transactionId) {
         `;
     }, 1000);
 }
+</script>
+
+<!-- 거래 추가 모달 -->
+<div class="modal fade" id="addTransactionModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">{{ get_text('add_transaction') }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('add_transaction') }}" method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="account_id" class="form-label">계정 선택 *</label>
+                        <select class="form-select" id="account_id" name="account_id" required>
+                            <option value="">계정을 선택하세요</option>
+                            {% for account in accounts %}
+                            <option value="{{ account.id }}">{{ account.name }} ({{ account.institution.name if account.institution else '' }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="transaction_type" class="form-label">{{ get_text('transaction_type') }} *</label>
+                        <select class="form-select" id="transaction_type" name="transaction_type" required onchange="updateTransactionTypeFields()">
+                            <option value="">거래 유형을 선택하세요</option>
+                            <option value="deposit">{{ get_text('deposit') }}</option>
+                            <option value="withdrawal">{{ get_text('withdrawal') }}</option>
+                            <option value="transfer">{{ get_text('transfer') }}</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="transaction_date" class="form-label">{{ get_text('transaction_date') }} *</label>
+                        <input type="datetime-local" class="form-control" id="transaction_date" name="transaction_date" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="amount" class="form-label">{{ get_text('amount') }} (원) *</label>
+                        <input type="number" class="form-control" id="amount" name="amount" required min="0" step="100">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="counterparty" class="form-label">{{ get_text('counterparty') }} *</label>
+                        <input type="text" class="form-control" id="counterparty" name="counterparty" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="description" class="form-label">{{ get_text('memo') }}</label>
+                        <textarea class="form-control" id="description" name="description" rows="3" placeholder="거래 내용을 입력하세요"></textarea>
+                    </div>
+                    
+                    <!-- 이체 전용 필드 -->
+                    <div id="transferFields" style="display: none;">
+                        <div class="alert alert-info">
+                            <i data-feather="info" class="me-2"></i>
+                            이체 거래는 통계 및 예산 관리에서 제외됩니다.
+                        </div>
+                        <div class="mb-3">
+                            <label for="target_account" class="form-label">받는 계정</label>
+                            <input type="text" class="form-control" id="target_account" name="target_account" placeholder="받는 계정 정보">
+                        </div>
+                    </div>
+                    
+                    <!-- 분류 정보 (이체가 아닌 경우만) -->
+                    <div id="classificationFields">
+                        <hr>
+                        <h6>분류 정보 (선택사항)</h6>
+                        
+                        <div class="mb-3">
+                            <label for="category_id" class="form-label">분류</label>
+                            <select class="form-select" id="category_id" name="category_id">
+                                <option value="">분류를 선택하세요</option>
+                                {% for category in categories %}
+                                <option value="{{ category.id }}">{{ category.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="department_id" class="form-label">부서</label>
+                            <select class="form-select" id="department_id" name="department_id">
+                                <option value="">부서를 선택하세요</option>
+                                {% for department in departments %}
+                                <option value="{{ department.id }}">{{ department.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="vendor_id" class="form-label">업체</label>
+                            <select class="form-select" id="vendor_id" name="vendor_id">
+                                <option value="">업체를 선택하세요</option>
+                                {% for vendor in vendors %}
+                                <option value="{{ vendor.id }}">{{ vendor.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ get_text('cancel') }}</button>
+                    <button type="submit" class="btn btn-primary">{{ get_text('add') }}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// 거래 유형에 따라 필드 표시/숨김
+function updateTransactionTypeFields() {
+    const transactionType = document.getElementById('transaction_type').value;
+    const transferFields = document.getElementById('transferFields');
+    const classificationFields = document.getElementById('classificationFields');
+    
+    if (transactionType === 'transfer') {
+        transferFields.style.display = 'block';
+        classificationFields.style.display = 'none';
+    } else {
+        transferFields.style.display = 'none';
+        classificationFields.style.display = 'block';
+    }
+}
+
+// 모달이 열릴 때 현재 시간으로 설정
+document.getElementById('addTransactionModal').addEventListener('show.bs.modal', function () {
+    const now = new Date();
+    const localDateTime = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+    document.getElementById('transaction_date').value = localDateTime;
+});
 </script>
 {% endblock %}
