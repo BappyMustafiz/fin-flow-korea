@@ -26,26 +26,28 @@
     </div>
 </div>
 
-<div class="row">
-    <!-- File Upload Section -->
-    <div class="col-md-6">
+<!-- Data Import Section -->
+<div class="row mb-4">
+    <div class="col-12">
         <div class="card">
             <div class="card-header">
                 <h5 class="card-title mb-0"><i data-feather="upload" class="me-2"></i>{{ get_text('data_import') }}</h5>
             </div>
             <div class="card-body">
                 <form action="{{ url_for('upload_transactions') }}" method="POST" enctype="multipart/form-data" id="uploadForm">
-                    <div class="mb-3">
-                        <label for="transaction_file" class="form-label">{{ get_text('upload_bank_transactions') }}</label>
-                        <p class="text-muted small mb-2">{{ get_text('supported_formats') }}</p>
-                        <input type="file" class="form-control" id="transaction_file" name="transaction_file" 
-                               accept=".csv,.xls,.xlsx" required>
+                    <div class="row">
+                        <div class="col-md-8">
+                            <label for="transaction_file" class="form-label">{{ get_text('upload_bank_transactions') }}</label>
+                            <p class="text-muted small mb-2">{{ get_text('supported_formats') }}</p>
+                            <input type="file" class="form-control" id="transaction_file" name="transaction_file" 
+                                   accept=".csv,.xls,.xlsx" required>
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i data-feather="upload" class="me-2"></i>{{ get_text('upload') }}
+                            </button>
+                        </div>
                     </div>
-                    
-                    
-                    <button type="submit" class="btn btn-primary">
-                        <i data-feather="upload" class="me-2"></i>{{ get_text('upload') }}
-                    </button>
                 </form>
                 
                 <!-- Upload Progress -->
@@ -62,64 +64,19 @@
             </div>
         </div>
     </div>
-    
-    <!-- Sample Download Section -->
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="card-title mb-0"><i data-feather="download" class="me-2"></i>{{ get_text('sample_download') }}</h5>
-            </div>
-            <div class="card-body">
-                <p class="text-muted mb-3">아래 샘플 파일을 다운로드하여 형식을 확인하세요.</p>
-                
-                <div class="d-grid gap-2">
-                    <a href="{{ url_for('download_sample', format='csv') }}" class="btn btn-outline-success">
-                        <i data-feather="file-text" class="me-2"></i>{{ get_text('download_csv_sample') }}
-                    </a>
-                </div>
-                
-                <div class="mt-4">
-                    <h6>필수 컬럼 (5개):</h6>
-                    <ul class="small text-muted">
-                        <li><strong>계정</strong>: 계정명 (예: KB국민은행 주거래)</li>
-                        <li><strong>거래일자</strong>: YYYY-MM-DD 형식</li>
-                        <li><strong>거래유형</strong>: 입금/출금/이체</li>
-                        <li><strong>금액</strong>: 숫자만 입력</li>
-                        <li><strong>거래처</strong>: 상대방 정보</li>
-                    </ul>
-                    
-                    <h6 class="mt-3">선택사항 컬럼:</h6>
-                    <ul class="small text-muted">
-                        <li><strong>거래시간</strong>: HH:MM:SS 형식</li>
-                        <li><strong>메모</strong>: 거래 내용</li>
-                        <li><strong>대상계정</strong>: 이체 시 받는 계정명 (이체 거래의 경우 필수)</li>
-                        <li><strong>분류</strong>: 카테고리명</li>
-                        <li><strong>부서</strong>: 부서명</li>
-                        <li><strong>업체</strong>: 업체명</li>
-                    </ul>
-                    
-                    <div class="alert alert-info mt-3">
-                        <small><i data-feather="info" class="me-1"></i><strong>파일 업로드 팁:</strong></small>
-                        <ul class="small mb-0 mt-2">
-                            <li>필수 컬럼 5개는 반드시 포함되어야 합니다</li>
-                            <li>계정명은 시스템에 등록된 계정명과 정확히 일치해야 합니다</li>
-                            <li>이체 거래의 경우 대상계정이 반드시 필요합니다</li>
-                            <li>이체 거래는 수입/지출 통계에서 제외됩니다</li>
-                            <li>분류 정보가 없으면 미분류 상태로 저장됩니다</li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
 </div>
 
-<!-- Recent Uploads History -->
-<div class="row mt-4">
+<!-- Upload History Section -->
+<div class="row mb-4">
     <div class="col-12">
         <div class="card">
-            <div class="card-header">
-                <h5 class="card-title mb-0"><i data-feather="clock" class="me-2"></i>최근 업로드 기록</h5>
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0"><i data-feather="clock" class="me-2"></i>업로드 기록</h5>
+                {% if recent_uploads %}
+                <button class="btn btn-outline-primary btn-sm" onclick="verifyUploads()">
+                    <i data-feather="check-circle" class="me-1"></i>업로드 검증
+                </button>
+                {% endif %}
             </div>
             <div class="card-body">
                 {% if recent_uploads %}
@@ -132,6 +89,7 @@
                                 <th>계정</th>
                                 <th>처리된 거래</th>
                                 <th>상태</th>
+                                <th>액션</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -150,6 +108,13 @@
                                     <span class="badge bg-warning">처리중</span>
                                     {% endif %}
                                 </td>
+                                <td>
+                                    {% if upload.status == 'completed' %}
+                                    <button class="btn btn-outline-info btn-sm" onclick="checkUpload({{ upload.id }})">
+                                        <i data-feather="search" class="me-1"></i>확인
+                                    </button>
+                                    {% endif %}
+                                </td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -157,15 +122,78 @@
                 </div>
                 {% else %}
                 <div class="text-center py-4">
-                    <i data-feather="upload" style="width: 64px; height: 64px;" class="text-muted mb-3"></i>
-                    <h5 class="text-muted">업로드 기록이 없습니다</h5>
-                    <p class="text-muted">첫 번째 파일을 업로드해보세요.</p>
+                    <i data-feather="upload" style="width: 48px; height: 48px;" class="text-muted mb-2"></i>
+                    <h6 class="text-muted">업로드 기록이 없습니다</h6>
+                    <p class="text-muted small mb-0">첫 번째 파일을 업로드해보세요.</p>
                 </div>
                 {% endif %}
+                
+                <!-- Verification Results -->
+                <div id="verificationResults" class="mt-3" style="display: none;"></div>
             </div>
         </div>
     </div>
 </div>
+
+<!-- Sample Download Section -->
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i data-feather="download" class="me-2"></i>{{ get_text('sample_download') }}</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted mb-3">아래 샘플 파일을 다운로드하여 형식을 확인하세요.</p>
+                
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('download_sample', format='csv') }}" class="btn btn-outline-success">
+                        <i data-feather="file-text" class="me-2"></i>{{ get_text('download_csv_sample') }}
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i data-feather="info" class="me-2"></i>파일 형식 안내</h5>
+            </div>
+            <div class="card-body">
+                <h6>필수 컬럼 (5개):</h6>
+                <ul class="small text-muted">
+                    <li><strong>계정</strong>: 계정명 (예: KB국민은행 주거래)</li>
+                    <li><strong>거래일자</strong>: YYYY-MM-DD 형식</li>
+                    <li><strong>거래유형</strong>: 입금/출금/이체</li>
+                    <li><strong>금액</strong>: 숫자만 입력</li>
+                    <li><strong>거래처</strong>: 상대방 정보</li>
+                </ul>
+                
+                <h6 class="mt-3">선택사항 컬럼:</h6>
+                <ul class="small text-muted">
+                    <li><strong>거래시간</strong>: HH:MM:SS 형식</li>
+                    <li><strong>메모</strong>: 거래 내용</li>
+                    <li><strong>대상계정</strong>: 이체 시 받는 계정명 (이체 거래의 경우 필수)</li>
+                    <li><strong>분류</strong>: 카테고리명</li>
+                    <li><strong>부서</strong>: 부서명</li>
+                    <li><strong>업체</strong>: 업체명</li>
+                </ul>
+                
+                <div class="alert alert-info mt-3">
+                    <small><i data-feather="info" class="me-1"></i><strong>파일 업로드 팁:</strong></small>
+                    <ul class="small mb-0 mt-2">
+                        <li>필수 컬럼 5개는 반드시 포함되어야 합니다</li>
+                        <li>계정명은 시스템에 등록된 계정명과 정확히 일치해야 합니다</li>
+                        <li>이체 거래의 경우 대상계정이 반드시 필요합니다</li>
+                        <li>이체 거래는 수입/지출 통계에서 제외됩니다</li>
+                        <li>분류 정보가 없으면 미분류 상태로 저장됩니다</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 
 <script>
 
@@ -241,5 +269,96 @@ document.getElementById('uploadForm').addEventListener('submit', function(e) {
         feather.replace();
     });
 });
+
+// Upload verification functions
+function verifyUploads() {
+    const resultsDiv = document.getElementById('verificationResults');
+    resultsDiv.innerHTML = `
+        <div class="alert alert-info">
+            <i data-feather="loader" class="me-2"></i>업로드 검증 중...
+        </div>
+    `;
+    resultsDiv.style.display = 'block';
+    
+    fetch('/verify-uploads', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            resultsDiv.innerHTML = `
+                <div class="alert alert-success">
+                    <i data-feather="check-circle" class="me-2"></i>
+                    검증 완료: 총 ${data.total_transactions}건의 거래가 정상적으로 저장되어 있습니다.
+                </div>
+            `;
+        } else {
+            resultsDiv.innerHTML = `
+                <div class="alert alert-warning">
+                    <i data-feather="alert-triangle" class="me-2"></i>
+                    검증 결과: ${data.message}
+                </div>
+            `;
+        }
+        feather.replace();
+    })
+    .catch(error => {
+        resultsDiv.innerHTML = `
+            <div class="alert alert-danger">
+                <i data-feather="alert-circle" class="me-2"></i>
+                검증 중 오류가 발생했습니다.
+            </div>
+        `;
+        feather.replace();
+    });
+}
+
+function checkUpload(uploadId) {
+    const resultsDiv = document.getElementById('verificationResults');
+    resultsDiv.innerHTML = `
+        <div class="alert alert-info">
+            <i data-feather="loader" class="me-2"></i>업로드 확인 중...
+        </div>
+    `;
+    resultsDiv.style.display = 'block';
+    
+    fetch(`/check-upload/${uploadId}`, {
+        method: 'GET'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            resultsDiv.innerHTML = `
+                <div class="alert alert-success">
+                    <i data-feather="check-circle" class="me-2"></i>
+                    <strong>업로드 확인 완료</strong><br>
+                    파일: ${data.filename}<br>
+                    처리된 거래: ${data.processed_count}건<br>
+                    업로드 시간: ${data.upload_time}
+                </div>
+            `;
+        } else {
+            resultsDiv.innerHTML = `
+                <div class="alert alert-danger">
+                    <i data-feather="alert-circle" class="me-2"></i>
+                    업로드 확인 실패: ${data.error}
+                </div>
+            `;
+        }
+        feather.replace();
+    })
+    .catch(error => {
+        resultsDiv.innerHTML = `
+            <div class="alert alert-danger">
+                <i data-feather="alert-circle" class="me-2"></i>
+                확인 중 오류가 발생했습니다.
+            </div>
+        `;
+        feather.replace();
+    });
+}
 </script>
 {% endblock %}

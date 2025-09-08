@@ -2283,7 +2283,29 @@ def data_management():
     categories = Category.query.all()
     departments = Department.query.all()
     vendors = Vendor.query.all()
-    recent_uploads = []  # TODO: 업로드 기록 모델 추가 후 구현
+    # 최근 업로드 기록 조회 (Transaction 모델을 활용)
+    recent_uploads_query = db.session.query(
+        Transaction.id,
+        func.date(Transaction.created_at).label('upload_date'),
+        Transaction.created_at,
+        Transaction.account_id,
+        func.count(Transaction.id).label('processed_count')
+    ).group_by(
+        func.date(Transaction.created_at),
+        Transaction.account_id
+    ).order_by(Transaction.created_at.desc()).limit(10)
+    
+    recent_uploads = []
+    for upload in recent_uploads_query:
+        account = Account.query.get(upload.account_id)
+        recent_uploads.append({
+            'id': upload.id,
+            'created_at': upload.created_at,
+            'filename': f"transactions_{upload.upload_date}.csv",
+            'account': account,
+            'processed_count': upload.processed_count,
+            'status': 'completed'
+        })
     
     return render_template('data_management.html', 
                          accounts=accounts,
@@ -2602,6 +2624,59 @@ def download_sample(format):
                            
     except Exception as e:
         return jsonify({'error': f'샘플 파일 생성 중 오류가 발생했습니다: {str(e)}'}), 500
+
+
+@app.route('/verify-uploads', methods=['POST'])
+@login_required
+def verify_uploads():
+    """전체 업로드 검증"""
+    try:
+        # 총 거래 건수 조회
+        total_transactions = Transaction.query.count()
+        
+        # 최근 업로드들의 상태 확인 (최근 7일)
+        from datetime import datetime, timedelta
+        recent_count = Transaction.query.filter(
+            Transaction.created_at >= datetime.now() - timedelta(days=7)
+        ).count()
+        
+        return jsonify({
+            'success': True,
+            'total_transactions': total_transactions,
+            'recent_transactions': recent_count,
+            'message': f'최근 7일간 {recent_count}건의 거래가 업로드되었습니다.'
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+
+@app.route('/check-upload/<int:upload_id>', methods=['GET'])
+@login_required
+def check_upload(upload_id):
+    """특정 업로드 확인"""
+    try:
+        # Transaction ID를 기준으로 해당 거래 조회
+        transaction = Transaction.query.get(upload_id)
+        
+        if not transaction:
+            return jsonify({'success': False, 'error': '업로드를 찾을 수 없습니다.'})
+        
+        # 같은 날짜, 같은 계정의 거래 건수 조회
+        same_date_count = Transaction.query.filter(
+            func.date(Transaction.created_at) == func.date(transaction.created_at),
+            Transaction.account_id == transaction.account_id
+        ).count()
+        
+        return jsonify({
+            'success': True,
+            'filename': f"transactions_{transaction.created_at.strftime('%Y-%m-%d')}.csv",
+            'processed_count': same_date_count,
+            'upload_time': transaction.created_at.strftime('%Y-%m-%d %H:%M'),
+            'account_name': transaction.account.name if transaction.account else 'N/A'
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
 
 def create_tables():
     """앱 시작시 테이블 생성 및 초기 데이터 로드"""
