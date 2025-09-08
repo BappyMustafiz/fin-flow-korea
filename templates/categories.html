@@ -37,7 +37,7 @@
                 <div class="d-flex justify-content-between">
                     <div>
                         <h5 class="card-title">사용 중인 분류</h5>
-                        <h3 class="mb-0">{{ categories|selectattr('vendors')|list|length }}</h3>
+                        <h3 class="mb-0">0</h3>
                     </div>
                     <div class="align-self-center">
                         <i data-feather="check-circle" style="width: 2rem; height: 2rem;"></i>
@@ -52,7 +52,7 @@
                 <div class="d-flex justify-content-between">
                     <div>
                         <h5 class="card-title">연결된 업체 수</h5>
-                        <h3 class="mb-0">{{ categories|sum(attribute='vendors')|length }}</h3>
+                        <h3 class="mb-0">0</h3>
                     </div>
                     <div class="align-self-center">
                         <i data-feather="users" style="width: 2rem; height: 2rem;"></i>
