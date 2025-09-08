@@ -66,26 +66,23 @@
             <div class="card-body">
                 <div class="alert-settings">
                     <!-- Budget Alert Settings -->
-                    <div class="setting-section mb-4">
-                        <h6 class="text-primary">
-                            <i data-feather="dollar-sign" class="me-2"></i>
-                            예산 알림 설정
-                        </h6>
-                        <div class="row">
-                            <div class="col-md-4">
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="budgetAlertEnabled" checked>
-                                    <label class="form-check-label" for="budgetAlertEnabled">
-                                        예산 알림 활성화
-                                    </label>
-                                </div>
+                    <div class="setting-section mb-4 p-3 border rounded">
+                        <div class="row align-items-end">
+                            <div class="col-md-2">
+                                <h6 class="mb-2 text-primary">
+                                    <i data-feather="dollar-sign" class="me-2"></i>
+                                    예산 알림
+                                </h6>
+                                <button class="btn btn-primary btn-sm" onclick="createBudgetAlert()">
+                                    <i data-feather="check" class="me-1"></i>확인
+                                </button>
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-md-3">
                                 <label for="budgetThreshold" class="form-label small">임계치 (%)</label>
                                 <input type="number" class="form-control form-control-sm" id="budgetThreshold" 
                                        value="80" min="50" max="100">
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-md-3">
                                 <label for="budgetFrequency" class="form-label small">알림 주기</label>
                                 <select class="form-select form-select-sm" id="budgetFrequency">
                                     <option value="daily">매일</option>
@@ -93,67 +90,157 @@
                                     <option value="monthly">매월</option>
                                 </select>
                             </div>
+                            <div class="col-md-2">
+                                <label for="budgetSeverity" class="form-label small">중요도</label>
+                                <select class="form-select form-select-sm" id="budgetSeverity">
+                                    <option value="info">정보</option>
+                                    <option value="warning" selected>경고</option>
+                                    <option value="critical">위험</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="budgetChannel" class="form-label small">알림 방식</label>
+                                <select class="form-select form-select-sm" id="budgetChannel">
+                                    <option value="app" selected>앱</option>
+                                    <option value="email">이메일</option>
+                                    <option value="sms">SMS</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
                     
                     <!-- Contract Alert Settings -->
-                    <div class="setting-section mb-4">
-                        <h6 class="text-info">
-                            <i data-feather="file-text" class="me-2"></i>
-                            계약 만료 알림 설정
-                        </h6>
-                        <div class="row">
-                            <div class="col-md-4">
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="contractAlertEnabled" checked>
-                                    <label class="form-check-label" for="contractAlertEnabled">
-                                        계약 만료 알림 활성화
-                                    </label>
-                                </div>
+                    <div class="setting-section mb-4 p-3 border rounded">
+                        <div class="row align-items-end">
+                            <div class="col-md-2">
+                                <h6 class="mb-2 text-info">
+                                    <i data-feather="file-text" class="me-2"></i>
+                                    계약 만료 알림
+                                </h6>
+                                <button class="btn btn-primary btn-sm" onclick="createContractAlert()">
+                                    <i data-feather="check" class="me-1"></i>확인
+                                </button>
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-md-3">
                                 <label for="contractDays" class="form-label small">사전 알림 (일)</label>
                                 <input type="number" class="form-control form-control-sm" id="contractDays" 
                                        value="30" min="7" max="90">
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-md-3">
                                 <label for="contractFrequency" class="form-label small">알림 주기</label>
                                 <select class="form-select form-select-sm" id="contractFrequency">
                                     <option value="daily" selected>매일</option>
                                     <option value="weekly">매주</option>
                                 </select>
                             </div>
+                            <div class="col-md-2">
+                                <label for="contractSeverity" class="form-label small">중요도</label>
+                                <select class="form-select form-select-sm" id="contractSeverity">
+                                    <option value="info">정보</option>
+                                    <option value="warning" selected>경고</option>
+                                    <option value="critical">위험</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="contractChannel" class="form-label small">알림 방식</label>
+                                <select class="form-select form-select-sm" id="contractChannel">
+                                    <option value="app" selected>앱</option>
+                                    <option value="email">이메일</option>
+                                    <option value="sms">SMS</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
                     
                     <!-- Anomaly Alert Settings -->
-                    <div class="setting-section mb-4">
-                        <h6 class="text-danger">
-                            <i data-feather="alert-triangle" class="me-2"></i>
-                            이상거래 알림 설정
-                        </h6>
-                        <div class="row">
-                            <div class="col-md-4">
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="anomalyAlertEnabled" checked>
-                                    <label class="form-check-label" for="anomalyAlertEnabled">
-                                        이상거래 알림 활성화
-                                    </label>
-                                </div>
+                    <div class="setting-section mb-4 p-3 border rounded">
+                        <div class="row align-items-end">
+                            <div class="col-md-2">
+                                <h6 class="mb-2 text-danger">
+                                    <i data-feather="alert-triangle" class="me-2"></i>
+                                    이상거래 알림
+                                </h6>
+                                <button class="btn btn-primary btn-sm" onclick="createAnomalyAlert()">
+                                    <i data-feather="check" class="me-1"></i>확인
+                                </button>
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-md-3">
                                 <label for="anomalyAmount" class="form-label small">이상 금액 (원)</label>
                                 <input type="text" class="form-control form-control-sm" id="anomalyAmount" 
                                        value="1,000,000" placeholder="예: 1,000,000">
                             </div>
-                            <div class="col-md-4">
-                                <div class="form-check form-switch mt-4">
-                                    <input class="form-check-input" type="checkbox" id="immediateAlert" checked>
-                                    <label class="form-check-label" for="immediateAlert">
+                            <div class="col-md-3">
+                                <label for="anomalySeverity" class="form-label small">중요도</label>
+                                <select class="form-select form-select-sm" id="anomalySeverity">
+                                    <option value="info">정보</option>
+                                    <option value="warning">경고</option>
+                                    <option value="critical" selected>위험</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="anomalyChannel" class="form-label small">알림 방식</label>
+                                <select class="form-select form-select-sm" id="anomalyChannel">
+                                    <option value="app" selected>앱</option>
+                                    <option value="email">이메일</option>
+                                    <option value="sms">SMS</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="form-check mt-4">
+                                    <input class="form-check-input" type="checkbox" id="immediateAlert">
+                                    <label class="form-check-label small" for="immediateAlert">
                                         즉시 알림
                                     </label>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 생성된 시스템 알림 카드 표시 영역 -->
+                    <div class="mt-4">
+                        <h6 class="text-secondary mb-3">
+                            <i data-feather="bell" class="me-2"></i>
+                            생성된 시스템 알림
+                        </h6>
+                        <div id="systemAlertCards" class="row">
+                            <!-- 기존 시스템 알림 카드들 표시 -->
+                            {% if alert_settings %}
+                                {% for setting in alert_settings %}
+                                {% if setting.alert_type in ['budget', 'contract', 'anomaly'] %}
+                                <div class="col-md-6 mb-3" id="alertCard_{{ setting.id }}">
+                                    <div class="card border {% if not setting.is_active %}bg-light{% endif %}">
+                                        <div class="card-body p-3">
+                                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                                <h6 class="card-title mb-1">{{ setting.name }}</h6>
+                                                <div class="form-check form-switch">
+                                                    <input class="form-check-input" type="checkbox" 
+                                                           {% if setting.is_active %}checked{% endif %}
+                                                           onchange="toggleAlertSetting({{ setting.id }})">
+                                                </div>
+                                            </div>
+                                            <p class="card-text text-muted small mb-2">{{ setting.condition }}</p>
+                                            <div class="mb-2">
+                                                <span class="badge bg-{{ 'info' if setting.severity == 'info' else 'warning' if setting.severity == 'warning' else 'danger' }} me-1">
+                                                    {{ setting.severity.title() }}
+                                                </span>
+                                                <span class="badge bg-secondary">
+                                                    {{ setting.channel.title() }}
+                                                </span>
+                                                <span class="badge bg-primary">
+                                                    {% if setting.alert_type == 'budget' %}예산{% elif setting.alert_type == 'contract' %}계약{% elif setting.alert_type == 'anomaly' %}이상거래{% endif %}
+                                                </span>
+                                            </div>
+                                            <div class="btn-group btn-group-sm">
+                                                <button class="btn btn-outline-danger" onclick="deleteAlertSetting({{ setting.id }})" title="삭제">
+                                                    <i data-feather="trash-2" style="width: 12px; height: 12px;"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endif %}
+                                {% endfor %}
+                            {% endif %}
                         </div>
                     </div>
                     
@@ -1170,6 +1257,184 @@ document.addEventListener('DOMContentLoaded', function() {
         editConditionValue.addEventListener('input', updateEditConditionInput);
     }
 });
+
+// 시스템 알림 생성 함수들
+function createBudgetAlert() {
+    const threshold = document.getElementById('budgetThreshold').value;
+    const frequency = document.getElementById('budgetFrequency').value;
+    const severity = document.getElementById('budgetSeverity').value;
+    const channel = document.getElementById('budgetChannel').value;
+    
+    if (!threshold) {
+        showToast('임계치를 설정해주세요.', 'warning');
+        return;
+    }
+    
+    // 중복 검사
+    checkSystemDuplicateAndCreate('budget', `${threshold}%`, {
+        name: `예산 초과 알림: ${threshold}%`,
+        condition: `budget threshold ${threshold}%`,
+        condition_type: 'budget_threshold',
+        condition_field: 'budget',
+        condition_value: threshold,
+        severity: severity,
+        channel: channel,
+        alert_type: 'budget',
+        frequency: frequency
+    });
+}
+
+function createContractAlert() {
+    const days = document.getElementById('contractDays').value;
+    const frequency = document.getElementById('contractFrequency').value;
+    const severity = document.getElementById('contractSeverity').value;
+    const channel = document.getElementById('contractChannel').value;
+    
+    if (!days) {
+        showToast('사전 알림 일수를 설정해주세요.', 'warning');
+        return;
+    }
+    
+    // 중복 검사
+    checkSystemDuplicateAndCreate('contract', `${days}일`, {
+        name: `계약 만료 알림: ${days}일 전`,
+        condition: `contract expiry ${days} days`,
+        condition_type: 'contract_expiry',
+        condition_field: 'contract',
+        condition_value: days,
+        severity: severity,
+        channel: channel,
+        alert_type: 'contract',
+        frequency: frequency
+    });
+}
+
+function createAnomalyAlert() {
+    const amount = document.getElementById('anomalyAmount').value.replace(/,/g, '');
+    const severity = document.getElementById('anomalySeverity').value;
+    const channel = document.getElementById('anomalyChannel').value;
+    const immediate = document.getElementById('immediateAlert').checked;
+    
+    if (!amount || isNaN(amount)) {
+        showToast('올바른 이상 금액을 입력해주세요.', 'warning');
+        return;
+    }
+    
+    // 중복 검사
+    checkSystemDuplicateAndCreate('anomaly', amount, {
+        name: `이상거래 알림: ${parseInt(amount).toLocaleString()}원 초과`,
+        condition: `transaction amount > ${amount}`,
+        condition_type: 'amount_threshold',
+        condition_field: 'amount',
+        condition_value: amount,
+        severity: severity,
+        channel: channel,
+        alert_type: 'anomaly',
+        immediate: immediate
+    });
+}
+
+// 시스템 알림 중복 검사 및 생성
+function checkSystemDuplicateAndCreate(type, checkValue, alertData) {
+    // 서버에 중복 검사 및 생성 요청
+    fetch('/alerts/create-system', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            type: type,
+            checkValue: checkValue,
+            alertData: alertData
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            if (data.isDuplicate) {
+                showToast(`중복된 조건이 있지만 새로운 알림을 생성했습니다: ${data.message}`, 'warning');
+            } else {
+                showToast('새로운 시스템 알림이 생성되었습니다.', 'success');
+            }
+            
+            // 시스템 알림 카드 추가
+            addSystemAlertCard(data.alertId, alertData);
+            
+            // 폼 초기화
+            resetSystemFormFields(type);
+        } else {
+            showToast(data.error || '알림 생성 중 오류가 발생했습니다.', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('알림 생성 중 오류가 발생했습니다.', 'error');
+    });
+}
+
+// 시스템 알림 카드 추가
+function addSystemAlertCard(alertId, alertData) {
+    const cardsContainer = document.getElementById('systemAlertCards');
+    
+    const typeText = alertData.alert_type === 'budget' ? '예산' : 
+                     alertData.alert_type === 'contract' ? '계약' : '이상거래';
+    
+    const cardHtml = `
+        <div class="col-md-6 mb-3" id="alertCard_${alertId}">
+            <div class="card border">
+                <div class="card-body p-3">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h6 class="card-title mb-1">${alertData.name}</h6>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" checked
+                                   onchange="toggleAlertSetting(${alertId})">
+                        </div>
+                    </div>
+                    <p class="card-text text-muted small mb-2">${alertData.condition}</p>
+                    <div class="mb-2">
+                        <span class="badge bg-${alertData.severity === 'info' ? 'info' : alertData.severity === 'warning' ? 'warning' : 'danger'} me-1">
+                            ${alertData.severity.charAt(0).toUpperCase() + alertData.severity.slice(1)}
+                        </span>
+                        <span class="badge bg-secondary">
+                            ${alertData.channel.charAt(0).toUpperCase() + alertData.channel.slice(1)}
+                        </span>
+                        <span class="badge bg-primary">
+                            ${typeText}
+                        </span>
+                    </div>
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-outline-danger" onclick="deleteAlertSetting(${alertId})" title="삭제">
+                            <i data-feather="trash-2" style="width: 12px; height: 12px;"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    cardsContainer.insertAdjacentHTML('beforeend', cardHtml);
+    
+    // 아이콘 새로고침
+    setTimeout(() => feather.replace(), 100);
+}
+
+// 시스템 알림 폼 필드 초기화
+function resetSystemFormFields(type) {
+    switch(type) {
+        case 'budget':
+            document.getElementById('budgetThreshold').value = '90';
+            document.getElementById('budgetFrequency').value = 'weekly';
+            break;
+        case 'contract':
+            document.getElementById('contractDays').value = '30';
+            document.getElementById('contractFrequency').value = 'daily';
+            break;
+        case 'anomaly':
+            document.getElementById('anomalyAmount').value = '';
+            document.getElementById('immediateAlert').checked = false;
+            break;
+    }
+}
 
 // 개별 알림 생성 함수들
 function createCounterpartyAlert() {
