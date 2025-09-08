@@ -3307,10 +3307,21 @@ def add_transaction():
         department_id = request.form.get('department_id') if transaction_type != 'transfer' else None
         vendor_id = request.form.get('vendor_id') if transaction_type != 'transfer' else None
         
-        # 유효성 검사
-        if not all([account_id, transaction_type, transaction_date, amount, counterparty]):
+        # 유효성 검사 (거래처는 선택사항)
+        if not all([account_id, transaction_type, transaction_date, amount]):
             flash('필수 항목을 모두 입력해주세요.', 'error')
             return redirect(url_for('transactions'))
+        
+        # 거래처가 비어있으면 기본값 설정
+        if not counterparty:
+            if transaction_type == 'deposit':
+                counterparty = '입금'
+            elif transaction_type == 'withdrawal':
+                counterparty = '출금'
+            elif transaction_type == 'transfer':
+                counterparty = '계좌이체'
+            else:
+                counterparty = '거래처 미분류'
         
         # 계정 확인
         account = Account.query.get(account_id)

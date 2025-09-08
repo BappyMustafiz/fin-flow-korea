@@ -277,9 +277,17 @@ fetch('/api/dashboard/chart-data')
 // 부서별 지출 차트
 const deptData = {{ dept_expenses | tojson }};
 console.log('Department data:', deptData);
+console.log('Chart.js available:', typeof Chart !== 'undefined');
+
 if (deptData && deptData.length > 0) {
-    const deptCtx = document.getElementById('deptExpenseChart').getContext('2d');
-    new Chart(deptCtx, {
+    const deptCanvas = document.getElementById('deptExpenseChart');
+    console.log('Canvas element found:', deptCanvas !== null);
+    
+    if (deptCanvas && typeof Chart !== 'undefined') {
+        const deptCtx = deptCanvas.getContext('2d');
+        console.log('Creating department chart...');
+        
+        const deptChart = new Chart(deptCtx, {
         type: 'doughnut',
         data: {
             labels: deptData.map(d => d.name),
@@ -313,14 +321,23 @@ if (deptData && deptData.length > 0) {
                 }
             }
         }
-    });
+        });
+        
+        console.log('Department chart created successfully');
+    } else {
+        console.log('Canvas or Chart.js not available');
+    }
 } else {
+    console.log('No department data available');
     // 데이터가 없을 때 안내 메시지 표시
-    const deptCtx = document.getElementById('deptExpenseChart').getContext('2d');
-    deptCtx.font = '14px Arial';
-    deptCtx.textAlign = 'center';
-    deptCtx.fillStyle = '#6c757d';
-    deptCtx.fillText('이번 달 부서별 지출 데이터가 없습니다.', deptCtx.canvas.width / 2, deptCtx.canvas.height / 2);
+    const deptCanvas = document.getElementById('deptExpenseChart');
+    if (deptCanvas) {
+        const deptCtx = deptCanvas.getContext('2d');
+        deptCtx.font = '14px Arial';
+        deptCtx.textAlign = 'center';
+        deptCtx.fillStyle = '#6c757d';
+        deptCtx.fillText('부서별 지출 데이터가 없습니다.', deptCanvas.width / 2, deptCanvas.height / 2);
+    }
 }
 </script>
 {% endblock %}
