@@ -998,7 +998,8 @@ def export_alerts_csv(alerts, start_date, end_date):
     # 응답 생성
     response = make_response(output.getvalue())
     response.headers['Content-Type'] = 'text/csv; charset=utf-8-sig'
-    response.headers['Content-Disposition'] = f'attachment; filename="알림내역_{start_date.strftime("%Y%m%d")}_{end_date.strftime("%Y%m%d")}.csv"'
+    filename = f'alerts_history_{start_date.strftime("%Y%m%d")}_{end_date.strftime("%Y%m%d")}.csv'
+    response.headers['Content-Disposition'] = f'attachment; filename={filename}'
     
     return response
 
@@ -1056,7 +1057,8 @@ def export_alerts_excel(alerts, start_date, end_date):
     
     response = make_response(output.getvalue())
     response.headers['Content-Type'] = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    response.headers['Content-Disposition'] = f'attachment; filename="알림내역_{start_date.strftime("%Y%m%d")}_{end_date.strftime("%Y%m%d")}.xlsx"'
+    filename = f'alerts_history_{start_date.strftime("%Y%m%d")}_{end_date.strftime("%Y%m%d")}.xlsx'
+    response.headers['Content-Disposition'] = f'attachment; filename={filename}'
     
     return response
 
