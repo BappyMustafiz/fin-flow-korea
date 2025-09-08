@@ -83,59 +83,55 @@
                             </a></li>
                         </ul>
                     </li>
+                    {% if current_user.is_authenticated and current_user.role == 'admin' %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('users') }}">
+                            <i data-feather="users" class="me-1"></i>사용자 관리
+                        </a>
+                    </li>
+                    {% endif %}
                 </ul>
                 
+                <!-- 오른쪽 메뉴: 사용자 정보와 로그아웃 -->
                 <ul class="navbar-nav">
-                    <!-- 언어 선택 드롭다운 -->
-                    <li class="nav-item dropdown me-2">
-                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                            <i data-feather="globe" class="me-1"></i>
-                            {% if current_lang == 'ko' %}한국어{% else %}English{% endif %}
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li>
-                                <a class="dropdown-item {% if current_lang == 'ko' %}active{% endif %}" 
-                                   href="{{ url_for('set_language', language='ko') }}">
-                                    🇰🇷 한국어
-                                </a>
-                            </li>
-                            <li>
-                                <a class="dropdown-item {% if current_lang == 'en' %}active{% endif %}" 
-                                   href="{{ url_for('set_language', language='en') }}">
-                                    🇺🇸 English
-                                </a>
-                            </li>
-                        </ul>
-                    </li>
-                    
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                            <i data-feather="user" class="me-1"></i>{{ get_text('profile') }}
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" id="userDropdown">
+                            <i data-feather="user" class="me-1"></i>
+                            {{ current_user.name if current_user.is_authenticated else '게스트' }}
+                            {% if current_user.is_authenticated and current_user.role == 'admin' %}
+                                <span class="badge bg-warning ms-1">관리자</span>
+                            {% endif %}
                         </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="#">{{ get_text('profile') }}</a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><h6 class="dropdown-header">{{ get_text('admin_menu') }}</h6></li>
-                            <li><a class="dropdown-item" href="{{ url_for('users') }}">
-                                <i data-feather="users" class="me-2"></i>{{ get_text('users') }}
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                            {% if current_user.is_authenticated %}
+                            <li><h6 class="dropdown-header">{{ current_user.name }}</h6></li>
+                            <li><a class="dropdown-item" href="{{ url_for('profile') }}">
+                                <i data-feather="user" class="me-2"></i>프로필
                             </a></li>
+                            {% if current_user.role == 'admin' %}
+                            <li><hr class="dropdown-divider"></li>
+                            <li><h6 class="dropdown-header">관리자 메뉴</h6></li>
                             <li><a class="dropdown-item" href="{{ url_for('audit') }}">
-                                <i data-feather="eye" class="me-2"></i>{{ get_text('audit') }}
+                                <i data-feather="eye" class="me-2"></i>감사 로그
                             </a></li>
                             <li><a class="dropdown-item" href="{{ url_for('init_data') }}">
-                                <i data-feather="database" class="me-2"></i>{{ get_text('sample_data') }}
+                                <i data-feather="database" class="me-2"></i>샘플 데이터 생성
                             </a></li>
+                            {% endif %}
                             <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item text-danger" href="{{ url_for('logout') }}">
-                                <i data-feather="log-out" class="me-2"></i>{{ get_text('logout') }}
+                            <li><a class="dropdown-item text-danger" href="javascript:void(0)" onclick="forceLogout()">
+                                <i data-feather="log-out" class="me-2"></i>로그아웃
                             </a></li>
+                            {% endif %}
                         </ul>
                     </li>
+                    {% if current_user.is_authenticated %}
                     <li class="nav-item">
-                        <a class="nav-link text-danger fw-bold" href="{{ url_for('logout') }}">
-                            <i data-feather="log-out" class="me-1"></i>{{ get_text('logout') }}
+                        <a class="nav-link text-danger fw-bold" href="javascript:void(0)" onclick="forceLogout()">
+                            <i data-feather="log-out" class="me-1"></i>로그아웃
                         </a>
                     </li>
+                    {% endif %}
                 </ul>
             </div>
         </div>
