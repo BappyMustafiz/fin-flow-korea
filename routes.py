@@ -1517,6 +1517,63 @@ def save_alert_settings():
         print(f"Alert settings save error: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 400
 
+@app.route('/alerts/create-custom', methods=['POST'])
+@login_required
+def create_custom_alert():
+    """사용자 정의 알림 생성 (중복 검사 포함)"""
+    try:
+        from models import AlertSetting
+        
+        data = request.get_json()
+        alert_type = data.get('type')
+        check_value = data.get('checkValue')
+        alert_data = data.get('alertData')
+        
+        if not all([alert_type, check_value, alert_data]):
+            return jsonify({'success': False, 'error': '필수 데이터가 누락되었습니다.'}), 400
+        
+        # 중복 검사
+        is_duplicate = False
+        duplicate_message = ""
+        
+        existing_alert = AlertSetting.query.filter_by(
+            alert_type='custom',
+            condition_type=alert_data['condition_type'],
+            condition_field=alert_data['condition_field'],
+            condition_value=alert_data['condition_value']
+        ).first()
+        
+        if existing_alert:
+            is_duplicate = True
+            duplicate_message = f"동일한 조건의 알림이 이미 존재합니다: {existing_alert.name}"
+        
+        # 새 알림 생성 (중복이 있어도 생성)
+        new_alert = AlertSetting()
+        new_alert.name = alert_data['name']
+        new_alert.alert_type = 'custom'
+        new_alert.condition = alert_data['condition']
+        new_alert.condition_type = alert_data['condition_type']
+        new_alert.condition_field = alert_data['condition_field']
+        new_alert.condition_value = alert_data['condition_value']
+        new_alert.severity = alert_data.get('severity', 'info')
+        new_alert.channel = alert_data.get('channel', 'app')
+        new_alert.is_active = True
+        
+        db.session.add(new_alert)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'isDuplicate': is_duplicate,
+            'message': duplicate_message,
+            'alertId': new_alert.id
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Custom alert creation error: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @app.route('/alerts/add', methods=['POST'])
 @login_required  
 def add_alert_setting():
