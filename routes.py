@@ -338,6 +338,7 @@ def register():
 @login_required
 def dashboard():
     """대시보드 - KPI 및 주요 지표 표시"""
+    from datetime import timedelta
     # KPI 계산
     today = datetime.now().date()
     current_month = today.replace(day=1)
@@ -384,7 +385,6 @@ def dashboard():
     recent_alerts = Alert.query.filter_by(is_read=False).order_by(desc(Alert.created_at)).limit(5).all()
     
     # 부서별 지출 현황 (최근 3개월로 확장하여 데이터 확보)
-    from datetime import timedelta
     three_months_ago = current_month - timedelta(days=90)
     
     dept_expenses_raw = db.session.query(
