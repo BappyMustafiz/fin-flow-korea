@@ -154,24 +154,31 @@
                 <div class="mt-4">
                     <h6>필수 컬럼:</h6>
                     <ul class="small text-muted">
+                        <li><strong>계정</strong>: 계정명 (예: KB국민은행 주거래)</li>
                         <li><strong>거래일자</strong>: YYYY-MM-DD 형식</li>
-                        <li><strong>거래시간</strong>: HH:MM:SS 형식 (선택사항)</li>
                         <li><strong>거래유형</strong>: 입금/출금/이체</li>
                         <li><strong>금액</strong>: 숫자만 입력</li>
                         <li><strong>거래처</strong>: 상대방 정보</li>
-                        <li><strong>메모</strong>: 거래 내용 (선택사항)</li>
                     </ul>
                     
                     <h6 class="mt-3">선택사항 컬럼:</h6>
                     <ul class="small text-muted">
-                        <li><strong>대상계정</strong>: 이체 시 받는 계정 (이체 거래에만 적용)</li>
-                        <li><strong>분류</strong>: 카테고리명 또는 ID</li>
-                        <li><strong>부서</strong>: 부서명 또는 ID</li>
-                        <li><strong>업체</strong>: 업체명 또는 ID</li>
+                        <li><strong>거래시간</strong>: HH:MM:SS 형식</li>
+                        <li><strong>메모</strong>: 거래 내용</li>
+                        <li><strong>대상계정</strong>: 이체 시 받는 계정명</li>
+                        <li><strong>분류</strong>: 카테고리명</li>
+                        <li><strong>부서</strong>: 부서명</li>
+                        <li><strong>업체</strong>: 업체명</li>
+                        <li><strong>계좌번호</strong>: 참고용 계좌번호</li>
                     </ul>
                     
                     <div class="alert alert-info mt-3">
-                        <small><i data-feather="info" class="me-1"></i><strong>이체 거래 참고:</strong> 이체 거래는 수입/지출 통계에서 제외되며, 계정 간 자금 이동으로만 처리됩니다.</small>
+                        <small><i data-feather="info" class="me-1"></i><strong>파일 업로드 팁:</strong></small>
+                        <ul class="small mb-0 mt-2">
+                            <li>계정명은 시스템에 등록된 계정명과 정확히 일치해야 합니다</li>
+                            <li>이체 거래는 수입/지출 통계에서 제외됩니다</li>
+                            <li>분류 정보가 없으면 미분류 상태로 저장됩니다</li>
+                        </ul>
                     </div>
                 </div>
             </div>
