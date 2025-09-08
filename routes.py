@@ -343,26 +343,30 @@ def dashboard():
     current_month = today.replace(day=1)
     last_month = (current_month - timedelta(days=1)).replace(day=1)
     
-    # 이번달 수입/지출
+    # 이번달 수입/지출 (이체 제외)
     current_income = db.session.query(func.sum(Transaction.amount)).filter(
         Transaction.amount > 0,
+        Transaction.transaction_type != 'transfer',
         func.date(Transaction.transaction_date) >= current_month
     ).scalar() or 0
     
     current_expense = db.session.query(func.sum(Transaction.amount)).filter(
         Transaction.amount < 0,
+        Transaction.transaction_type != 'transfer',
         func.date(Transaction.transaction_date) >= current_month
     ).scalar() or 0
     
-    # 저번달 수입/지출
+    # 저번달 수입/지출 (이체 제외)
     last_income = db.session.query(func.sum(Transaction.amount)).filter(
         Transaction.amount > 0,
+        Transaction.transaction_type != 'transfer',
         func.date(Transaction.transaction_date) >= last_month,
         func.date(Transaction.transaction_date) < current_month
     ).scalar() or 0
     
     last_expense = db.session.query(func.sum(Transaction.amount)).filter(
         Transaction.amount < 0,
+        Transaction.transaction_type != 'transfer',
         func.date(Transaction.transaction_date) >= last_month,
         func.date(Transaction.transaction_date) < current_month
     ).scalar() or 0
@@ -379,12 +383,13 @@ def dashboard():
     # 최근 알림 (5건)
     recent_alerts = Alert.query.filter_by(is_read=False).order_by(desc(Alert.created_at)).limit(5).all()
     
-    # 부서별 지출 현황 (이번달)
+    # 부서별 지출 현황 (이번달, 이체 제외)
     dept_expenses_raw = db.session.query(
         Department.name,
         func.sum(Transaction.amount).label('total')
     ).join(Transaction).filter(
         Transaction.amount < 0,
+        Transaction.transaction_type != 'transfer',
         func.date(Transaction.transaction_date) >= current_month
     ).group_by(Department.name).all()
     
@@ -539,6 +544,7 @@ def transactions():
     departments = Department.query.all()
     categories = Category.query.all()
     accounts = Account.query.join(Institution).all()
+    vendors = Vendor.query.all()  # 거래 추가 모달용
     
     # 현재 선택된 계좌 정보
     selected_account = None
@@ -551,6 +557,7 @@ def transactions():
                          departments=departments,
                          categories=categories,
                          accounts=accounts,
+                         vendors=vendors,
                          selected_account=selected_account,
                          current_filters={
                              'status': status,
@@ -2399,6 +2406,78 @@ def upload_transactions():
         
     except Exception as e:
         return jsonify({'success': False, 'error': f'파일 처리 중 오류가 발생했습니다: {str(e)}'})
+
+@app.route('/add-transaction', methods=['POST'])
+@login_required
+def add_transaction():
+    """거래 추가"""
+    try:
+        # 폼 데이터 받기
+        account_id = request.form.get('account_id')
+        transaction_type = request.form.get('transaction_type')
+        transaction_date = request.form.get('transaction_date')
+        amount = request.form.get('amount')
+        counterparty = request.form.get('counterparty')
+        description = request.form.get('description', '')
+        target_account = request.form.get('target_account', '')
+        
+        # 분류 정보 (이체가 아닌 경우만)
+        category_id = request.form.get('category_id') if transaction_type != 'transfer' else None
+        department_id = request.form.get('department_id') if transaction_type != 'transfer' else None
+        vendor_id = request.form.get('vendor_id') if transaction_type != 'transfer' else None
+        
+        # 유효성 검사
+        if not all([account_id, transaction_type, transaction_date, amount, counterparty]):
+            flash('필수 항목을 모두 입력해주세요.', 'error')
+            return redirect(url_for('transactions'))
+        
+        # 계정 확인
+        account = Account.query.get(account_id)
+        if not account:
+            flash('유효하지 않은 계정입니다.', 'error')
+            return redirect(url_for('transactions'))
+        
+        # 새 거래 생성
+        transaction = Transaction()
+        transaction.account_id = account_id
+        transaction.transaction_id = f'MANUAL-{datetime.now().strftime("%Y%m%d%H%M%S")}-{int(datetime.now().timestamp() * 1000) % 10000:04d}'
+        transaction.transaction_date = datetime.strptime(transaction_date, '%Y-%m-%dT%H:%M')
+        transaction.counterparty = counterparty
+        transaction.description = description if description else counterparty
+        
+        # 거래 유형에 따른 처리
+        amount_value = float(amount)
+        if transaction_type == 'deposit':
+            transaction.transaction_type = 'credit'
+            transaction.amount = amount_value
+        elif transaction_type == 'withdrawal':
+            transaction.transaction_type = 'debit'
+            transaction.amount = -amount_value  # 출금은 음수
+        elif transaction_type == 'transfer':
+            transaction.transaction_type = 'transfer'
+            transaction.amount = -amount_value  # 이체도 음수 (보내는 쪽)
+            if target_account:
+                transaction.description += f' (받는 계정: {target_account})'
+        
+        # 분류 정보 설정 (이체가 아닌 경우만)
+        if transaction_type != 'transfer':
+            transaction.category_id = category_id if category_id else None
+            transaction.department_id = department_id if department_id else None
+            transaction.vendor_id = vendor_id if vendor_id else None
+            transaction.classification_status = 'manual'  # 수동 추가
+        else:
+            transaction.classification_status = 'classified'  # 이체는 자동 분류됨
+        
+        db.session.add(transaction)
+        db.session.commit()
+        
+        flash('거래가 성공적으로 추가되었습니다.', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'거래 추가 중 오류가 발생했습니다: {str(e)}', 'error')
+    
+    return redirect(url_for('transactions'))
 
 @app.route('/download-sample/<format>')
 @login_required
