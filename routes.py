@@ -914,6 +914,175 @@ def alerts():
     alert_settings = AlertSetting.query.order_by(desc(AlertSetting.created_at)).all()
     return render_template('alerts.html', alerts=alerts, alert_settings=alert_settings)
 
+
+@app.route('/alerts/export')
+@login_required
+def export_alerts():
+    """알림 내역 내보내기"""
+    try:
+        from datetime import date, datetime
+        import csv
+        import io
+        from flask import make_response
+        
+        # 파라미터 가져오기
+        export_format = request.args.get('format', 'csv').lower()
+        start_date_str = request.args.get('start_date')
+        end_date_str = request.args.get('end_date')
+        alert_type = request.args.get('alert_type', 'all')
+        
+        # 날짜 처리
+        if start_date_str and end_date_str:
+            start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d')
+            end_date = end_date.replace(hour=23, minute=59, second=59)
+        else:
+            # 기본값: 지난 6개월
+            end_date = datetime.now()
+            start_date = end_date.replace(month=end_date.month - 6 if end_date.month > 6 else end_date.month + 6, 
+                                        year=end_date.year if end_date.month > 6 else end_date.year - 1)
+        
+        # Alert 데이터 조회
+        query = Alert.query.filter(
+            Alert.created_at >= start_date,
+            Alert.created_at <= end_date
+        )
+        
+        if alert_type != 'all':
+            query = query.filter(Alert.alert_type == alert_type)
+        
+        alerts = query.order_by(Alert.created_at.desc()).all()
+        
+        if export_format == 'csv':
+            return export_alerts_csv(alerts, start_date, end_date)
+        elif export_format == 'excel':
+            return export_alerts_excel(alerts, start_date, end_date)
+        else:
+            flash('지원하지 않는 내보내기 형식입니다.', 'error')
+            return redirect(url_for('alerts'))
+            
+    except Exception as e:
+        flash(f'알림 내역 내보내기 중 오류가 발생했습니다: {str(e)}', 'error')
+        return redirect(url_for('alerts'))
+
+
+def export_alerts_csv(alerts, start_date, end_date):
+    """CSV 형식으로 알림 데이터 내보내기"""
+    import csv
+    import io
+    from flask import make_response
+    
+    output = io.StringIO()
+    writer = csv.writer(output)
+    
+    # 헤더 작성
+    writer.writerow([
+        '생성일시', '제목', '메시지', '알림 유형', '심각도', '읽음 상태', '관련 테이블', '관련 ID'
+    ])
+    
+    # 데이터 작성
+    for alert in alerts:
+        writer.writerow([
+            alert.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+            alert.title,
+            alert.message,
+            get_alert_type_name(alert.alert_type),
+            get_severity_name(alert.severity),
+            '읽음' if alert.is_read else '미읽음',
+            alert.related_table or '',
+            alert.related_id or ''
+        ])
+    
+    output.seek(0)
+    
+    # 응답 생성
+    response = make_response(output.getvalue())
+    response.headers['Content-Type'] = 'text/csv; charset=utf-8-sig'
+    response.headers['Content-Disposition'] = f'attachment; filename="알림내역_{start_date.strftime("%Y%m%d")}_{end_date.strftime("%Y%m%d")}.csv"'
+    
+    return response
+
+
+def export_alerts_excel(alerts, start_date, end_date):
+    """Excel 형식으로 알림 데이터 내보내기"""
+    import io
+    from flask import make_response
+    import openpyxl
+    from openpyxl.styles import Font, PatternFill, Alignment
+    
+    # 워크북 생성
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "알림 내역"
+    
+    # 헤더 스타일
+    header_font = Font(bold=True, color="FFFFFF")
+    header_fill = PatternFill("solid", fgColor="4472C4")
+    header_alignment = Alignment(horizontal="center")
+    
+    # 헤더 작성
+    headers = ['생성일시', '제목', '메시지', '알림 유형', '심각도', '읽음 상태', '관련 테이블', '관련 ID']
+    for col, header in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col, value=header)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = header_alignment
+    
+    # 데이터 작성
+    for row, alert in enumerate(alerts, 2):
+        ws.cell(row=row, column=1, value=alert.created_at.strftime('%Y-%m-%d %H:%M:%S'))
+        ws.cell(row=row, column=2, value=alert.title)
+        ws.cell(row=row, column=3, value=alert.message)
+        ws.cell(row=row, column=4, value=get_alert_type_name(alert.alert_type))
+        ws.cell(row=row, column=5, value=get_severity_name(alert.severity))
+        ws.cell(row=row, column=6, value='읽음' if alert.is_read else '미읽음')
+        ws.cell(row=row, column=7, value=alert.related_table or '')
+        ws.cell(row=row, column=8, value=alert.related_id or '')
+        
+        # 미읽음 알림 강조
+        if not alert.is_read:
+            for col in range(1, 9):
+                ws.cell(row=row, column=col).fill = PatternFill("solid", fgColor="FFF2CC")
+    
+    # 컬럼 너비 조정
+    column_widths = [20, 25, 40, 15, 10, 10, 15, 10]
+    for col, width in enumerate(column_widths, 1):
+        ws.column_dimensions[openpyxl.utils.get_column_letter(col)].width = width
+    
+    # 파일 생성
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+    
+    response = make_response(output.getvalue())
+    response.headers['Content-Type'] = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    response.headers['Content-Disposition'] = f'attachment; filename="알림내역_{start_date.strftime("%Y%m%d")}_{end_date.strftime("%Y%m%d")}.xlsx"'
+    
+    return response
+
+
+def get_alert_type_name(alert_type):
+    """알림 유형 한글명 반환"""
+    type_names = {
+        'budget': '예산',
+        'contract': '계약',
+        'anomaly': '이상거래',
+        'custom': '사용자 정의',
+        'system': '시스템'
+    }
+    return type_names.get(alert_type, alert_type)
+
+
+def get_severity_name(severity):
+    """심각도 한글명 반환"""
+    severity_names = {
+        'info': '정보',
+        'warning': '경고',
+        'error': '오류',
+        'critical': '심각'
+    }
+    return severity_names.get(severity, severity)
+
 @app.route('/audit')
 @login_required
 def audit():
