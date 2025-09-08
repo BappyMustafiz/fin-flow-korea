@@ -2773,6 +2773,121 @@ def data_management():
                          vendors=vendors,
                          recent_uploads=recent_uploads)
 
+
+@app.route('/export-transactions-period', methods=['POST'])
+@login_required
+def export_transactions_period():
+    """기간별 거래 내역 다운로드"""
+    try:
+        import io
+        from datetime import datetime
+        from models import Transaction, Account, Category, Department, Vendor
+        
+        # 폼 데이터 받기
+        start_date_str = request.form.get('start_date')
+        end_date_str = request.form.get('end_date')
+        export_format = request.form.get('export_format', 'csv')
+        
+        if not start_date_str or not end_date_str:
+            flash('시작일과 종료일을 모두 입력해주세요.', 'error')
+            return redirect(url_for('data_management'))
+        
+        # 날짜 파싱
+        start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
+        end_date = datetime.strptime(end_date_str, '%Y-%m-%d')
+        
+        if start_date > end_date:
+            flash('시작일은 종료일보다 이전이어야 합니다.', 'error')
+            return redirect(url_for('data_management'))
+        
+        # 기간내 거래 조회
+        transactions = Transaction.query.filter(
+            Transaction.transaction_date >= start_date,
+            Transaction.transaction_date <= end_date
+        ).order_by(Transaction.transaction_date.desc()).all()
+        
+        if not transactions:
+            flash(f'{start_date_str}부터 {end_date_str}까지 거래 내역이 없습니다.', 'warning')
+            return redirect(url_for('data_management'))
+        
+        # 데이터 준비
+        transaction_data = []
+        for transaction in transactions:
+            # 관련 데이터 조회
+            account = Account.query.get(transaction.account_id) if transaction.account_id else None
+            category = Category.query.get(transaction.category_id) if transaction.category_id else None
+            department = Department.query.get(transaction.department_id) if transaction.department_id else None
+            vendor = Vendor.query.get(transaction.vendor_id) if transaction.vendor_id else None
+            
+            transaction_data.append({
+                '거래일': transaction.transaction_date.strftime('%Y-%m-%d'),
+                '거래시간': transaction.transaction_date.strftime('%H:%M:%S') if transaction.transaction_date else '',
+                '계정': account.name if account else '',
+                '거래유형': transaction.transaction_type or '',
+                '금액': transaction.amount,
+                '잔액': transaction.balance if transaction.balance else '',
+                '내용': transaction.description or '',
+                '상대계좌': transaction.counterpart_account or '',
+                '상대은행': transaction.counterpart_bank or '',
+                '분류': category.name if category else '',
+                '부서': department.name if department else '',
+                '업체': vendor.name if vendor else '',
+                '분류상태': {
+                    'pending': '미분류',
+                    'classified': '분류완료',
+                    'manual': '수동분류'
+                }.get(transaction.classification_status, transaction.classification_status or ''),
+                '메모': transaction.memo or ''
+            })
+        
+        # 파일명 생성
+        filename = f"transactions_{start_date_str}_{end_date_str}"
+        
+        if export_format == 'excel':
+            # Excel 파일 생성
+            import pandas as pd
+            df = pd.DataFrame(transaction_data)
+            
+            output = io.BytesIO()
+            with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                df.to_excel(writer, sheet_name='거래내역', index=False)
+            
+            output.seek(0)
+            
+            return send_file(
+                output,
+                as_attachment=True,
+                download_name=f"{filename}.xlsx",
+                mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            )
+        
+        else:
+            # CSV 파일 생성 (UTF-8 BOM으로 한글 지원)
+            import csv
+            output = io.StringIO()
+            
+            if transaction_data:
+                fieldnames = transaction_data[0].keys()
+                writer = csv.DictWriter(output, fieldnames=fieldnames)
+                writer.writeheader()
+                writer.writerows(transaction_data)
+            
+            # UTF-8 BOM 추가 (Excel에서 한글 깨짐 방지)
+            csv_content = '\ufeff' + output.getvalue()
+            
+            return Response(
+                csv_content,
+                mimetype='text/csv; charset=utf-8',
+                headers={
+                    'Content-Disposition': f'attachment; filename="{filename}.csv"',
+                    'Content-Type': 'text/csv; charset=utf-8'
+                }
+            )
+            
+    except Exception as e:
+        flash(f'다운로드 중 오류가 발생했습니다: {str(e)}', 'error')
+        return redirect(url_for('data_management'))
+
 @app.route('/upload-transactions', methods=['POST'])
 @login_required
 def upload_transactions():

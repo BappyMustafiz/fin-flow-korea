@@ -66,6 +66,42 @@
     </div>
 </div>
 
+<!-- Transaction Export Section -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i data-feather="download" class="me-2"></i>거래 내역 다운로드</h5>
+            </div>
+            <div class="card-body">
+                <form action="{{ url_for('export_transactions_period') }}" method="POST" class="row g-3">
+                    <div class="col-md-4">
+                        <label for="start_date" class="form-label">시작일</label>
+                        <input type="date" class="form-control" id="start_date" name="start_date" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="end_date" class="form-label">종료일</label>
+                        <input type="date" class="form-control" id="end_date" name="end_date" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="export_format" class="form-label">다운로드 형식</label>
+                        <select class="form-select" id="export_format" name="export_format">
+                            <option value="csv">CSV 파일</option>
+                            <option value="excel">Excel 파일</option>
+                        </select>
+                    </div>
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-success">
+                            <i data-feather="download" class="me-2"></i>거래 내역 다운로드
+                        </button>
+                        <small class="text-muted ms-3">선택한 기간의 모든 거래 내역을 다운로드합니다.</small>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Upload History Section -->
 <div class="row mb-4">
     <div class="col-12">
@@ -360,5 +396,21 @@ function checkUpload(uploadId) {
         feather.replace();
     });
 }
+
+// 거래 내역 다운로드 기본 날짜 설정
+document.addEventListener('DOMContentLoaded', function() {
+    const today = new Date();
+    const oneMonthAgo = new Date();
+    oneMonthAgo.setMonth(today.getMonth() - 1);
+    
+    const startDateInput = document.getElementById('start_date');
+    const endDateInput = document.getElementById('end_date');
+    
+    if (startDateInput && endDateInput) {
+        // 기본값: 1개월 전부터 오늘까지
+        startDateInput.value = oneMonthAgo.toISOString().split('T')[0];
+        endDateInput.value = today.toISOString().split('T')[0];
+    }
+});
 </script>
 {% endblock %}
