@@ -478,18 +478,27 @@ function generateReport() {
 }
 
 function updateCharts(data, reportType) {
+    console.log('Updating charts for report type:', reportType, 'with data:', data);
+    
     if (reportType === 'cashflow' && data.cashflow) {
         updateCashflowChart(data.cashflow);
     } else if (reportType === 'department' && data.department) {
         updateDepartmentChart(data.department);
     } else if (reportType === 'vendor' && data.vendor) {
         updateVendorChart(data.vendor);
+    } else {
+        console.log('No matching report type or data found');
     }
 }
 
 function updateCashflowChart(cashflowData) {
     const ctx = document.getElementById('cashflowChart');
-    if (!ctx) return;
+    if (!ctx) {
+        console.log('Cashflow chart canvas not found');
+        return;
+    }
+    
+    console.log('Updating cashflow chart with data:', cashflowData);
     
     const labels = cashflowData.map(item => item.period);
     const incomeData = cashflowData.map(item => item.income);
@@ -552,19 +561,22 @@ function updateCashflowChart(cashflowData) {
 }
 
 function updateDepartmentChart(departmentData) {
-    const ctx = document.getElementById('deptExpenseChart');
-    if (!ctx) return;
+    const ctx = document.getElementById('deptSpendingChart');
+    if (!ctx) {
+        console.log('Department chart canvas not found');
+        return;
+    }
     
     const labels = departmentData.map(item => item.name);
     const data = departmentData.map(item => item.total);
     
     // 기존 차트 파괴
-    if (window.deptExpenseChart) {
-        window.deptExpenseChart.destroy();
+    if (window.deptSpendingChart) {
+        window.deptSpendingChart.destroy();
     }
     
     // 새 차트 생성
-    window.deptExpenseChart = new Chart(ctx, {
+    window.deptSpendingChart = new Chart(ctx, {
         type: 'doughnut',
         data: {
             labels: labels,
@@ -591,6 +603,41 @@ function updateDepartmentChart(departmentData) {
             }
         }
     });
+}
+
+function updateVendorChart(vendorData) {
+    // 거래처 차트는 테이블로 표시하므로 테이블 업데이트
+    updateVendorTable(vendorData);
+}
+
+function updateVendorTable(vendorData) {
+    const tableBody = document.querySelector('.table tbody');
+    if (!tableBody) return;
+    
+    if (!vendorData || vendorData.length === 0) {
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="4" class="text-center text-muted py-3">
+                    선택한 기간에 거래 데이터가 없습니다.
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    let html = '';
+    vendorData.forEach((vendor, index) => {
+        html += `
+            <tr>
+                <td>${index + 1}</td>
+                <td>${vendor.name}</td>
+                <td>${vendor.count}회</td>
+                <td class="text-end text-danger">₩${vendor.total.toLocaleString()}</td>
+            </tr>
+        `;
+    });
+    
+    tableBody.innerHTML = html;
 }
 
 function exportReport(format) {
@@ -646,8 +693,11 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('startDate').value = oneYearAgo.toISOString().split('T')[0];
     document.getElementById('endDate').value = today.toISOString().split('T')[0];
     
-    // 페이지 로드시 기본 리포트 생성
-    generateReport();
+    // 페이지 로드시 기본 리포트 생성 (약간의 지연)
+    setTimeout(() => {
+        console.log('Loading default report...');
+        generateReport();
+    }, 500);
 });
 </script>
 {% endblock %}

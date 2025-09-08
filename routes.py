@@ -905,8 +905,10 @@ def reports():
 def reports_data():
     """기간별 리포트 데이터 AJAX 요청 처리"""
     try:
-        from datetime import datetime, timedelta
+        from datetime import datetime, timedelta, date
         import json
+        from models import Transaction, Account, Category, Department, Vendor
+        from sqlalchemy import func, extract
         
         # 요청 파라미터 받기
         report_type = request.args.get('type', 'cashflow')
@@ -914,10 +916,15 @@ def reports_data():
         end_date_str = request.args.get('end_date')
         period = request.args.get('period', 'monthly')
         
+        print(f"Reports data request - Type: {report_type}, Start: {start_date_str}, End: {end_date_str}")
+        
         # 날짜 파싱
         if start_date_str and end_date_str:
-            start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
-            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+            try:
+                start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+                end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+            except ValueError as e:
+                return jsonify({'success': False, 'error': f'날짜 형식 오류: {str(e)}'})
         else:
             # 기본값: 최근 12개월
             end_date = date.today()
@@ -1006,9 +1013,13 @@ def reports_data():
             } for row in vendor_spending_raw]
             data['vendor'] = vendor_data
         
+        print(f"Reports data response: {data}")
         return jsonify({'success': True, 'data': data})
         
     except Exception as e:
+        print(f"Reports data error: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)})
 
 @app.route('/settings')
