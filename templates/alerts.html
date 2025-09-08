@@ -195,11 +195,7 @@
                             </div>
                             <div class="btn-group-vertical btn-group-sm">
                                 <button class="btn btn-outline-secondary btn-sm" 
-                                        onclick="editAlertSetting({{ setting.id }}, 
-                                                {{ setting.name|tojson }}, 
-                                                {{ setting.condition|tojson }}, 
-                                                '{{ setting.severity }}', 
-                                                '{{ setting.channel }}')" 
+                                        onclick="editAlertSetting({{ setting.id }}, {{ setting.name|tojson|safe }}, {{ setting.condition|tojson|safe }}, '{{ setting.severity }}', '{{ setting.channel }}')" 
                                         title="수정">
                                     <i data-feather="edit-2" style="width: 12px; height: 12px;"></i>
                                 </button>
@@ -644,10 +640,16 @@ function formatNumberWithCommas(value) {
 // 페이지 로드 시 설정값 로드 및 이벤트 리스너 추가
 document.addEventListener('DOMContentLoaded', function() {
     // 서버에서 전달된 현재 설정값 로드
-    {% if current_settings %}
-    const currentSettings = {{ current_settings | tojson }};
-    loadCurrentSettings(currentSettings);
-    {% endif %}
+    try {
+        {% if current_settings %}
+        const currentSettings = {{ current_settings | tojson | safe }};
+        if (currentSettings && typeof currentSettings === 'object') {
+            loadCurrentSettings(currentSettings);
+        }
+        {% endif %}
+    } catch (e) {
+        console.error('Settings load error:', e);
+    }
     
     const anomalyAmountField = document.getElementById('anomalyAmount');
     

@@ -1146,7 +1146,22 @@ def alerts():
     
     # 세션에서도 설정값 확인 (최신 설정 우선)
     session_settings = session.get('alert_settings', {})
-    current_settings.update(session_settings)
+    if session_settings:
+        current_settings.update(session_settings)
+    
+    # current_settings가 비어있지 않은지 확인
+    if not current_settings:
+        current_settings = {
+            'budgetAlert': False,
+            'budgetThreshold': '80',
+            'budgetFrequency': 'weekly',
+            'contractAlert': False,
+            'contractDays': '30',
+            'contractFrequency': 'daily',
+            'anomalyAlert': False,
+            'anomalyAmount': '1000000',
+            'immediateAlert': True
+        }
     
     return render_template('alerts.html', alerts=alerts, alert_settings=alert_settings, current_settings=current_settings)
 
