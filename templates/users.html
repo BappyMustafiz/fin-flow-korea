@@ -7,14 +7,9 @@
     <div class="col-12">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h2><i data-feather="users" class="me-2"></i>사용자 관리</h2>
-            <div class="d-flex gap-2">
-                <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addUserModal">
-                    <i data-feather="user-plus" class="me-2"></i>새 사용자 추가
-                </button>
-                <a href="{{ url_for('register') }}" class="btn btn-primary">
-                    <i data-feather="external-link" class="me-2"></i>회원가입 페이지
-                </a>
-            </div>
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addUserModal">
+                <i data-feather="user-plus" class="me-2"></i>새 사용자 추가
+            </button>
         </div>
     </div>
 </div>
