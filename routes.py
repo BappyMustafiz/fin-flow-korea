@@ -906,7 +906,7 @@ def reports_data():
     """새로운 6가지 리포트 데이터 AJAX 요청 처리"""
     try:
         from datetime import datetime, date
-        from models import Transaction, Account, Category, Department, Vendor, Budget
+        from models import Transaction, Account, Category, Department, Vendor
         from sqlalchemy import func, extract, case
         
         # 요청 파라미터 받기
