@@ -3096,7 +3096,7 @@ def add_transaction():
         amount = request.form.get('amount')
         counterparty = request.form.get('counterparty')
         description = request.form.get('description', '')
-        target_account = request.form.get('target_account', '')
+        target_account_id = request.form.get('target_account_id', '')
         
         # 분류 정보 (이체가 아닌 경우만)
         category_id = request.form.get('category_id') if transaction_type != 'transfer' else None
@@ -3133,8 +3133,12 @@ def add_transaction():
         elif transaction_type == 'transfer':
             transaction.transaction_type = 'transfer'
             transaction.amount = -amount_value  # 이체도 음수 (보내는 쪽)
-            if target_account:
-                transaction.description += f' (받는 계정: {target_account})'
+            if target_account_id:
+                target_account = Account.query.get(target_account_id)
+                if target_account:
+                    transaction.description += f' (받는 계정: {target_account.name})'
+                    # 받는 계정 ID를 별도 필드에 저장 (향후 확장용)
+                    transaction.counterpart_account = target_account.account_number if target_account.account_number else target_account.name
         
         # 분류 정보 설정 (이체가 아닌 경우만)
         if transaction_type != 'transfer':
