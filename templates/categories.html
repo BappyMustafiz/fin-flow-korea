@@ -1,0 +1,296 @@
+{% extends "base.html" %}
+
+{% block title %}분류 관리 - 한국형 오픈뱅킹 회계시스템{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2><i data-feather="tag" class="me-2"></i>분류 관리</h2>
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addCategoryModal">
+                <i data-feather="plus" class="me-2"></i>새 분류 추가
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- 분류 통계 카드 -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h5 class="card-title">전체 분류</h5>
+                        <h3 class="mb-0">{{ categories|length }}</h3>
+                    </div>
+                    <div class="align-self-center">
+                        <i data-feather="tag" style="width: 2rem; height: 2rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h5 class="card-title">사용 중인 분류</h5>
+                        <h3 class="mb-0">{{ categories|selectattr('vendors')|list|length }}</h3>
+                    </div>
+                    <div class="align-self-center">
+                        <i data-feather="check-circle" style="width: 2rem; height: 2rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h5 class="card-title">연결된 업체 수</h5>
+                        <h3 class="mb-0">{{ categories|sum(attribute='vendors')|length }}</h3>
+                    </div>
+                    <div class="align-self-center">
+                        <i data-feather="users" style="width: 2rem; height: 2rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h5 class="card-title">미사용 분류</h5>
+                        <h3 class="mb-0">{{ categories|rejectattr('vendors')|list|length }}</h3>
+                    </div>
+                    <div class="align-self-center">
+                        <i data-feather="alert-circle" style="width: 2rem; height: 2rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 분류 목록 테이블 -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="card-title mb-0">분류 목록</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>코드</th>
+                        <th>분류명</th>
+                        <th>설명</th>
+                        <th>연결된 업체 수</th>
+                        <th>생성일</th>
+                        <th>관리</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for category in categories %}
+                    <tr>
+                        <td>
+                            <code class="badge bg-secondary">{{ category.code }}</code>
+                        </td>
+                        <td>
+                            <strong>{{ category.name }}</strong>
+                        </td>
+                        <td>
+                            {% if category.description %}
+                                {{ category.description }}
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge bg-info">{{ category.vendors|length }}개</span>
+                        </td>
+                        <td>{{ category.created_at.strftime('%Y-%m-%d') if category.created_at else '-' }}</td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                <!-- 편집 버튼 -->
+                                <button type="button" class="btn btn-sm btn-outline-primary" 
+                                        title="편집"
+                                        onclick="editCategory({{ category.id }}, '{{ category.code }}', '{{ category.name }}', '{{ category.description or '' }}')">
+                                    <i data-feather="edit"></i>
+                                </button>
+                                
+                                <!-- 삭제 버튼 -->
+                                <button type="button" class="btn btn-sm btn-outline-danger" 
+                                        title="삭제"
+                                        onclick="deleteCategory({{ category.id }}, '{{ category.name }}')">
+                                    <i data-feather="trash-2"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="text-center text-muted py-4">
+                            등록된 분류가 없습니다.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- 분류 추가 모달 -->
+<div class="modal fade" id="addCategoryModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">새 분류 추가</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('add_category') }}">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="categoryCode" class="form-label">분류 코드 *</label>
+                        <input type="text" class="form-control" id="categoryCode" name="code" required
+                               placeholder="예: 001, OFFICE, etc.">
+                    </div>
+                    <div class="mb-3">
+                        <label for="categoryName" class="form-label">분류명 *</label>
+                        <input type="text" class="form-control" id="categoryName" name="name" required
+                               placeholder="예: 사무용품, 교통비 등">
+                    </div>
+                    <div class="mb-3">
+                        <label for="categoryDescription" class="form-label">설명</label>
+                        <textarea class="form-control" id="categoryDescription" name="description" rows="3"
+                                  placeholder="분류에 대한 추가 설명을 입력하세요"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i data-feather="plus" class="me-1"></i>분류 추가
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 분류 편집 모달 -->
+<div class="modal fade" id="editCategoryModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">분류 편집</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" id="editForm">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="editCategoryCode" class="form-label">분류 코드 *</label>
+                        <input type="text" class="form-control" id="editCategoryCode" name="code" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editCategoryName" class="form-label">분류명 *</label>
+                        <input type="text" class="form-control" id="editCategoryName" name="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editCategoryDescription" class="form-label">설명</label>
+                        <textarea class="form-control" id="editCategoryDescription" name="description" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i data-feather="save" class="me-1"></i>변경사항 저장
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 삭제 확인 폼 (숨김) -->
+<form method="POST" id="deleteForm" style="display: none;">
+</form>
+
+<style>
+.table th {
+    border-top: none;
+    font-weight: 600;
+    color: #495057;
+}
+
+.btn-group .btn {
+    padding: 0.25rem 0.5rem;
+}
+
+.card {
+    border: none;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.table-responsive {
+    border-radius: 0.375rem;
+}
+
+.badge {
+    font-size: 0.75rem;
+}
+
+.modal-body .form-label {
+    font-weight: 600;
+    color: #495057;
+}
+
+code.badge {
+    font-family: 'Courier New', monospace;
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// 분류 편집 함수
+function editCategory(id, code, name, description) {
+    document.getElementById('editForm').action = '/categories/' + id + '/edit';
+    document.getElementById('editCategoryCode').value = code;
+    document.getElementById('editCategoryName').value = name;
+    document.getElementById('editCategoryDescription').value = description;
+    
+    const modal = new bootstrap.Modal(document.getElementById('editCategoryModal'));
+    modal.show();
+}
+
+// 분류 삭제 함수
+function deleteCategory(id, name) {
+    if (confirm('분류 "' + name + '"을(를) 삭제하시겠습니까?\n\n주의: 이 분류에 연결된 업체나 거래가 있으면 삭제할 수 없습니다.')) {
+        document.getElementById('deleteForm').action = '/categories/' + id + '/delete';
+        document.getElementById('deleteForm').submit();
+    }
+}
+
+// 모달이 열릴 때 feather 아이콘 다시 렌더링
+document.addEventListener('DOMContentLoaded', function() {
+    const modals = document.querySelectorAll('.modal');
+    modals.forEach(modal => {
+        modal.addEventListener('shown.bs.modal', function() {
+            feather.replace();
+        });
+    });
+});
+</script>
+{% endblock %}

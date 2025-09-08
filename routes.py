@@ -1995,6 +1995,135 @@ def delete_department(dept_id):
     
     return redirect(url_for('departments'))
 
+
+@app.route('/categories')
+@login_required
+def categories():
+    """분류 관리"""
+    from models import Category
+    categories = Category.query.all()
+    return render_template('categories.html', categories=categories)
+
+
+@app.route('/categories/add', methods=['POST'])
+@login_required
+def add_category():
+    """분류 추가"""
+    try:
+        from models import Category
+        
+        code = request.form.get('code', '').strip()
+        name = request.form.get('name', '').strip()
+        description = request.form.get('description', '').strip()
+        
+        if not code or not name:
+            flash('분류 코드와 이름은 필수입니다.', 'error')
+            return redirect(url_for('categories'))
+        
+        # 중복 체크
+        existing_code = Category.query.filter_by(code=code).first()
+        if existing_code:
+            flash('이미 존재하는 분류 코드입니다.', 'error')
+            return redirect(url_for('categories'))
+        
+        existing_name = Category.query.filter_by(name=name).first()
+        if existing_name:
+            flash('이미 존재하는 분류명입니다.', 'error')
+            return redirect(url_for('categories'))
+        
+        category = Category(code=code, name=name, description=description)
+        db.session.add(category)
+        db.session.commit()
+        
+        flash(f'분류 "{name}"이 추가되었습니다.', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'분류 추가 중 오류가 발생했습니다: {str(e)}', 'error')
+    
+    return redirect(url_for('categories'))
+
+
+@app.route('/categories/<int:category_id>/edit', methods=['POST'])
+@login_required
+def edit_category(category_id):
+    """분류 수정"""
+    try:
+        from models import Category
+        
+        category = Category.query.get_or_404(category_id)
+        code = request.form.get('code', '').strip()
+        name = request.form.get('name', '').strip()
+        description = request.form.get('description', '').strip()
+        
+        if not code or not name:
+            flash('분류 코드와 이름은 필수입니다.', 'error')
+            return redirect(url_for('categories'))
+        
+        # 중복 체크 (자기 자신 제외)
+        existing_code = Category.query.filter(
+            Category.code == code, 
+            Category.id != category_id
+        ).first()
+        if existing_code:
+            flash('이미 존재하는 분류 코드입니다.', 'error')
+            return redirect(url_for('categories'))
+        
+        existing_name = Category.query.filter(
+            Category.name == name, 
+            Category.id != category_id
+        ).first()
+        if existing_name:
+            flash('이미 존재하는 분류명입니다.', 'error')
+            return redirect(url_for('categories'))
+        
+        category.code = code
+        category.name = name
+        category.description = description
+        db.session.commit()
+        
+        flash(f'분류 "{name}"이 수정되었습니다.', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'분류 수정 중 오류가 발생했습니다: {str(e)}', 'error')
+    
+    return redirect(url_for('categories'))
+
+
+@app.route('/categories/<int:category_id>/delete', methods=['POST'])
+@login_required
+def delete_category(category_id):
+    """분류 삭제"""
+    try:
+        from models import Category, Vendor, Transaction
+        
+        category = Category.query.get_or_404(category_id)
+        
+        # 분류에 연결된 업체가 있는지 확인
+        vendors_count = Vendor.query.filter_by(category_id=category_id).count()
+        if vendors_count > 0:
+            flash(f'분류에 {vendors_count}개의 업체가 연결되어 있어 삭제할 수 없습니다.', 'error')
+            return redirect(url_for('categories'))
+        
+        # 분류에 연결된 거래가 있는지 확인
+        transactions_count = Transaction.query.filter_by(category_id=category_id).count()
+        if transactions_count > 0:
+            flash(f'분류에 {transactions_count}개의 거래가 연결되어 있어 삭제할 수 없습니다.', 'error')
+            return redirect(url_for('categories'))
+        
+        db.session.delete(category)
+        db.session.commit()
+        
+        flash(f'분류 "{category.name}"이 삭제되었습니다.', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'분류 삭제 중 오류가 발생했습니다: {str(e)}', 'error')
+    
+    return redirect(url_for('categories'))
+
+
 # API 엔드포인트들
 
 @app.route('/users')
