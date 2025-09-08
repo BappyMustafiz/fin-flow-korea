@@ -2384,11 +2384,8 @@ def upload_transactions():
                 amount = float(str(row['금액']).replace(',', '').replace('원', ''))
                 transaction.amount = amount
                 
-                # 거래유형 처리 (파일에 있으면 사용, 없으면 기본값 사용)
-                if '거래유형' in df.columns and pd.notna(row['거래유형']):
-                    transaction_type = str(row['거래유형']).strip()
-                else:
-                    transaction_type = default_transaction_type
+                # 거래유형 처리
+                transaction_type = str(row['거래유형']).strip()
                 
                 if transaction_type in ['입금', '수입', 'deposit']:
                     transaction.transaction_type = 'credit'
@@ -2398,6 +2395,11 @@ def upload_transactions():
                 elif transaction_type in ['이체', 'transfer']:
                     transaction.transaction_type = 'transfer'
                     transaction.amount = -abs(amount)  # 이체도 음수 (보내는 쪽)
+                    
+                    # 이체의 경우 대상계정 필수 체크
+                    if not ('대상계정' in df.columns and pd.notna(row['대상계정']) and str(row['대상계정']).strip()):
+                        print(f"Warning: Transfer transaction missing target account in row {processed_count}")
+                        continue  # 이체인데 대상계정이 없으면 건너뛰기
                 else:
                     transaction.transaction_type = 'debit'  # 기본값
                 
@@ -2572,7 +2574,7 @@ def download_sample(format):
             '거래처': ['스타벅스 강남점', '클라이언트 A', '오피스디포', '내 저축계좌', '회사 급여'],  # 필수
             '거래시간': ['09:30:00', '14:15:30', '16:45:20', '11:20:00', '13:30:00'],  # 선택사항
             '메모': ['커피 및 간식', '프로젝트 수수료', '사무용품 구매', '저축 이체', '월급'],  # 선택사항
-            '대상계정': ['', '', '', 'KB국민은행 저축계좌', ''],  # 선택사항
+            '대상계정': ['', '', '', 'KB국민은행 저축계좌', ''],  # 이체 시 필수
             '분류': ['식음료', '매출', '사무용품', '', '급여'],  # 선택사항
             '부서': ['마케팅', '영업', '총무', '', '인사'],  # 선택사항
             '업체': ['스타벅스', '클라이언트A', '오피스디포', '', '회사']  # 선택사항
