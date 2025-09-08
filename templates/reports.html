@@ -6,7 +6,7 @@
 <div class="row mb-4">
     <div class="col-12">
         <h1 class="h3 mb-0">재무 리포트</h1>
-        <p class="text-muted">현금흐름, 예산 대비 실적, 부서별 분석 리포트</p>
+        <p class="text-muted">손익계산서, 현금흐름, 예산분석, 부서별/거래처별/카테고리별 분석</p>
     </div>
 </div>
 
@@ -18,376 +18,213 @@
             리포트 설정
         </h5>
         <div class="row g-3">
-            <div class="col-md-3">
+            <div class="col-md-4">
                 <label for="reportType" class="form-label">리포트 유형</label>
                 <select class="form-select" id="reportType" onchange="onReportTypeChange()">
-                    <option value="cashflow">현금흐름 분석</option>
-                    <option value="department">부서별 지출 분석</option>
+                    <option value="pl">손익계산서</option>
+                    <option value="cashflow">현금흐름표</option>
+                    <option value="budget">예산 vs 실적</option>
+                    <option value="department">부서별 손익</option>
                     <option value="vendor">거래처별 분석</option>
                     <option value="category">카테고리별 분석</option>
                 </select>
             </div>
             <div class="col-md-3">
-                <label for="periodType" class="form-label">기간 설정</label>
-                <select class="form-select" id="periodType" onchange="onPeriodTypeChange()">
-                    <option value="thisyear">올해 (1월 1일 ~ 현재)</option>
-                    <option value="custom">사용자 지정 기간</option>
-                </select>
-            </div>
-            <div class="col-md-2" id="customPeriodStart" style="display: none;">
                 <label for="startDate" class="form-label">시작일</label>
                 <input type="date" class="form-control" id="startDate">
             </div>
-            <div class="col-md-2" id="customPeriodEnd" style="display: none;">
+            <div class="col-md-3">
                 <label for="endDate" class="form-label">종료일</label>
                 <input type="date" class="form-control" id="endDate">
             </div>
             <div class="col-md-2">
-                <label for="aggregation" class="form-label">집계 단위</label>
-                <select class="form-select" id="aggregation">
-                    <option value="daily">일별</option>
-                    <option value="weekly">주별</option>
-                    <option value="monthly" selected>월별</option>
-                </select>
-            </div>
-            <div class="col-md-2">
                 <label class="form-label">&nbsp;</label>
                 <button type="button" class="btn btn-primary d-block w-100" onclick="generateReport()">
-                    <i data-feather="refresh-cw" class="me-1"></i>리포트 생성
+                    <i data-feather="bar-chart-2" class="me-1"></i>리포트 생성
                 </button>
             </div>
         </div>
-        <div class="row mt-3">
-            <div class="col-md-12">
-                <div class="d-flex justify-content-end">
-                    <button class="btn btn-outline-secondary me-2" onclick="exportReport('csv')">
-                        <i data-feather="file" class="me-1"></i>CSV 내보내기
-                    </button>
-                    <button class="btn btn-outline-secondary" onclick="exportReport('excel')">
-                        <i data-feather="grid" class="me-1"></i>Excel 내보내기
-                    </button>
-                </div>
-            </div>
-        </div>
     </div>
 </div>
 
-<!-- Dynamic Report Content -->
-<div id="reportContainer">
-    <!-- Current report will be displayed here -->
-    <div class="alert alert-info text-center">
-        <i data-feather="bar-chart-2" class="me-2"></i>
-        리포트 유형과 기간을 선택한 후 "리포트 생성" 버튼을 클릭하세요.
-    </div>
-</div>
-
-<!-- Cash Flow Report Template -->
-<div class="report-template" id="cashflowTemplate" style="display: none;">
-    <div class="row mb-4">
-        <div class="col-lg-8">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">
-                        <i data-feather="trending-up" class="me-2"></i>
-                        현금흐름 추이
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div style="height: 350px;">
-                        <canvas id="cashflowChart"></canvas>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-lg-4">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">
-                        <i data-feather="dollar-sign" class="me-2"></i>
-                        월별 요약
-                    </h5>
-                </div>
-                <div class="card-body">
-                    
-                    {% set ns = namespace(total_income=0, total_expense=0) %}
-                    {% for item in monthly_flow %}
-                        {% set ns.total_income = ns.total_income + item.income %}
-                        {% set ns.total_expense = ns.total_expense + item.expense %}
-                    {% endfor %}
-                    
-                    <div class="summary-item mb-3">
-                        <div class="d-flex justify-content-between">
-                            <span class="text-muted">총 수입</span>
-                            <strong class="text-success">₩{{ "{:,.0f}".format(ns.total_income) }}</strong>
-                        </div>
-                    </div>
-                    <div class="summary-item mb-3">
-                        <div class="d-flex justify-content-between">
-                            <span class="text-muted">총 지출</span>
-                            <strong class="text-danger">₩{{ "{:,.0f}".format(ns.total_expense | abs) }}</strong>
-                        </div>
-                    </div>
-                    <div class="summary-item mb-3">
-                        <div class="d-flex justify-content-between">
-                            <span class="text-muted">순현금흐름</span>
-                            {% set net_flow = ns.total_income + ns.total_expense %}
-                            <strong class="{% if net_flow > 0 %}text-success{% elif net_flow < 0 %}text-danger{% else %}text-muted{% endif %}">
-                                ₩{{ "{:,.0f}".format(net_flow) }}
-                            </strong>
-                        </div>
-                    </div>
-                    <div class="summary-item">
-                        <div class="d-flex justify-content-between">
-                            <span class="text-muted">평균 월 지출</span>
-                            {% set avg_expense = (ns.total_expense / (monthly_flow | length if monthly_flow | length > 0 else 1)) | abs %}
-                            <strong>₩{{ "{:,.0f}".format(avg_expense) }}</strong>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Department Spending Report Template -->
-<div class="report-template" id="departmentTemplate" style="display: none;">
-    <div class="row mb-4">
-        <div class="col-lg-6">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">
-                        <i data-feather="users" class="me-2"></i>
-                        부서별 지출 분포
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div style="height: 350px;">
-                        <canvas id="departmentChart"></canvas>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-6">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">
-                        <i data-feather="list" class="me-2"></i>
-                        부서별 상세 내역
-                    </h5>
-                </div>
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-sm mb-0" id="departmentTable">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>부서명</th>
-                                    <th>거래 건수</th>
-                                    <th class="text-end">총 지출</th>
-                                    <th class="text-end">평균 지출</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <!-- Dynamic content -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Vendor Analysis Report Template -->
-<div class="report-template" id="vendorTemplate" style="display: none;">
-    <div class="row mb-4">
-        <div class="col-lg-8">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">
-                        <i data-feather="briefcase" class="me-2"></i>
-                        거래처별 지출 현황
-                    </h5>
-                </div>
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-sm mb-0" id="vendorTable">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>순위</th>
-                                    <th>거래처</th>
-                                    <th>거래횟수</th>
-                                    <th class="text-end">총 금액</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <!-- Dynamic content -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-4">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">
-                        <i data-feather="pie-chart" class="me-2"></i>
-                        상위 거래처 분포
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div style="height: 300px;">
-                        <canvas id="vendorChart"></canvas>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Category Analysis Report Template -->
-<div class="report-template" id="categoryTemplate" style="display: none;">
-    <div class="row mb-4">
-        <div class="col-lg-6">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">
-                        <i data-feather="tag" class="me-2"></i>
-                        카테고리별 지출 분포
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div style="height: 350px;">
-                        <canvas id="categoryChart"></canvas>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-6">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">
-                        <i data-feather="list" class="me-2"></i>
-                        카테고리별 상세 내역
-                    </h5>
-                </div>
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-sm mb-0" id="categoryTable">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>카테고리</th>
-                                    <th>거래 건수</th>
-                                    <th class="text-end">총 지출</th>
-                                    <th class="text-end">비율</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <!-- Dynamic content -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-                    <table class="table table-hover">
-                        <thead class="table-light">
-                            <tr>
-                                <th>부서</th>
-                                <th class="text-end">예산</th>
-                                <th class="text-end">실적</th>
-                                <th class="text-end">차이</th>
-                                <th class="text-center">달성률</th>
-                                <th class="text-center">상태</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for dept in dept_spending %}
-                            {% set budget = 10000000 %}  <!-- 샘플 예산 -->
-                            {% set actual = dept.total | abs %}
-                            {% set diff = budget - actual %}
-                            {% set rate = (actual / budget * 100) if budget > 0 else 0 %}
-                            <tr>
-                                <td>{{ dept.name }}</td>
-                                <td class="text-end">₩{{ "{:,.0f}".format(budget) }}</td>
-                                <td class="text-end text-danger">₩{{ "{:,.0f}".format(actual) }}</td>
-                                <td class="text-end {% if diff > 0 %}text-success{% elif diff < 0 %}text-danger{% else %}text-muted{% endif %}">₩{{ "{:,.0f}".format(diff) }}</td>
-                                <td class="text-center">
-                                    <div class="progress" style="width: 100px;">
-                                        <div class="progress-bar {% if rate > 100 %}bg-danger{% elif rate > 90 %}bg-warning{% else %}bg-success{% endif %}" 
-                                             style="width: {{ [rate, 100] | min }}%">
-                                            {{ "%.1f" | format(rate) }}%
-                                        </div>
-                                    </div>
-                                </td>
-                                <td class="text-center">
-                                    {% if rate > 100 %}
-                                        <span class="badge bg-danger">초과</span>
-                                    {% elif rate > 90 %}
-                                        <span class="badge bg-warning">주의</span>
-                                    {% else %}
-                                        <span class="badge bg-success">양호</span>
-                                    {% endif %}
-                                </td>
-                            </tr>
-                            {% else %}
-                            <tr>
-                                <td colspan="6" class="text-center text-muted py-4">
-                                    부서별 지출 데이터가 없습니다.
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Contract Analysis -->
-<div class="row mb-4">
-    <div class="col-12">
-        <div class="card">
+<!-- Report Content -->
+<div id="reportContent" style="display: none;">
+    <!-- P&L Statement -->
+    <div id="plReport" class="report-section" style="display: none;">
+        <div class="card mb-4">
             <div class="card-header">
-                <h5 class="card-title mb-0">
-                    <i data-feather="file-text" class="me-2"></i>
-                    계약 관점 분석
-                </h5>
+                <h5 class="mb-0"><i data-feather="trending-up" class="me-2"></i>손익계산서</h5>
             </div>
             <div class="card-body">
-                <div class="alert alert-info">
-                    <i data-feather="info" class="me-2"></i>
-                    계약 데이터와 관련 지출을 연계하여 분석합니다. 계약 만료 임박 알림 기능도 포함됩니다.
-                </div>
-                
                 <div class="row">
-                    <div class="col-md-4">
-                        <div class="card bg-light">
-                            <div class="card-body text-center">
-                                <h4 class="text-primary">12건</h4>
-                                <p class="mb-0">활성 계약</p>
-                            </div>
+                    <div class="col-lg-6">
+                        <canvas id="plChart" style="height: 300px;"></canvas>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="table-responsive">
+                            <table class="table table-striped" id="plTable">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>구분</th>
+                                        <th class="text-end">금액</th>
+                                        <th class="text-end">비중</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
                         </div>
                     </div>
-                    <div class="col-md-4">
-                        <div class="card bg-light">
-                            <div class="card-body text-center">
-                                <h4 class="text-warning">3건</h4>
-                                <p class="mb-0">만료 임박 (30일 이내)</p>
-                            </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cash Flow Statement -->
+    <div id="cashflowReport" class="report-section" style="display: none;">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i data-feather="dollar-sign" class="me-2"></i>현금흐름표</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-lg-8">
+                        <canvas id="cashflowChart" style="height: 350px;"></canvas>
+                    </div>
+                    <div class="col-lg-4">
+                        <div class="table-responsive">
+                            <table class="table table-striped table-sm" id="cashflowTable">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>기간</th>
+                                        <th class="text-end">순현금흐름</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
                         </div>
                     </div>
-                    <div class="col-md-4">
-                        <div class="card bg-light">
-                            <div class="card-body text-center">
-                                <h4 class="text-success">85%</h4>
-                                <p class="mb-0">계약 이행률</p>
-                            </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Budget vs Actual -->
+    <div id="budgetReport" class="report-section" style="display: none;">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i data-feather="target" class="me-2"></i>예산 vs 실적</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-lg-8">
+                        <canvas id="budgetChart" style="height: 350px;"></canvas>
+                    </div>
+                    <div class="col-lg-4">
+                        <div class="table-responsive">
+                            <table class="table table-striped table-sm" id="budgetTable">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>부서</th>
+                                        <th class="text-end">예산</th>
+                                        <th class="text-end">실적</th>
+                                        <th class="text-end">차이</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Department Analysis -->
+    <div id="departmentReport" class="report-section" style="display: none;">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i data-feather="users" class="me-2"></i>부서별 손익</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-lg-6">
+                        <canvas id="departmentChart" style="height: 300px;"></canvas>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="table-responsive">
+                            <table class="table table-striped" id="departmentTable">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>부서</th>
+                                        <th class="text-end">수익</th>
+                                        <th class="text-end">비용</th>
+                                        <th class="text-end">손익</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Vendor Analysis -->
+    <div id="vendorReport" class="report-section" style="display: none;">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i data-feather="briefcase" class="me-2"></i>거래처별 분석</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-lg-6">
+                        <canvas id="vendorChart" style="height: 300px;"></canvas>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="table-responsive">
+                            <table class="table table-striped" id="vendorTable">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>순위</th>
+                                        <th>거래처</th>
+                                        <th class="text-end">거래횟수</th>
+                                        <th class="text-end">거래금액</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Category Analysis -->
+    <div id="categoryReport" class="report-section" style="display: none;">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i data-feather="tag" class="me-2"></i>카테고리별 분석</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-lg-6">
+                        <canvas id="categoryChart" style="height: 300px;"></canvas>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="table-responsive">
+                            <table class="table table-striped" id="categoryTable">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>카테고리</th>
+                                        <th class="text-end">거래건수</th>
+                                        <th class="text-end">거래금액</th>
+                                        <th class="text-end">비중</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
@@ -395,217 +232,227 @@
         </div>
     </div>
 </div>
-{% endblock %}
 
-{% block scripts %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- Loading State -->
+<div id="loadingState" class="text-center py-5" style="display: none;">
+    <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">로딩 중...</span>
+    </div>
+    <p class="mt-3 text-muted">리포트를 생성하고 있습니다...</p>
+</div>
+
+<!-- No Data State -->
+<div id="noDataState" class="text-center py-5" style="display: none;">
+    <i data-feather="alert-circle" class="text-muted" style="width: 48px; height: 48px;"></i>
+    <h5 class="mt-3 text-muted">데이터가 없습니다</h5>
+    <p class="text-muted">선택한 기간에 해당하는 거래 데이터가 없습니다.</p>
+</div>
+
 <script>
-// 전역 차트 변수들
 let currentChart = null;
 
+// 페이지 로드 시 기본 날짜 설정
 document.addEventListener('DOMContentLoaded', function() {
-    initializePage();
-});
-
-function initializePage() {
-    // 페이지 로드시 기본 설정
-    setDefaultDates();
-    feather.replace();
-}
-
-function setDefaultDates() {
-    // 올해 1월 1일 설정
     const today = new Date();
     const startOfYear = new Date(today.getFullYear(), 0, 1);
     
     document.getElementById('startDate').value = startOfYear.toISOString().split('T')[0];
     document.getElementById('endDate').value = today.toISOString().split('T')[0];
-}
-
-function onPeriodTypeChange() {
-    const periodType = document.getElementById('periodType').value;
-    const customStart = document.getElementById('customPeriodStart');
-    const customEnd = document.getElementById('customPeriodEnd');
     
-    if (periodType === 'custom') {
-        customStart.style.display = 'block';
-        customEnd.style.display = 'block';
-    } else {
-        customStart.style.display = 'none';
-        customEnd.style.display = 'none';
-        // 올해 1월 1일부터 현재까지 설정
-        setDefaultDates();
-    }
-}
+    // 기본 리포트 로드
+    generateReport();
+});
 
 function onReportTypeChange() {
-    // 리포트 유형이 변경되면 기존 리포트 숨기기
-    hideAllReports();
-}
-
-function hideAllReports() {
-    document.getElementById('reportContainer').innerHTML = `
-        <div class="alert alert-info text-center">
-            <i data-feather="bar-chart-2" class="me-2"></i>
-            리포트 유형과 기간을 선택한 후 "리포트 생성" 버튼을 클릭하세요.
-        </div>
-    `;
-    feather.replace();
+    // 리포트 타입이 변경되면 자동으로 리포트 생성
+    generateReport();
 }
 
 function generateReport() {
     const reportType = document.getElementById('reportType').value;
-    const periodType = document.getElementById('periodType').value;
-    const aggregation = document.getElementById('aggregation').value;
+    const startDate = document.getElementById('startDate').value;
+    const endDate = document.getElementById('endDate').value;
     
-    let startDate, endDate;
-    
-    if (periodType === 'custom') {
-        startDate = document.getElementById('startDate').value;
-        endDate = document.getElementById('endDate').value;
-        
-        if (!startDate || !endDate) {
-            showToast('시작일과 종료일을 모두 선택해주세요.', 'warning');
-            return;
-        }
-        
-        if (new Date(startDate) > new Date(endDate)) {
-            showToast('시작일은 종료일보다 이전이어야 합니다.', 'warning');
-            return;
-        }
-    } else {
-        // 올해 1월 1일부터 현재까지
-        const today = new Date();
-        const startOfYear = new Date(today.getFullYear(), 0, 1);
-        startDate = startOfYear.toISOString().split('T')[0];
-        endDate = today.toISOString().split('T')[0];
+    if (!startDate || !endDate) {
+        alert('시작일과 종료일을 선택해주세요.');
+        return;
     }
     
-    showToast('리포트를 생성하고 있습니다...', 'info');
+    showLoadingState();
     
-    // 서버에 AJAX 요청
-    const params = new URLSearchParams({
-        type: reportType,
-        start_date: startDate,
-        end_date: endDate,
-        aggregation: aggregation
-    });
-    
-    fetch(`/reports/data?${params.toString()}`)
+    // API 호출
+    fetch(`/reports/data?report_type=${reportType}&start_date=${startDate}&end_date=${endDate}`)
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                displayReport(reportType, data.data, startDate, endDate, aggregation);
-                showToast('리포트가 생성되었습니다.', 'success');
+                displayReport(reportType, data.data);
             } else {
-                showToast(`리포트 생성 실패: ${data.error}`, 'danger');
+                showError(data.error || '리포트 생성 중 오류가 발생했습니다.');
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            showToast('리포트 생성 중 오류가 발생했습니다.', 'danger');
+            showError('서버 연결 오류가 발생했습니다.');
         });
 }
 
-function displayReport(reportType, data, startDate, endDate, aggregation) {
-    // 기존 차트 파괴
+function showLoadingState() {
+    document.getElementById('reportContent').style.display = 'none';
+    document.getElementById('noDataState').style.display = 'none';
+    document.getElementById('loadingState').style.display = 'block';
+}
+
+function displayReport(reportType, data) {
+    // 모든 리포트 섹션 숨기기
+    document.querySelectorAll('.report-section').forEach(section => {
+        section.style.display = 'none';
+    });
+    
+    // 로딩 상태 숨기기
+    document.getElementById('loadingState').style.display = 'none';
+    document.getElementById('noDataState').style.display = 'none';
+    
+    // 기존 차트 제거
     if (currentChart) {
         currentChart.destroy();
         currentChart = null;
     }
     
-    // 리포트 컨테이너에 적절한 템플릿 표시
-    const container = document.getElementById('reportContainer');
-    const template = document.getElementById(reportType + 'Template');
+    // 해당 리포트 표시
+    document.getElementById('reportContent').style.display = 'block';
     
-    if (template) {
-        container.innerHTML = template.innerHTML;
-        feather.replace();
-        
-        // 리포트 유형에 따라 차트/테이블 생성
-        switch(reportType) {
-            case 'cashflow':
-                createCashflowChart(data.cashflow || []);
-                break;
-            case 'department':
-                createDepartmentChart(data.department || []);
-                createDepartmentTable(data.department || []);
-                break;
-            case 'vendor':
-                createVendorTable(data.vendor || []);
-                createVendorChart(data.vendor || []);
-                break;
-            case 'category':
-                createCategoryChart(data.category || []);
-                createCategoryTable(data.category || []);
-                break;
-        }
-    } else {
-        container.innerHTML = `
-            <div class="alert alert-warning text-center">
-                <i data-feather="alert-triangle" class="me-2"></i>
-                선택한 리포트 유형에 대한 템플릿을 찾을 수 없습니다.
-            </div>
-        `;
-        feather.replace();
+    switch(reportType) {
+        case 'pl':
+            displayPLReport(data);
+            break;
+        case 'cashflow':
+            displayCashflowReport(data);
+            break;
+        case 'budget':
+            displayBudgetReport(data);
+            break;
+        case 'department':
+            displayDepartmentReport(data);
+            break;
+        case 'vendor':
+            displayVendorReport(data);
+            break;
+        case 'category':
+            displayCategoryReport(data);
+            break;
     }
 }
 
-function createCashflowChart(data) {
-    const ctx = document.getElementById('cashflowChart');
-    if (!ctx || data.length === 0) return;
+function displayPLReport(data) {
+    document.getElementById('plReport').style.display = 'block';
     
-    const labels = data.map(item => item.period);
-    const incomeData = data.map(item => item.income);
-    const expenseData = data.map(item => item.expense);
-    const netData = data.map(item => item.net);
+    if (!data.pl || data.pl.length === 0) {
+        showNoDataState();
+        return;
+    }
+    
+    createPLChart(data.pl);
+    createPLTable(data.pl);
+}
+
+function displayCashflowReport(data) {
+    document.getElementById('cashflowReport').style.display = 'block';
+    
+    if (!data.cashflow || data.cashflow.length === 0) {
+        showNoDataState();
+        return;
+    }
+    
+    createCashflowChart(data.cashflow);
+    createCashflowTable(data.cashflow);
+}
+
+function displayBudgetReport(data) {
+    document.getElementById('budgetReport').style.display = 'block';
+    
+    if (!data.budget || data.budget.length === 0) {
+        showNoDataState();
+        return;
+    }
+    
+    createBudgetChart(data.budget);
+    createBudgetTable(data.budget);
+}
+
+function displayDepartmentReport(data) {
+    document.getElementById('departmentReport').style.display = 'block';
+    
+    if (!data.department || data.department.length === 0) {
+        showNoDataState();
+        return;
+    }
+    
+    createDepartmentChart(data.department);
+    createDepartmentTable(data.department);
+}
+
+function displayVendorReport(data) {
+    document.getElementById('vendorReport').style.display = 'block';
+    
+    if (!data.vendor || data.vendor.length === 0) {
+        showNoDataState();
+        return;
+    }
+    
+    createVendorChart(data.vendor);
+    createVendorTable(data.vendor);
+}
+
+function displayCategoryReport(data) {
+    document.getElementById('categoryReport').style.display = 'block';
+    
+    if (!data.category || data.category.length === 0) {
+        showNoDataState();
+        return;
+    }
+    
+    createCategoryChart(data.category);
+    createCategoryTable(data.category);
+}
+
+function createPLChart(data) {
+    const ctx = document.getElementById('plChart');
+    if (!ctx) return;
+    
+    const totalRevenue = data.filter(item => item.type === 'revenue').reduce((sum, item) => sum + Math.abs(item.amount), 0);
+    const totalCosts = data.filter(item => item.type === 'cost').reduce((sum, item) => sum + Math.abs(item.amount), 0);
+    const netProfit = totalRevenue - totalCosts;
     
     currentChart = new Chart(ctx, {
-        type: 'line',
+        type: 'bar',
         data: {
-            labels: labels,
+            labels: ['수익', '비용', '순이익'],
             datasets: [{
-                label: '수입',
-                data: incomeData,
-                borderColor: 'rgb(40, 167, 69)',
-                backgroundColor: 'rgba(40, 167, 69, 0.1)',
-                tension: 0.1
-            }, {
-                label: '지출',
-                data: expenseData,
-                borderColor: 'rgb(220, 53, 69)',
-                backgroundColor: 'rgba(220, 53, 69, 0.1)',
-                tension: 0.1
-            }, {
-                label: '순현금흐름',
-                data: netData,
-                borderColor: 'rgb(0, 123, 255)',
-                backgroundColor: 'rgba(0, 123, 255, 0.1)',
-                tension: 0.1
+                data: [totalRevenue, totalCosts, Math.abs(netProfit)],
+                backgroundColor: ['#28a745', '#dc3545', netProfit >= 0 ? '#17a2b8' : '#ffc107']
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            interaction: {
-                intersect: false,
-                mode: 'index'
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const value = context.parsed.y;
+                            const sign = context.dataIndex === 2 ? (netProfit >= 0 ? '+' : '-') : '';
+                            return context.label + ': ' + sign + '₩' + value.toLocaleString();
+                        }
+                    }
+                }
             },
             scales: {
                 y: {
                     beginAtZero: true,
                     ticks: {
                         callback: function(value) {
-                            return value.toLocaleString() + '원';
-                        }
-                    }
-                }
-            },
-            plugins: {
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            return context.dataset.label + ': ' + context.parsed.y.toLocaleString() + '원';
+                            return '₩' + value.toLocaleString();
                         }
                     }
                 }
@@ -614,34 +461,223 @@ function createCashflowChart(data) {
     });
 }
 
-function createDepartmentChart(data) {
-    const ctx = document.getElementById('departmentChart');
-    if (!ctx || data.length === 0) return;
+function createPLTable(data) {
+    const tableBody = document.querySelector('#plTable tbody');
+    if (!tableBody) return;
     
-    const colors = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'];
+    const totalRevenue = data.filter(item => item.type === 'revenue').reduce((sum, item) => sum + Math.abs(item.amount), 0);
+    const totalCosts = data.filter(item => item.type === 'cost').reduce((sum, item) => sum + Math.abs(item.amount), 0);
+    const netProfit = totalRevenue - totalCosts;
+    const total = totalRevenue + totalCosts;
+    
+    const revenuePercent = total > 0 ? (totalRevenue / total * 100).toFixed(1) : 0;
+    const costsPercent = total > 0 ? (totalCosts / total * 100).toFixed(1) : 0;
+    
+    const html = `
+        <tr>
+            <td><strong>총 수익</strong></td>
+            <td class="text-end text-success"><strong>₩${totalRevenue.toLocaleString()}</strong></td>
+            <td class="text-end">${revenuePercent}%</td>
+        </tr>
+        <tr>
+            <td><strong>총 비용</strong></td>
+            <td class="text-end text-danger"><strong>₩${totalCosts.toLocaleString()}</strong></td>
+            <td class="text-end">${costsPercent}%</td>
+        </tr>
+        <tr class="table-warning">
+            <td><strong>순이익</strong></td>
+            <td class="text-end ${netProfit >= 0 ? 'text-success' : 'text-danger'}"><strong>${netProfit >= 0 ? '+' : ''}₩${Math.abs(netProfit).toLocaleString()}</strong></td>
+            <td class="text-end">-</td>
+        </tr>
+    `;
+    
+    tableBody.innerHTML = html;
+}
+
+function createCashflowChart(data) {
+    const ctx = document.getElementById('cashflowChart');
+    if (!ctx) return;
     
     currentChart = new Chart(ctx, {
-        type: 'doughnut',
+        type: 'line',
         data: {
-            labels: data.map(item => item.name),
-            datasets: [{
-                data: data.map(item => item.total),
-                backgroundColor: colors
-            }]
+            labels: data.map(item => item.period),
+            datasets: [
+                {
+                    label: '수입',
+                    data: data.map(item => item.income),
+                    borderColor: '#28a745',
+                    backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                    fill: false
+                },
+                {
+                    label: '지출',
+                    data: data.map(item => item.expense),
+                    borderColor: '#dc3545',
+                    backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                    fill: false
+                },
+                {
+                    label: '순현금흐름',
+                    data: data.map(item => item.net),
+                    borderColor: '#17a2b8',
+                    backgroundColor: 'rgba(23, 162, 184, 0.1)',
+                    fill: true
+                }
+            ]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: {
-                    position: 'bottom'
-                },
+                legend: { position: 'top' },
                 tooltip: {
                     callbacks: {
                         label: function(context) {
-                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                            const percentage = ((context.parsed / total) * 100).toFixed(1);
-                            return context.label + ': ₩' + context.parsed.toLocaleString() + ' (' + percentage + '%)';
+                            return context.dataset.label + ': ₩' + context.parsed.y.toLocaleString();
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return '₩' + value.toLocaleString();
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+function createCashflowTable(data) {
+    const tableBody = document.querySelector('#cashflowTable tbody');
+    if (!tableBody) return;
+    
+    const html = data.map(item => `
+        <tr>
+            <td>${item.period}</td>
+            <td class="text-end ${item.net >= 0 ? 'text-success' : 'text-danger'}">
+                ${item.net >= 0 ? '+' : ''}₩${Math.abs(item.net).toLocaleString()}
+            </td>
+        </tr>
+    `).join('');
+    
+    tableBody.innerHTML = html;
+}
+
+function createBudgetChart(data) {
+    const ctx = document.getElementById('budgetChart');
+    if (!ctx) return;
+    
+    currentChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: data.map(item => item.department),
+            datasets: [
+                {
+                    label: '예산',
+                    data: data.map(item => item.budget),
+                    backgroundColor: 'rgba(54, 162, 235, 0.8)'
+                },
+                {
+                    label: '실적',
+                    data: data.map(item => item.actual),
+                    backgroundColor: 'rgba(255, 99, 132, 0.8)'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'top' },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.dataset.label + ': ₩' + context.parsed.y.toLocaleString();
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return '₩' + value.toLocaleString();
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+function createBudgetTable(data) {
+    const tableBody = document.querySelector('#budgetTable tbody');
+    if (!tableBody) return;
+    
+    const html = data.map(item => {
+        const difference = item.actual - item.budget;
+        const colorClass = difference <= 0 ? 'text-success' : 'text-danger';
+        
+        return `
+            <tr>
+                <td>${item.department}</td>
+                <td class="text-end">₩${item.budget.toLocaleString()}</td>
+                <td class="text-end">₩${item.actual.toLocaleString()}</td>
+                <td class="text-end ${colorClass}">${difference >= 0 ? '+' : ''}₩${Math.abs(difference).toLocaleString()}</td>
+            </tr>
+        `;
+    }).join('');
+    
+    tableBody.innerHTML = html;
+}
+
+function createDepartmentChart(data) {
+    const ctx = document.getElementById('departmentChart');
+    if (!ctx) return;
+    
+    currentChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: data.map(item => item.name),
+            datasets: [
+                {
+                    label: '수익',
+                    data: data.map(item => item.revenue),
+                    backgroundColor: 'rgba(40, 167, 69, 0.8)'
+                },
+                {
+                    label: '비용',
+                    data: data.map(item => item.cost),
+                    backgroundColor: 'rgba(220, 53, 69, 0.8)'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'top' },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.dataset.label + ': ₩' + context.parsed.y.toLocaleString();
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return '₩' + value.toLocaleString();
                         }
                     }
                 }
@@ -654,70 +690,28 @@ function createDepartmentTable(data) {
     const tableBody = document.querySelector('#departmentTable tbody');
     if (!tableBody) return;
     
-    if (data.length === 0) {
-        tableBody.innerHTML = `
+    const html = data.map(item => {
+        const profit = item.revenue - item.cost;
+        const profitClass = profit >= 0 ? 'text-success' : 'text-danger';
+        
+        return `
             <tr>
-                <td colspan="4" class="text-center text-muted py-3">
-                    선택한 기간에 부서별 데이터가 없습니다.
-                </td>
+                <td>${item.name}</td>
+                <td class="text-end text-success">₩${item.revenue.toLocaleString()}</td>
+                <td class="text-end text-danger">₩${item.cost.toLocaleString()}</td>
+                <td class="text-end ${profitClass}">${profit >= 0 ? '+' : ''}₩${Math.abs(profit).toLocaleString()}</td>
             </tr>
         `;
-        return;
-    }
-    
-    let html = '';
-    data.forEach(dept => {
-        const average = dept.count > 0 ? dept.total / dept.count : 0;
-        html += `
-            <tr>
-                <td>${dept.name}</td>
-                <td>${dept.count}건</td>
-                <td class="text-end text-danger">₩${dept.total.toLocaleString()}</td>
-                <td class="text-end">₩${average.toLocaleString()}</td>
-            </tr>
-        `;
-    });
-    
-    tableBody.innerHTML = html;
-}
-
-function createVendorTable(data) {
-    const tableBody = document.querySelector('#vendorTable tbody');
-    if (!tableBody) return;
-    
-    if (data.length === 0) {
-        tableBody.innerHTML = `
-            <tr>
-                <td colspan="4" class="text-center text-muted py-3">
-                    선택한 기간에 거래처별 데이터가 없습니다.
-                </td>
-            </tr>
-        `;
-        return;
-    }
-    
-    let html = '';
-    data.forEach((vendor, index) => {
-        const colorClass = vendor.total >= 0 ? 'text-success' : 'text-danger';
-        const sign = vendor.total >= 0 ? '+' : '';
-        html += `
-            <tr>
-                <td>${index + 1}</td>
-                <td>${vendor.name}</td>
-                <td>${vendor.count}회</td>
-                <td class="text-end ${colorClass}">${sign}₩${vendor.total.toLocaleString()}</td>
-            </tr>
-        `;
-    });
+    }).join('');
     
     tableBody.innerHTML = html;
 }
 
 function createVendorChart(data) {
     const ctx = document.getElementById('vendorChart');
-    if (!ctx || data.length === 0) return;
+    if (!ctx) return;
     
-    const topVendors = data.slice(0, 10); // 상위 10개만
+    const topVendors = data.slice(0, 10);
     const colors = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40', '#FF6384', '#C9CBCF', '#AFCBDE', '#FFEB3B'];
     
     currentChart = new Chart(ctx, {
@@ -725,7 +719,7 @@ function createVendorChart(data) {
         data: {
             labels: topVendors.map(item => item.name),
             datasets: [{
-                data: topVendors.map(item => Math.abs(item.total)), // 절댓값으로 차트 표시
+                data: topVendors.map(item => Math.abs(item.total)),
                 backgroundColor: colors
             }]
         },
@@ -733,17 +727,13 @@ function createVendorChart(data) {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: {
-                    position: 'bottom'
-                },
+                legend: { position: 'bottom' },
                 tooltip: {
                     callbacks: {
                         label: function(context) {
                             const originalValue = topVendors[context.dataIndex].total;
                             const sign = originalValue >= 0 ? '+' : '';
-                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                            const percentage = ((context.parsed / total) * 100).toFixed(1);
-                            return context.label + ': ' + sign + '₩' + originalValue.toLocaleString() + ' (' + percentage + '%)';
+                            return context.label + ': ' + sign + '₩' + originalValue.toLocaleString();
                         }
                     }
                 }
@@ -752,9 +742,30 @@ function createVendorChart(data) {
     });
 }
 
+function createVendorTable(data) {
+    const tableBody = document.querySelector('#vendorTable tbody');
+    if (!tableBody) return;
+    
+    const html = data.map((vendor, index) => {
+        const colorClass = vendor.total >= 0 ? 'text-success' : 'text-danger';
+        const sign = vendor.total >= 0 ? '+' : '';
+        
+        return `
+            <tr>
+                <td>${index + 1}</td>
+                <td>${vendor.name}</td>
+                <td class="text-end">${vendor.count}회</td>
+                <td class="text-end ${colorClass}">${sign}₩${vendor.total.toLocaleString()}</td>
+            </tr>
+        `;
+    }).join('');
+    
+    tableBody.innerHTML = html;
+}
+
 function createCategoryChart(data) {
     const ctx = document.getElementById('categoryChart');
-    if (!ctx || data.length === 0) return;
+    if (!ctx) return;
     
     const colors = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'];
     
@@ -763,7 +774,7 @@ function createCategoryChart(data) {
         data: {
             labels: data.map(item => item.name),
             datasets: [{
-                data: data.map(item => Math.abs(item.total)), // 절댓값으로 차트 표시
+                data: data.map(item => Math.abs(item.total)),
                 backgroundColor: colors
             }]
         },
@@ -771,17 +782,13 @@ function createCategoryChart(data) {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: {
-                    position: 'bottom'
-                },
+                legend: { position: 'bottom' },
                 tooltip: {
                     callbacks: {
                         label: function(context) {
                             const originalValue = data[context.dataIndex].total;
                             const sign = originalValue >= 0 ? '+' : '';
-                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                            const percentage = ((context.parsed / total) * 100).toFixed(1);
-                            return context.label + ': ' + sign + '₩' + originalValue.toLocaleString() + ' (' + percentage + '%)';
+                            return context.label + ': ' + sign + '₩' + originalValue.toLocaleString();
                         }
                     }
                 }
@@ -794,138 +801,35 @@ function createCategoryTable(data) {
     const tableBody = document.querySelector('#categoryTable tbody');
     if (!tableBody) return;
     
-    if (data.length === 0) {
-        tableBody.innerHTML = `
-            <tr>
-                <td colspan="4" class="text-center text-muted py-3">
-                    선택한 기간에 카테고리별 데이터가 없습니다.
-                </td>
-            </tr>
-        `;
-        return;
-    }
-    
     const totalAbs = data.reduce((sum, item) => sum + Math.abs(item.total), 0);
-    let html = '';
-    data.forEach(category => {
+    
+    const html = data.map(category => {
         const percentage = totalAbs > 0 ? (Math.abs(category.total) / totalAbs * 100).toFixed(1) : 0;
         const colorClass = category.total >= 0 ? 'text-success' : 'text-danger';
         const sign = category.total >= 0 ? '+' : '';
-        html += `
+        
+        return `
             <tr>
                 <td>${category.name}</td>
-                <td>${category.count}건</td>
+                <td class="text-end">${category.count}건</td>
                 <td class="text-end ${colorClass}">${sign}₩${category.total.toLocaleString()}</td>
                 <td class="text-end">${percentage}%</td>
             </tr>
         `;
-    });
+    }).join('');
     
     tableBody.innerHTML = html;
 }
 
-// 유틸리티 함수들
-function showToast(message, type = 'info') {
-    const toast = document.createElement('div');
-    toast.className = `alert alert-${type} position-fixed`;
-    toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
-    toast.textContent = message;
-    
-    document.body.appendChild(toast);
-    
-    setTimeout(() => {
-        toast.remove();
-    }, 3000);
+function showNoDataState() {
+    document.getElementById('reportContent').style.display = 'none';
+    document.getElementById('loadingState').style.display = 'none';
+    document.getElementById('noDataState').style.display = 'block';
 }
 
-function exportReport(format) {
-    const reportType = document.getElementById('reportType').value;
-    const periodType = document.getElementById('periodType').value;
-    const aggregation = document.getElementById('aggregation').value;
-    
-    let startDate, endDate;
-    
-    if (periodType === 'custom') {
-        startDate = document.getElementById('startDate').value;
-        endDate = document.getElementById('endDate').value;
-        
-        if (!startDate || !endDate) {
-            showToast('시작일과 종료일을 선택한 후 내보내기를 진행해주세요.', 'warning');
-            return;
-        }
-    } else {
-        const today = new Date();
-        const startOfYear = new Date(today.getFullYear(), 0, 1);
-        startDate = startOfYear.toISOString().split('T')[0];
-        endDate = today.toISOString().split('T')[0];
-    }
-    
-    showToast(`${format.toUpperCase()} 파일로 내보내는 중...`, 'info');
-    
-    // 실제 내보내기 기능은 추후 구현
-    setTimeout(() => {
-        showToast(`${format.toUpperCase()} 내보내기가 완료되었습니다.`, 'success');
-    }, 2000);
+function showError(message) {
+    document.getElementById('loadingState').style.display = 'none';
+    alert('오류: ' + message);
 }
-
-function exportReport(format) {
-    const reportType = document.getElementById('reportType').value;
-    const startDate = document.getElementById('startDate').value;
-    const endDate = document.getElementById('endDate').value;
-    const period = document.getElementById('period').value;
-    
-    // 내보내기 URL 생성
-    const params = new URLSearchParams({
-        type: reportType,
-        start_date: startDate,
-        end_date: endDate,
-        period: period,
-        format: format
-    });
-    
-    showToast(`${format.toUpperCase()} 형식으로 내보내고 있습니다...`, 'info');
-    
-    // 파일 다운로드
-    const url = `/reports/export?${params.toString()}`;
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `financial_report_${new Date().toISOString().split('T')[0]}.${format}`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
-    setTimeout(() => {
-        showToast('리포트 파일이 다운로드되었습니다.', 'success');
-    }, 1000);
-}
-
-function showToast(message, type = 'success') {
-    const toast = document.createElement('div');
-    toast.className = `alert alert-${type} position-fixed top-0 end-0 m-3`;
-    toast.style.zIndex = '9999';
-    toast.textContent = message;
-    
-    document.body.appendChild(toast);
-    
-    setTimeout(() => {
-        toast.remove();
-    }, 3000);
-}
-
-// 페이지 로드시 기본 날짜 설정
-document.addEventListener('DOMContentLoaded', function() {
-    const today = new Date();
-    const oneYearAgo = new Date();
-    oneYearAgo.setFullYear(today.getFullYear() - 1);
-    
-    document.getElementById('startDate').value = oneYearAgo.toISOString().split('T')[0];
-    document.getElementById('endDate').value = today.toISOString().split('T')[0];
-    
-    // 페이지 로드시 기본 리포트 생성 (약간의 지연)
-    setTimeout(() => {
-        console.log('Loading default report...');
-        generateReport();
-    }, 500);
-});
 </script>
 {% endblock %}

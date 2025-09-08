@@ -903,18 +903,16 @@ def reports():
 @app.route('/reports/data')
 @login_required
 def reports_data():
-    """기간별 리포트 데이터 AJAX 요청 처리"""
+    """새로운 6가지 리포트 데이터 AJAX 요청 처리"""
     try:
-        from datetime import datetime, timedelta, date
-        import json
-        from models import Transaction, Account, Category, Department, Vendor
-        from sqlalchemy import func, extract
+        from datetime import datetime, date
+        from models import Transaction, Account, Category, Department, Vendor, Budget
+        from sqlalchemy import func, extract, case
         
         # 요청 파라미터 받기
-        report_type = request.args.get('type', 'cashflow')
+        report_type = request.args.get('report_type', 'pl')
         start_date_str = request.args.get('start_date')
         end_date_str = request.args.get('end_date')
-        aggregation = request.args.get('aggregation', 'monthly')
         
         print(f"Reports data request - Type: {report_type}, Start: {start_date_str}, End: {end_date_str}")
         
@@ -926,162 +924,135 @@ def reports_data():
             except ValueError as e:
                 return jsonify({'success': False, 'error': f'날짜 형식 오류: {str(e)}'})
         else:
-            # 기본값: 최근 12개월
-            end_date = date.today()
-            start_date = end_date.replace(year=end_date.year - 1)
+            # 기본값: 올해 전체
+            today = date.today()
+            start_date = date(today.year, 1, 1)
+            end_date = today
         
         data = {}
         
-        if report_type == 'cashflow':
-            # 현금흐름 데이터 - 집계 단위에 따라 다르게 처리
+        if report_type == 'pl':
+            # 손익계산서 - 수익과 비용 분석
+            revenue_data = db.session.query(
+                Category.name,
+                func.sum(Transaction.amount).label('total')
+            ).join(Transaction).filter(
+                Transaction.transaction_date >= start_date,
+                Transaction.transaction_date <= end_date,
+                Transaction.amount > 0
+            ).group_by(Category.name).all()
             
-            if aggregation == 'daily':
-                # 일별 집계
-                income_raw = db.session.query(
-                    Transaction.transaction_date,
-                    func.sum(Transaction.amount).label('total')
-                ).filter(
-                    Transaction.transaction_date >= start_date,
-                    Transaction.transaction_date <= end_date,
-                    Transaction.amount > 0
-                ).group_by(Transaction.transaction_date).order_by(Transaction.transaction_date).all()
-                
-                expense_raw = db.session.query(
-                    Transaction.transaction_date,
-                    func.sum(Transaction.amount).label('total')
-                ).filter(
-                    Transaction.transaction_date >= start_date,
-                    Transaction.transaction_date <= end_date,
-                    Transaction.amount < 0
-                ).group_by(Transaction.transaction_date).order_by(Transaction.transaction_date).all()
-                
-                income_dict = {row.transaction_date: float(row.total or 0) for row in income_raw}
-                expense_dict = {row.transaction_date: abs(float(row.total or 0)) for row in expense_raw}
-                
-                all_dates = set(income_dict.keys()) | set(expense_dict.keys())
-                flow_data = []
-                
-                for date_key in sorted(all_dates):
-                    income = income_dict.get(date_key, 0)
-                    expense = expense_dict.get(date_key, 0)
-                    flow_data.append({
-                        'period': date_key.strftime('%Y-%m-%d'),
-                        'income': income,
-                        'expense': expense,
-                        'net': income - expense
-                    })
-                    
-            elif aggregation == 'weekly':
-                # 주별 집계
-                income_raw = db.session.query(
-                    extract('year', Transaction.transaction_date).label('year'),
-                    extract('week', Transaction.transaction_date).label('week'),
-                    func.sum(Transaction.amount).label('total')
-                ).filter(
-                    Transaction.transaction_date >= start_date,
-                    Transaction.transaction_date <= end_date,
-                    Transaction.amount > 0
-                ).group_by(
-                    extract('year', Transaction.transaction_date),
-                    extract('week', Transaction.transaction_date)
-                ).order_by('year', 'week').all()
-                
-                expense_raw = db.session.query(
-                    extract('year', Transaction.transaction_date).label('year'),
-                    extract('week', Transaction.transaction_date).label('week'),
-                    func.sum(Transaction.amount).label('total')
-                ).filter(
-                    Transaction.transaction_date >= start_date,
-                    Transaction.transaction_date <= end_date,
-                    Transaction.amount < 0
-                ).group_by(
-                    extract('year', Transaction.transaction_date),
-                    extract('week', Transaction.transaction_date)
-                ).order_by('year', 'week').all()
-                
-                income_dict = {(int(row.year), int(row.week)): float(row.total or 0) for row in income_raw}
-                expense_dict = {(int(row.year), int(row.week)): abs(float(row.total or 0)) for row in expense_raw}
-                
-                all_weeks = set(income_dict.keys()) | set(expense_dict.keys())
-                flow_data = []
-                
-                for year, week in sorted(all_weeks):
-                    income = income_dict.get((year, week), 0)
-                    expense = expense_dict.get((year, week), 0)
-                    flow_data.append({
-                        'period': f'{year}-W{week:02d}',
-                        'income': income,
-                        'expense': expense,
-                        'net': income - expense
-                    })
-                    
-            else:  # monthly (기본값)
-                # 월별 집계
-                income_raw = db.session.query(
-                    extract('year', Transaction.transaction_date).label('year'),
-                    extract('month', Transaction.transaction_date).label('month'),
-                    func.sum(Transaction.amount).label('total')
-                ).filter(
-                    Transaction.transaction_date >= start_date,
-                    Transaction.transaction_date <= end_date,
-                    Transaction.amount > 0
-                ).group_by(
-                    extract('year', Transaction.transaction_date),
-                    extract('month', Transaction.transaction_date)
-                ).order_by('year', 'month').all()
-                
-                expense_raw = db.session.query(
-                    extract('year', Transaction.transaction_date).label('year'),
-                    extract('month', Transaction.transaction_date).label('month'),
-                    func.sum(Transaction.amount).label('total')
-                ).filter(
-                    Transaction.transaction_date >= start_date,
-                    Transaction.transaction_date <= end_date,
-                    Transaction.amount < 0
-                ).group_by(
-                    extract('year', Transaction.transaction_date),
-                    extract('month', Transaction.transaction_date)
-                ).order_by('year', 'month').all()
-                
-                income_dict = {(int(row.year), int(row.month)): float(row.total or 0) for row in income_raw}
-                expense_dict = {(int(row.year), int(row.month)): abs(float(row.total or 0)) for row in expense_raw}
-                
-                all_months = set(income_dict.keys()) | set(expense_dict.keys())
-                flow_data = []
-                
-                for year, month in sorted(all_months):
-                    income = income_dict.get((year, month), 0)
-                    expense = expense_dict.get((year, month), 0)
-                    flow_data.append({
-                        'period': f'{year}-{month:02d}',
-                        'income': income,
-                        'expense': expense,
-                        'net': income - expense
-                    })
-            
-            data['cashflow'] = flow_data
-            
-        elif report_type == 'department':
-            # 부서별 지출 현황
-            dept_spending_raw = db.session.query(
-                Department.name,
-                func.sum(Transaction.amount).label('total'),
-                func.count(Transaction.id).label('count')
+            cost_data = db.session.query(
+                Category.name,
+                func.sum(Transaction.amount).label('total')
             ).join(Transaction).filter(
                 Transaction.transaction_date >= start_date,
                 Transaction.transaction_date <= end_date,
                 Transaction.amount < 0
+            ).group_by(Category.name).all()
+            
+            pl_data = []
+            for row in revenue_data:
+                pl_data.append({
+                    'name': row.name,
+                    'type': 'revenue',
+                    'amount': float(row.total or 0)
+                })
+            
+            for row in cost_data:
+                pl_data.append({
+                    'name': row.name,
+                    'type': 'cost',
+                    'amount': float(abs(row.total or 0))
+                })
+            
+            data['pl'] = pl_data
+            
+        elif report_type == 'cashflow':
+            # 현금흐름표 - 월별 현금흐름
+            monthly_flow_raw = db.session.query(
+                extract('year', Transaction.transaction_date).label('year'),
+                extract('month', Transaction.transaction_date).label('month'),
+                func.sum(case((Transaction.amount > 0, Transaction.amount), else_=0)).label('income'),
+                func.sum(case((Transaction.amount < 0, Transaction.amount), else_=0)).label('expense')
+            ).filter(
+                Transaction.transaction_date >= start_date,
+                Transaction.transaction_date <= end_date
+            ).group_by(
+                extract('year', Transaction.transaction_date),
+                extract('month', Transaction.transaction_date)
+            ).order_by('year', 'month').all()
+            
+            cashflow_data = []
+            for row in monthly_flow_raw:
+                income = float(row.income or 0)
+                expense = float(row.expense or 0)
+                cashflow_data.append({
+                    'period': f"{int(row.year)}-{str(int(row.month)).zfill(2)}",
+                    'income': income,
+                    'expense': abs(expense),
+                    'net': income + expense
+                })
+            
+            data['cashflow'] = cashflow_data
+            
+        elif report_type == 'budget':
+            # 예산 vs 실적
+            # 부서별 예산 데이터 (없으면 0으로 처리)
+            dept_budget_raw = db.session.query(Department.name).all()
+            
+            budget_data = []
+            for dept in dept_budget_raw:
+                # 실제 지출 계산
+                actual_spent = db.session.query(
+                    func.sum(Transaction.amount).label('total')
+                ).join(Department).filter(
+                    Department.name == dept.name,
+                    Transaction.transaction_date >= start_date,
+                    Transaction.transaction_date <= end_date,
+                    Transaction.amount < 0
+                ).scalar() or 0
+                
+                # 임시 예산 설정 (실제로는 Budget 테이블에서 가져와야 함)
+                budget_amount = 1000000  # 100만원 기본 예산
+                
+                budget_data.append({
+                    'department': dept.name,
+                    'budget': budget_amount,
+                    'actual': abs(float(actual_spent)),
+                    'variance': budget_amount - abs(float(actual_spent))
+                })
+            
+            data['budget'] = budget_data
+            
+        elif report_type == 'department':
+            # 부서별 손익 분석
+            dept_analysis_raw = db.session.query(
+                Department.name,
+                func.sum(case((Transaction.amount > 0, Transaction.amount), else_=0)).label('revenue'),
+                func.sum(case((Transaction.amount < 0, Transaction.amount), else_=0)).label('cost'),
+                func.count(Transaction.id).label('count')
+            ).join(Transaction).filter(
+                Transaction.transaction_date >= start_date,
+                Transaction.transaction_date <= end_date
             ).group_by(Department.name).all()
             
-            dept_spending = [{
-                'name': row.name, 
-                'total': float(abs(row.total or 0)), 
-                'count': row.count
-            } for row in dept_spending_raw]
-            data['department'] = dept_spending
+            dept_data = []
+            for row in dept_analysis_raw:
+                revenue = float(row.revenue or 0)
+                cost = abs(float(row.cost or 0))
+                dept_data.append({
+                    'name': row.name,
+                    'revenue': revenue,
+                    'cost': cost,
+                    'profit': revenue - cost,
+                    'count': row.count
+                })
+            
+            data['department'] = dept_data
             
         elif report_type == 'vendor':
-            # 거래처별 분석 (수익과 지출 모두 포함)
+            # 거래처별 분석
             vendor_analysis_raw = db.session.query(
                 Vendor.name,
                 func.sum(Transaction.amount).label('total'),
@@ -1089,18 +1060,18 @@ def reports_data():
             ).join(Transaction).filter(
                 Transaction.transaction_date >= start_date,
                 Transaction.transaction_date <= end_date
-            ).group_by(Vendor.name).order_by(func.sum(Transaction.amount).desc()).limit(20).all()
+            ).group_by(Vendor.name).order_by(func.abs(func.sum(Transaction.amount)).desc()).limit(20).all()
             
             vendor_data = [{
-                'name': row.name, 
-                'total': float(row.total or 0), 
+                'name': row.name,
+                'total': float(row.total or 0),
                 'count': row.count
             } for row in vendor_analysis_raw]
+            
             data['vendor'] = vendor_data
             
         elif report_type == 'category':
-            # 카테고리별 분석 (수익과 지출 모두 포함)
-            from models import Category
+            # 카테고리별 분석
             category_analysis_raw = db.session.query(
                 Category.name,
                 func.sum(Transaction.amount).label('total'),
@@ -1108,13 +1079,14 @@ def reports_data():
             ).join(Transaction).filter(
                 Transaction.transaction_date >= start_date,
                 Transaction.transaction_date <= end_date
-            ).group_by(Category.name).order_by(func.sum(Transaction.amount).desc()).all()
+            ).group_by(Category.name).order_by(func.abs(func.sum(Transaction.amount)).desc()).all()
             
             category_data = [{
-                'name': row.name, 
-                'total': float(row.total or 0), 
+                'name': row.name,
+                'total': float(row.total or 0),
                 'count': row.count
             } for row in category_analysis_raw]
+            
             data['category'] = category_data
         
         print(f"Reports data response: {data}")
