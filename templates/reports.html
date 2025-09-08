@@ -440,12 +440,157 @@ function generateReport() {
     const endDate = document.getElementById('endDate').value;
     const period = document.getElementById('period').value;
     
-    // 리포트 생성 로직 (실제로는 서버 요청)
+    // 입력 검증
+    if (!startDate || !endDate) {
+        showToast('시작일과 종료일을 모두 선택해주세요.', 'warning');
+        return;
+    }
+    
+    if (new Date(startDate) > new Date(endDate)) {
+        showToast('시작일은 종료일보다 이전이어야 합니다.', 'warning');
+        return;
+    }
+    
     showToast('리포트를 생성하고 있습니다...', 'info');
     
-    setTimeout(() => {
-        showToast('리포트가 생성되었습니다.', 'success');
-    }, 2000);
+    // 서버에 AJAX 요청
+    const params = new URLSearchParams({
+        type: reportType,
+        start_date: startDate,
+        end_date: endDate,
+        period: period
+    });
+    
+    fetch(`/reports/data?${params.toString()}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updateCharts(data.data, reportType);
+                showToast('리포트가 생성되었습니다.', 'success');
+            } else {
+                showToast(`리포트 생성 실패: ${data.error}`, 'danger');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('리포트 생성 중 오류가 발생했습니다.', 'danger');
+        });
+}
+
+function updateCharts(data, reportType) {
+    if (reportType === 'cashflow' && data.cashflow) {
+        updateCashflowChart(data.cashflow);
+    } else if (reportType === 'department' && data.department) {
+        updateDepartmentChart(data.department);
+    } else if (reportType === 'vendor' && data.vendor) {
+        updateVendorChart(data.vendor);
+    }
+}
+
+function updateCashflowChart(cashflowData) {
+    const ctx = document.getElementById('cashflowChart');
+    if (!ctx) return;
+    
+    const labels = cashflowData.map(item => item.period);
+    const incomeData = cashflowData.map(item => item.income);
+    const expenseData = cashflowData.map(item => item.expense);
+    const netData = cashflowData.map(item => item.net);
+    
+    // 기존 차트 파괴
+    if (window.cashflowChart) {
+        window.cashflowChart.destroy();
+    }
+    
+    // 새 차트 생성
+    window.cashflowChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: '수입',
+                data: incomeData,
+                borderColor: 'rgb(75, 192, 192)',
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                fill: false
+            }, {
+                label: '지출',
+                data: expenseData,
+                borderColor: 'rgb(255, 99, 132)',
+                backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                fill: false
+            }, {
+                label: '순현금흐름',
+                data: netData,
+                borderColor: 'rgb(54, 162, 235)',
+                backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                fill: false
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return value.toLocaleString() + '원';
+                        }
+                    }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.dataset.label + ': ' + context.parsed.y.toLocaleString() + '원';
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+function updateDepartmentChart(departmentData) {
+    const ctx = document.getElementById('deptExpenseChart');
+    if (!ctx) return;
+    
+    const labels = departmentData.map(item => item.name);
+    const data = departmentData.map(item => item.total);
+    
+    // 기존 차트 파괴
+    if (window.deptExpenseChart) {
+        window.deptExpenseChart.destroy();
+    }
+    
+    // 새 차트 생성
+    window.deptExpenseChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: data,
+                backgroundColor: [
+                    '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0',
+                    '#9966FF', '#FF9F40', '#FF6384', '#C9CBCF'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = ((context.parsed / total) * 100).toFixed(1);
+                            return context.label + ': ' + context.parsed.toLocaleString() + '원 (' + percentage + '%)';
+                        }
+                    }
+                }
+            }
+        }
+    });
 }
 
 function exportReport(format) {
@@ -491,5 +636,18 @@ function showToast(message, type = 'success') {
         toast.remove();
     }, 3000);
 }
+
+// 페이지 로드시 기본 날짜 설정
+document.addEventListener('DOMContentLoaded', function() {
+    const today = new Date();
+    const oneYearAgo = new Date();
+    oneYearAgo.setFullYear(today.getFullYear() - 1);
+    
+    document.getElementById('startDate').value = oneYearAgo.toISOString().split('T')[0];
+    document.getElementById('endDate').value = today.toISOString().split('T')[0];
+    
+    // 페이지 로드시 기본 리포트 생성
+    generateReport();
+});
 </script>
 {% endblock %}

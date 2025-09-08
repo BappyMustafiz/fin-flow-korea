@@ -1088,6 +1088,25 @@ document.querySelector('#addTransactionModal form').addEventListener('submit', f
     }
 });
 
+// 업체명 선택 방식 변경
+function updateCounterpartyField() {
+    const counterpartyType = document.getElementById('counterparty_type').value;
+    const existingSelect = document.getElementById('counterparty_existing');
+    const newInput = document.getElementById('counterparty_new');
+    
+    if (counterpartyType === 'existing') {
+        existingSelect.style.display = 'block';
+        newInput.style.display = 'none';
+        existingSelect.required = true;
+        newInput.required = false;
+    } else {
+        existingSelect.style.display = 'none';
+        newInput.style.display = 'block';
+        existingSelect.required = false;
+        newInput.required = true;
+    }
+}
+
 // 모달이 열릴 때 현재 시간으로 설정
 document.getElementById('addTransactionModal').addEventListener('show.bs.modal', function () {
     const now = new Date();
@@ -1097,6 +1116,10 @@ document.getElementById('addTransactionModal').addEventListener('show.bs.modal',
     // 금액 필드 초기화
     document.getElementById('amount').value = '';
     document.getElementById('amount_value').value = '';
+    
+    // 업체명 필드 초기화
+    document.getElementById('counterparty_type').value = 'existing';
+    updateCounterpartyField();
 });
 </script>
 {% endblock %}

@@ -899,6 +899,118 @@ def reports():
                          dept_spending=dept_spending,
                          top_vendors=top_vendors)
 
+
+@app.route('/reports/data')
+@login_required
+def reports_data():
+    """기간별 리포트 데이터 AJAX 요청 처리"""
+    try:
+        from datetime import datetime, timedelta
+        import json
+        
+        # 요청 파라미터 받기
+        report_type = request.args.get('type', 'cashflow')
+        start_date_str = request.args.get('start_date')
+        end_date_str = request.args.get('end_date')
+        period = request.args.get('period', 'monthly')
+        
+        # 날짜 파싱
+        if start_date_str and end_date_str:
+            start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+        else:
+            # 기본값: 최근 12개월
+            end_date = date.today()
+            start_date = end_date.replace(year=end_date.year - 1)
+        
+        data = {}
+        
+        if report_type == 'cashflow':
+            # 현금흐름 데이터
+            monthly_income_raw = db.session.query(
+                extract('year', Transaction.transaction_date).label('year'),
+                extract('month', Transaction.transaction_date).label('month'),
+                func.sum(Transaction.amount).label('total')
+            ).filter(
+                Transaction.transaction_date >= start_date,
+                Transaction.transaction_date <= end_date,
+                Transaction.amount > 0
+            ).group_by(
+                extract('year', Transaction.transaction_date),
+                extract('month', Transaction.transaction_date)
+            ).order_by('year', 'month').all()
+            
+            monthly_expense_raw = db.session.query(
+                extract('year', Transaction.transaction_date).label('year'),
+                extract('month', Transaction.transaction_date).label('month'),
+                func.sum(Transaction.amount).label('total')
+            ).filter(
+                Transaction.transaction_date >= start_date,
+                Transaction.transaction_date <= end_date,
+                Transaction.amount < 0
+            ).group_by(
+                extract('year', Transaction.transaction_date),
+                extract('month', Transaction.transaction_date)
+            ).order_by('year', 'month').all()
+            
+            # 수입과 지출 데이터 처리
+            income_dict = {(int(row.year), int(row.month)): float(row.total or 0) for row in monthly_income_raw}
+            expense_dict = {(int(row.year), int(row.month)): abs(float(row.total or 0)) for row in monthly_expense_raw}
+            
+            # 모든 월 생성
+            all_months = set(income_dict.keys()) | set(expense_dict.keys())
+            monthly_flow = []
+            
+            for year, month in sorted(all_months):
+                income = income_dict.get((year, month), 0)
+                expense = expense_dict.get((year, month), 0)
+                monthly_flow.append({
+                    'period': f'{year}-{month:02d}',
+                    'income': income,
+                    'expense': expense,
+                    'net': income - expense
+                })
+            
+            data['cashflow'] = monthly_flow
+            
+        elif report_type == 'department':
+            # 부서별 지출 현황
+            dept_spending_raw = db.session.query(
+                Department.name,
+                func.sum(Transaction.amount).label('total')
+            ).join(Transaction).filter(
+                Transaction.transaction_date >= start_date,
+                Transaction.transaction_date <= end_date,
+                Transaction.amount < 0
+            ).group_by(Department.name).all()
+            
+            dept_spending = [{'name': row.name, 'total': float(abs(row.total or 0))} for row in dept_spending_raw]
+            data['department'] = dept_spending
+            
+        elif report_type == 'vendor':
+            # 거래처별 분석
+            vendor_spending_raw = db.session.query(
+                Vendor.name,
+                func.sum(Transaction.amount).label('total'),
+                func.count(Transaction.id).label('count')
+            ).join(Transaction).filter(
+                Transaction.transaction_date >= start_date,
+                Transaction.transaction_date <= end_date,
+                Transaction.amount < 0
+            ).group_by(Vendor.name).order_by(func.sum(Transaction.amount)).limit(10).all()
+            
+            vendor_data = [{
+                'name': row.name, 
+                'total': float(abs(row.total or 0)), 
+                'count': row.count
+            } for row in vendor_spending_raw]
+            data['vendor'] = vendor_data
+        
+        return jsonify({'success': True, 'data': data})
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
 @app.route('/settings')
 @login_required
 def settings():
