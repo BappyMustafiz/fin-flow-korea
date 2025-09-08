@@ -72,20 +72,20 @@
     </div>
     
     <div class="col-md-3">
-        <div class="card kpi-card kpi-pending">
+        <div class="card kpi-card kpi-departments">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <h5 class="card-title mb-0">{{ get_text('unclassified_transactions') }}</h5>
-                        <h3 class="mb-0">{{ unclassified_count }}건</h3>
+                        <h5 class="card-title mb-0">{{ get_text('total_departments') }}</h5>
+                        <h3 class="mb-0">{{ departments_count }}개</h3>
                         <small class="text-muted">
-                            <a href="{{ url_for('transactions', status='pending') }}" class="text-decoration-none">
-                                {{ get_text('classify_now') }}
+                            <a href="{{ url_for('departments') }}" class="text-decoration-none">
+                                {{ get_text('departments') }}
                             </a>
                         </small>
                     </div>
                     <div class="kpi-icon">
-                        <i data-feather="alert-circle"></i>
+                        <i data-feather="users"></i>
                     </div>
                 </div>
             </div>

@@ -45,6 +45,8 @@ TEXTS = {
         'view_all': '전체 보기',
         'no_transactions': '거래 내역이 없습니다.',
         'no_alerts': '새로운 알림이 없습니다.',
+        'departments_count': '부서 수',
+        'total_departments': '총 부서',
         
         # 공통
         'language': '언어'
@@ -84,6 +86,8 @@ TEXTS = {
         'view_all': 'View All',
         'no_transactions': 'No transactions available.',
         'no_alerts': 'No new alerts.',
+        'departments_count': 'Departments',
+        'total_departments': 'Total Departments',
         
         # 공통
         'language': 'Language'
@@ -300,6 +304,9 @@ def dashboard():
     # 미분류 거래 수
     unclassified_count = Transaction.query.filter_by(classification_status='pending').count()
     
+    # 부서 수
+    departments_count = Department.query.count()
+    
     # 최근 거래 내역 (5건)
     recent_transactions = Transaction.query.order_by(desc(Transaction.transaction_date)).limit(5).all()
     
@@ -324,6 +331,7 @@ def dashboard():
                          last_income=last_income,
                          last_expense=abs(last_expense),
                          unclassified_count=unclassified_count,
+                         departments_count=departments_count,
                          recent_transactions=recent_transactions,
                          recent_alerts=recent_alerts,
                          dept_expenses=dept_expenses)

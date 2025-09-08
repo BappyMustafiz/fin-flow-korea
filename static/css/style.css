@@ -98,6 +98,10 @@ body {
     border-left-color: var(--warning-yellow);
 }
 
+.kpi-card.kpi-departments {
+    border-left-color: var(--info-orange);
+}
+
 .kpi-icon {
     opacity: 0.1;
     width: 60px;
