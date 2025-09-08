@@ -953,8 +953,24 @@ function viewDetails(transactionId) {
                     </div>
                     
                     <div class="mb-3">
-                        <label for="counterparty" class="form-label">{{ get_text('counterparty') }} *</label>
-                        <input type="text" class="form-control" id="counterparty" name="counterparty" required>
+                        <label for="counterparty_type" class="form-label">{{ get_text('counterparty') }} *</label>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <select class="form-select" id="counterparty_type" onchange="updateCounterpartyField()">
+                                    <option value="existing">기존 업체</option>
+                                    <option value="new">새 업체</option>
+                                </select>
+                            </div>
+                            <div class="col-md-8">
+                                <select class="form-select" id="counterparty_existing" name="counterparty">
+                                    <option value="">업체를 선택하세요</option>
+                                    {% for vendor in vendors %}
+                                    <option value="{{ vendor.name }}">{{ vendor.name }}</option>
+                                    {% endfor %}
+                                </select>
+                                <input type="text" class="form-control" id="counterparty_new" name="counterparty" style="display: none;" placeholder="새 업체명을 입력하세요">
+                            </div>
+                        </div>
                     </div>
                     
                     <div class="mb-3">
