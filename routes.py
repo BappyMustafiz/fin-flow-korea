@@ -2337,11 +2337,21 @@ def upload_transactions():
         else:
             df = pd.read_excel(file.stream)
         
-        # 필수 컬럼 확인 (거래유형은 기본값이 있으면 선택사항)
-        if default_transaction_type:
-            required_columns = ['거래일자', '금액', '거래처']
+        # 필수 컬럼 확인 
+        # 파일에 계정 컬럼이 있으면 파일의 계정 사용, 없으면 폼에서 선택한 계정 사용
+        if '계정' in df.columns:
+            # 파일에 계정 컬럼이 있는 경우
+            if default_transaction_type:
+                required_columns = ['계정', '거래일자', '금액', '거래처']
+            else:
+                required_columns = ['계정', '거래일자', '거래유형', '금액', '거래처']
         else:
-            required_columns = ['거래일자', '거래유형', '금액', '거래처']
+            # 파일에 계정 컬럼이 없는 경우 (기존 방식)
+            if default_transaction_type:
+                required_columns = ['거래일자', '금액', '거래처']
+            else:
+                required_columns = ['거래일자', '거래유형', '금액', '거래처']
+        
         missing_columns = [col for col in required_columns if col not in df.columns]
         
         if missing_columns:
@@ -2352,7 +2362,21 @@ def upload_transactions():
         for _, row in df.iterrows():
             try:
                 transaction = Transaction()
-                transaction.account_id = account_id
+                
+                # 계정 처리 - 파일에 계정 컬럼이 있으면 그것을 우선 사용
+                if '계정' in df.columns and pd.notna(row['계정']):
+                    account_name = str(row['계정']).strip()
+                    # 계정명으로 계정 찾기
+                    file_account = Account.query.filter_by(name=account_name).first()
+                    if not file_account:
+                        print(f"Warning: Account '{account_name}' not found, using default account")
+                        transaction.account_id = account_id  # 기본 계정 사용
+                    else:
+                        transaction.account_id = file_account.id
+                else:
+                    # 파일에 계정 컬럼이 없으면 폼에서 선택한 계정 사용
+                    transaction.account_id = account_id
+                
                 transaction.transaction_id = f'UPLOAD-{datetime.now().strftime("%Y%m%d%H%M%S")}-{processed_count:04d}'
                 
                 # 거래일자 처리
