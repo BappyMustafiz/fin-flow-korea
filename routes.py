@@ -26,6 +26,7 @@ TEXTS = {
         'users': '계정 관리',
         'audit': '감사 로그',
         'sample_data': '샘플 데이터',
+        'data_management': '데이터 관리',
         'logout': '로그아웃',
         'profile': '프로필',
         'admin_menu': '관리자 메뉴',
@@ -48,6 +49,22 @@ TEXTS = {
         'departments_count': '부서 수',
         'total_departments': '총 부서',
         
+        # 데이터 관리
+        'data_import': '데이터 가져오기',
+        'file_upload': '파일 업로드',
+        'upload_bank_transactions': '은행거래 파일 업로드',
+        'supported_formats': '지원 형식: CSV, Excel (XLS, XLSX)',
+        'choose_file': '파일 선택',
+        'upload': '업로드',
+        'sample_download': '샘플 파일 다운로드',
+        'download_csv_sample': 'CSV 샘플 다운로드',
+        'download_excel_sample': 'Excel 샘플 다운로드',
+        'upload_instructions': '파일 업로드 안내',
+        'upload_guide_1': '1. 은행에서 거래내역을 CSV 또는 Excel 형식으로 다운로드하세요',
+        'upload_guide_2': '2. 아래 샘플 파일 형식을 참고하여 데이터를 정리하세요',
+        'upload_guide_3': '3. 파일을 선택하고 업로드 버튼을 클릭하세요',
+        'upload_guide_4': '4. 업로드된 거래 데이터는 자동으로 분류됩니다',
+        
         # 공통
         'language': '언어'
     },
@@ -67,6 +84,7 @@ TEXTS = {
         'users': 'Users',
         'audit': 'Audit Log',
         'sample_data': 'Sample Data',
+        'data_management': 'Data Management',
         'logout': 'Logout',
         'profile': 'Profile',
         'admin_menu': 'Admin Menu',
@@ -88,6 +106,22 @@ TEXTS = {
         'no_alerts': 'No new alerts.',
         'departments_count': 'Departments',
         'total_departments': 'Total Departments',
+        
+        # 데이터 관리
+        'data_import': 'Data Import',
+        'file_upload': 'File Upload',
+        'upload_bank_transactions': 'Upload Bank Transaction File',
+        'supported_formats': 'Supported formats: CSV, Excel (XLS, XLSX)',
+        'choose_file': 'Choose File',
+        'upload': 'Upload',
+        'sample_download': 'Sample File Download',
+        'download_csv_sample': 'Download CSV Sample',
+        'download_excel_sample': 'Download Excel Sample',
+        'upload_instructions': 'File Upload Instructions',
+        'upload_guide_1': '1. Download transaction history from your bank in CSV or Excel format',
+        'upload_guide_2': '2. Organize your data according to the sample file format below',
+        'upload_guide_3': '3. Select your file and click the upload button',
+        'upload_guide_4': '4. Uploaded transaction data will be automatically classified',
         
         # 공통
         'language': 'Language'
