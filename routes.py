@@ -1327,14 +1327,66 @@ def mark_alert_read(alert_id):
 def save_alert_settings():
     """알림 설정 저장"""
     try:
+        from models import AlertSetting
         settings_data = request.get_json()
         
-        # 실제 구현에서는 사용자별 설정을 데이터베이스에 저장
-        # 현재는 세션에 임시 저장
+        # 기존 설정 삭제 (시스템 기본 알림 설정들)
+        existing_settings = AlertSetting.query.filter(
+            AlertSetting.alert_type.in_(['budget', 'contract', 'anomaly'])
+        ).all()
+        for setting in existing_settings:
+            db.session.delete(setting)
+        
+        # 예산 알림 설정
+        if settings_data.get('budgetAlert'):
+            budget_setting = AlertSetting()
+            budget_setting.name = "예산 초과 알림"
+            budget_setting.alert_type = "budget"
+            budget_setting.condition = f"budget threshold {settings_data.get('budgetThreshold', '80')}"
+            budget_setting.condition_type = "percentage"
+            budget_setting.condition_field = "budget_usage"
+            budget_setting.condition_value = settings_data.get('budgetThreshold', '80')
+            budget_setting.severity = "warning"
+            budget_setting.is_active = True
+            db.session.add(budget_setting)
+        
+        # 계약 만료 알림 설정
+        if settings_data.get('contractAlert'):
+            contract_setting = AlertSetting()
+            contract_setting.name = "계약 만료 알림"
+            contract_setting.alert_type = "contract"
+            contract_setting.condition = f"contract expires in {settings_data.get('contractDays', '30')} days"
+            contract_setting.condition_type = "date_range"
+            contract_setting.condition_field = "end_date"
+            contract_setting.condition_value = settings_data.get('contractDays', '30')
+            contract_setting.severity = "info"
+            contract_setting.is_active = True
+            db.session.add(contract_setting)
+        
+        # 이상거래 알림 설정
+        if settings_data.get('anomalyAlert'):
+            anomaly_setting = AlertSetting()
+            anomaly_setting.name = "이상거래 알림"
+            anomaly_setting.alert_type = "anomaly"
+            anomaly_setting.condition = f"amount >= {settings_data.get('anomalyAmount', '1000000')}"
+            anomaly_setting.condition_type = "amount_range"
+            anomaly_setting.condition_field = "amount"
+            # 설정된 금액 이상의 거래를 감지하기 위해 최대값을 큰 수로 설정
+            anomaly_amount = settings_data.get('anomalyAmount', '1000000')
+            anomaly_setting.condition_value = f"{anomaly_amount},9999999999"
+            anomaly_setting.severity = "warning"
+            anomaly_setting.is_active = True
+            db.session.add(anomaly_setting)
+        
+        db.session.commit()
+        
+        # 세션에도 저장 (호환성 유지)
         session['alert_settings'] = settings_data
         
         return jsonify({'success': True, 'message': '알림 설정이 저장되었습니다.'})
     except Exception as e:
+        db.session.rollback()
+        print(f"Alert settings save error: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 400
 
 @app.route('/alerts/add', methods=['POST'])
