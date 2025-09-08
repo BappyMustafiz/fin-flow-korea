@@ -6,6 +6,7 @@
 {% block content %}
 <div class="alert alert-info">
     <strong>템플릿 확인:</strong> 이 페이지는 base.html을 사용하고 있습니다 (수정됨)
+    {% if debug_message %}<br><strong>라우트 확인:</strong> {{ debug_message }}{% endif %}
 </div>
 <div class="row">
     <div class="col-12">
