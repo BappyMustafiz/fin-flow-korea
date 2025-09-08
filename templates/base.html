@@ -34,7 +34,6 @@
             </button>
             
             <div class="collapse navbar-collapse" id="navbarNav">
-                {% if current_user.is_authenticated %}
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('dashboard') }}">
@@ -90,13 +89,11 @@
                             </a></li>
                         </ul>
                     </li>
-                    {% if current_user.role == 'admin' %}
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('users') }}">
                             <i data-feather="users" class="me-1"></i>사용자 관리
                         </a>
                     </li>
-                    {% endif %}
                 </ul>
                 
                 <!-- 오른쪽 메뉴: 사용자 정보와 로그아웃 -->
