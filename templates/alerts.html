@@ -52,7 +52,7 @@
 
 <!-- Alert Settings -->
 <div class="row mb-4">
-    <div class="col-lg-8">
+    <div class="col-lg-7">
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="card-title mb-0">
@@ -462,6 +462,112 @@
                         <i data-feather="save" class="me-1"></i>설정 저장
                     </button>
                 </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 생성된 알림 카드 사이드바 -->
+    <div class="col-lg-5">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i data-feather="layers" class="me-2"></i>
+                    생성된 알림
+                </h5>
+            </div>
+            <div class="card-body p-0" style="max-height: 800px; overflow-y: auto;">
+                
+                <!-- 시스템 알림 섹션 -->
+                <div class="p-3 border-bottom">
+                    <h6 class="text-primary mb-3">
+                        <i data-feather="settings" class="me-2"></i>
+                        시스템 알림
+                    </h6>
+                    <div id="systemAlertCards" class="alert-cards-list">
+                        <!-- 기존 시스템 알림 카드들 표시 -->
+                        {% if alert_settings %}
+                            {% for setting in alert_settings %}
+                            {% if setting.alert_type in ['budget', 'contract', 'anomaly'] %}
+                            <div class="alert-card-item mb-3" id="alertCard_{{ setting.id }}">
+                                <div class="card border-start border-4 border-primary {% if not setting.is_active %}bg-light{% endif %}">
+                                    <div class="card-body p-3">
+                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                            <h6 class="card-title mb-1 small">{{ setting.name }}</h6>
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input form-check-input-sm" type="checkbox" 
+                                                       {% if setting.is_active %}checked{% endif %}
+                                                       onchange="toggleAlertSetting({{ setting.id }})">
+                                            </div>
+                                        </div>
+                                        <p class="card-text text-muted small mb-2">{{ setting.condition }}</p>
+                                        <div class="mb-2">
+                                            <span class="badge badge-sm bg-{{ 'info' if setting.severity == 'info' else 'warning' if setting.severity == 'warning' else 'danger' }} me-1">
+                                                {{ setting.severity.title() }}
+                                            </span>
+                                            <span class="badge badge-sm bg-secondary me-1">
+                                                {{ setting.channel.title() }}
+                                            </span>
+                                            <span class="badge badge-sm bg-primary">
+                                                {% if setting.alert_type == 'budget' %}예산{% elif setting.alert_type == 'contract' %}계약{% elif setting.alert_type == 'anomaly' %}이상거래{% endif %}
+                                            </span>
+                                        </div>
+                                        <button class="btn btn-outline-danger btn-sm" onclick="deleteAlertSetting({{ setting.id }})" title="삭제">
+                                            <i data-feather="trash-2" style="width: 12px; height: 12px;"></i>
+                                            삭제
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- 사용자 정의 알림 섹션 -->
+                <div class="p-3">
+                    <h6 class="text-success mb-3">
+                        <i data-feather="user" class="me-2"></i>
+                        사용자 정의 알림
+                    </h6>
+                    <div id="customAlertCards" class="alert-cards-list">
+                        <!-- 기존 사용자 정의 알림 카드들 표시 -->
+                        {% if alert_settings %}
+                            {% for setting in alert_settings %}
+                            {% if setting.alert_type == 'custom' %}
+                            <div class="alert-card-item mb-3" id="alertCard_{{ setting.id }}">
+                                <div class="card border-start border-4 border-success {% if not setting.is_active %}bg-light{% endif %}">
+                                    <div class="card-body p-3">
+                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                            <h6 class="card-title mb-1 small">{{ setting.name }}</h6>
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input form-check-input-sm" type="checkbox" 
+                                                       {% if setting.is_active %}checked{% endif %}
+                                                       onchange="toggleAlertSetting({{ setting.id }})">
+                                            </div>
+                                        </div>
+                                        <p class="card-text text-muted small mb-2">{{ setting.condition }}</p>
+                                        <div class="mb-2">
+                                            <span class="badge badge-sm bg-{{ 'info' if setting.severity == 'info' else 'warning' if setting.severity == 'warning' else 'danger' }} me-1">
+                                                {{ setting.severity.title() }}
+                                            </span>
+                                            <span class="badge badge-sm bg-secondary">
+                                                {{ setting.channel.title() }}
+                                            </span>
+                                        </div>
+                                        <button class="btn btn-outline-danger btn-sm" onclick="deleteAlertSetting({{ setting.id }})" title="삭제">
+                                            <i data-feather="trash-2" style="width: 12px; height: 12px;"></i>
+                                            삭제
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                </div>
+                
             </div>
         </div>
     </div>
@@ -1380,33 +1486,32 @@ function addSystemAlertCard(alertId, alertData) {
                      alertData.alert_type === 'contract' ? '계약' : '이상거래';
     
     const cardHtml = `
-        <div class="col-md-6 mb-3" id="alertCard_${alertId}">
-            <div class="card border">
+        <div class="alert-card-item mb-3" id="alertCard_${alertId}">
+            <div class="card border-start border-4 border-primary">
                 <div class="card-body p-3">
                     <div class="d-flex justify-content-between align-items-start mb-2">
-                        <h6 class="card-title mb-1">${alertData.name}</h6>
+                        <h6 class="card-title mb-1 small">${alertData.name}</h6>
                         <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" checked
+                            <input class="form-check-input form-check-input-sm" type="checkbox" checked
                                    onchange="toggleAlertSetting(${alertId})">
                         </div>
                     </div>
                     <p class="card-text text-muted small mb-2">${alertData.condition}</p>
                     <div class="mb-2">
-                        <span class="badge bg-${alertData.severity === 'info' ? 'info' : alertData.severity === 'warning' ? 'warning' : 'danger'} me-1">
+                        <span class="badge badge-sm bg-${alertData.severity === 'info' ? 'info' : alertData.severity === 'warning' ? 'warning' : 'danger'} me-1">
                             ${alertData.severity.charAt(0).toUpperCase() + alertData.severity.slice(1)}
                         </span>
-                        <span class="badge bg-secondary">
+                        <span class="badge badge-sm bg-secondary me-1">
                             ${alertData.channel.charAt(0).toUpperCase() + alertData.channel.slice(1)}
                         </span>
-                        <span class="badge bg-primary">
+                        <span class="badge badge-sm bg-primary">
                             ${typeText}
                         </span>
                     </div>
-                    <div class="btn-group btn-group-sm">
-                        <button class="btn btn-outline-danger" onclick="deleteAlertSetting(${alertId})" title="삭제">
-                            <i data-feather="trash-2" style="width: 12px; height: 12px;"></i>
-                        </button>
-                    </div>
+                    <button class="btn btn-outline-danger btn-sm" onclick="deleteAlertSetting(${alertId})" title="삭제">
+                        <i data-feather="trash-2" style="width: 12px; height: 12px;"></i>
+                        삭제
+                    </button>
                 </div>
             </div>
         </div>
@@ -1609,30 +1714,29 @@ function addAlertCard(alertId, alertData) {
     const cardsContainer = document.getElementById('customAlertCards');
     
     const cardHtml = `
-        <div class="col-md-6 mb-3" id="alertCard_${alertId}">
-            <div class="card border">
+        <div class="alert-card-item mb-3" id="alertCard_${alertId}">
+            <div class="card border-start border-4 border-success">
                 <div class="card-body p-3">
                     <div class="d-flex justify-content-between align-items-start mb-2">
-                        <h6 class="card-title mb-1">${alertData.name}</h6>
+                        <h6 class="card-title mb-1 small">${alertData.name}</h6>
                         <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" checked
+                            <input class="form-check-input form-check-input-sm" type="checkbox" checked
                                    onchange="toggleAlertSetting(${alertId})">
                         </div>
                     </div>
                     <p class="card-text text-muted small mb-2">${alertData.condition}</p>
                     <div class="mb-2">
-                        <span class="badge bg-${alertData.severity === 'info' ? 'info' : alertData.severity === 'warning' ? 'warning' : 'danger'} me-1">
+                        <span class="badge badge-sm bg-${alertData.severity === 'info' ? 'info' : alertData.severity === 'warning' ? 'warning' : 'danger'} me-1">
                             ${alertData.severity.charAt(0).toUpperCase() + alertData.severity.slice(1)}
                         </span>
-                        <span class="badge bg-secondary">
+                        <span class="badge badge-sm bg-secondary">
                             ${alertData.channel.charAt(0).toUpperCase() + alertData.channel.slice(1)}
                         </span>
                     </div>
-                    <div class="btn-group btn-group-sm">
-                        <button class="btn btn-outline-danger" onclick="deleteAlertSetting(${alertId})" title="삭제">
-                            <i data-feather="trash-2" style="width: 12px; height: 12px;"></i>
-                        </button>
-                    </div>
+                    <button class="btn btn-outline-danger btn-sm" onclick="deleteAlertSetting(${alertId})" title="삭제">
+                        <i data-feather="trash-2" style="width: 12px; height: 12px;"></i>
+                        삭제
+                    </button>
                 </div>
             </div>
         </div>
