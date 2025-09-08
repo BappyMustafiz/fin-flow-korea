@@ -480,6 +480,77 @@
     </div>
 </div>
 
+<!-- Alert List -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i data-feather="list" class="me-2"></i>
+                    알림 목록
+                </h5>
+                <div class="btn-group btn-group-sm">
+                    <button class="btn btn-outline-secondary active" onclick="filterAlerts('all')">전체</button>
+                    <button class="btn btn-outline-secondary" onclick="filterAlerts('unread')">읽지않음</button>
+                    <button class="btn btn-outline-secondary" onclick="filterAlerts('budget')">예산</button>
+                    <button class="btn btn-outline-secondary" onclick="filterAlerts('contract')">계약</button>
+                    <button class="btn btn-outline-secondary" onclick="filterAlerts('anomaly')">이상거래</button>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="alert-list">
+                    {% for alert in alerts %}
+                    <div class="alert-item {{ 'unread' if not alert.is_read else '' }}" data-alert-type="{{ alert.alert_type }}">
+                        <div class="d-flex">
+                            <div class="alert-icon me-3">
+                                {% if alert.alert_type == 'budget' %}
+                                    <i data-feather="dollar-sign" class="text-warning"></i>
+                                {% elif alert.alert_type == 'contract' %}
+                                    <i data-feather="file-text" class="text-info"></i>
+                                {% elif alert.alert_type == 'anomaly' %}
+                                    <i data-feather="alert-triangle" class="text-danger"></i>
+                                {% else %}
+                                    <i data-feather="bell" class="text-primary"></i>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="alert-content flex-grow-1">
+                                <div class="d-flex justify-content-between align-items-start mb-1">
+                                    <h6 class="alert-title mb-0">{{ alert.title }}</h6>
+                                    <div class="alert-actions">
+                                        <small class="text-muted me-3">{{ alert.created_at.strftime('%m/%d %H:%M') }}</small>
+                                        {% if not alert.is_read %}
+                                            <a href="{{ url_for('mark_alert_read', alert_id=alert.id) }}" 
+                                               class="btn btn-sm btn-outline-primary">읽음</a>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                <p class="alert-message text-muted mb-2">{{ alert.message }}</p>
+                                
+                                <div class="alert-meta">
+                                    <span class="badge badge-alert-{{ alert.alert_type }}">
+                                        {{ alert.alert_type | alert_type }}
+                                    </span>
+                                    <span class="badge {% if alert.severity == 'error' %}bg-danger{% elif alert.severity == 'warning' %}bg-warning{% else %}bg-info{% endif %}">
+                                        {{ alert.severity.title() }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="text-center text-muted py-5">
+                        <i data-feather="check-circle" class="mb-3" style="width: 64px; height: 64px;"></i>
+                        <h5>알림이 없습니다</h5>
+                        <p>새로운 알림이 있으면 여기에 표시됩니다.</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
 <!-- Alert Settings Modal -->
 <div class="modal fade" id="alertSettingsModal" tabindex="-1">
