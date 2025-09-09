@@ -142,12 +142,20 @@
                                 </td>
                                 <td>
                                     <div class="btn-group btn-group-sm">
-                                        <a href="{{ url_for('apply_rule', rule_id=rule.id) }}" 
-                                           class="btn btn-outline-success" 
-                                           title="규칙 적용"
-                                           onclick="return confirm('이 규칙을 적용하시겠습니까?')">
-                                            <i data-feather="play"></i>
-                                        </a>
+                                        {% if rule.is_active %}
+                                            <a href="{{ url_for('apply_rule', rule_id=rule.id) }}" 
+                                               class="btn btn-outline-success" 
+                                               title="규칙 적용"
+                                               onclick="return confirm('이 규칙을 적용하시겠습니까?')">
+                                                <i data-feather="play"></i>
+                                            </a>
+                                        {% else %}
+                                            <button class="btn btn-outline-secondary" 
+                                                    disabled
+                                                    title="비활성화된 규칙 (적용 불가)">
+                                                <i data-feather="pause"></i>
+                                            </button>
+                                        {% endif %}
                                         <button class="btn btn-outline-primary" 
                                                 onclick="editRule({{ rule.id }})" 
                                                 title="편집">
@@ -157,7 +165,7 @@
                                             <button type="submit" 
                                                     class="btn {% if rule.is_active %}btn-outline-warning{% else %}btn-outline-success{% endif %}" 
                                                     title="{% if rule.is_active %}비활성화{% else %}활성화{% endif %}">
-                                                <i data-feather="{% if rule.is_active %}pause{% else %}play{% endif %}"></i>
+                                                <i data-feather="{% if rule.is_active %}pause-circle{% else %}play-circle{% endif %}"></i>
                                             </button>
                                         </form>
                                         <button class="btn btn-outline-info" 
