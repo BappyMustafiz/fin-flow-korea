@@ -165,16 +165,6 @@
         // Feather 아이콘 초기화
         feather.replace();
         
-        // 강제 로그아웃 함수
-        function forceLogout() {
-            if (confirm('로그아웃하시겠습니까?')) {
-                // 세션 스토리지와 로컬 스토리지 클리어
-                sessionStorage.clear();
-                localStorage.clear();
-                // 직접 로그아웃 페이지로 이동
-                window.location.href = '/logout';
-            }
-        }
         
         // 드롭다운 메뉴 수동 초기화
         document.addEventListener('DOMContentLoaded', function() {
