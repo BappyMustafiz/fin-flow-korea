@@ -2165,6 +2165,13 @@ def add_contract():
         payment_cycle = request.form.get('payment_cycle', 'monthly')
         category_id = request.form.get('category_id')
         
+        # 상세 스케줄링 필드
+        transaction_count = request.form.get('transaction_count')
+        first_transaction_date_str = request.form.get('first_transaction_date')
+        payment_day = request.form.get('payment_day')
+        payment_weekday = request.form.get('payment_weekday') 
+        interval_count = request.form.get('interval_count', '1')
+        
         if not all([name, vendor_id, department_id, contract_amount, start_date_str, end_date_str]):
             flash('필수 정보가 누락되었습니다.', 'error')
             return redirect(url_for('contracts'))
@@ -2180,6 +2187,11 @@ def add_contract():
         start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
         end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
         
+        # 첫 거래 날짜 처리
+        first_transaction_date = None
+        if first_transaction_date_str:
+            first_transaction_date = datetime.strptime(first_transaction_date_str, '%Y-%m-%d').date()
+        
         contract = Contract(
             name=name,
             vendor_id=int(vendor_id),
@@ -2190,7 +2202,12 @@ def add_contract():
             description=description,
             auto_generate_transactions=auto_generate_transactions,
             payment_cycle=payment_cycle,
-            category_id=int(category_id) if category_id else None
+            category_id=int(category_id) if category_id else None,
+            transaction_count=int(transaction_count) if transaction_count else None,
+            first_transaction_date=first_transaction_date,
+            payment_day=int(payment_day) if payment_day else None,
+            payment_weekday=int(payment_weekday) if payment_weekday else None,
+            interval_count=int(interval_count) if interval_count else 1
         )
         
         db.session.add(contract)
