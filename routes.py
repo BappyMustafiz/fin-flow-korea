@@ -2790,30 +2790,39 @@ def add_category():
     try:
         from models import Category
         
-        code = request.form.get('code', '').strip()
         name = request.form.get('name', '').strip()
         description = request.form.get('description', '').strip()
         
-        if not code or not name:
-            flash('분류 코드와 이름은 필수입니다.', 'error')
+        if not name:
+            flash('분류명은 필수입니다.', 'error')
             return redirect(url_for('categories'))
         
-        # 중복 체크
-        existing_code = Category.query.filter_by(code=code).first()
-        if existing_code:
-            flash('이미 존재하는 분류 코드입니다.', 'error')
-            return redirect(url_for('categories'))
-        
+        # 분류명 중복 체크
         existing_name = Category.query.filter_by(name=name).first()
         if existing_name:
             flash('이미 존재하는 분류명입니다.', 'error')
             return redirect(url_for('categories'))
         
+        # 자동 코드 생성
+        last_category = Category.query.order_by(Category.id.desc()).first()
+        if last_category:
+            # 마지막 분류의 ID를 기반으로 다음 코드 생성
+            next_id = last_category.id + 1
+        else:
+            next_id = 1
+        
+        code = f"CAT{next_id:03d}"
+        
+        # 혹시 코드 중복이 있는지 확인 (안전장치)
+        while Category.query.filter_by(code=code).first():
+            next_id += 1
+            code = f"CAT{next_id:03d}"
+        
         category = Category(code=code, name=name, description=description)
         db.session.add(category)
         db.session.commit()
         
-        flash(f'분류 "{name}"이 추가되었습니다.', 'success')
+        flash(f'분류 "{name}" (코드: {code})이 추가되었습니다.', 'success')
         
     except Exception as e:
         db.session.rollback()
