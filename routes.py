@@ -512,7 +512,11 @@ def refresh_connection(consent_id):
 def transactions():
     """거래 내역 관리"""
     page = request.args.get('page', 1, type=int)
-    per_page = 20
+    per_page = request.args.get('per_page', 20, type=int)
+    
+    # per_page 값 검증 (10, 20, 25, 50, 100만 허용)
+    if per_page not in [10, 20, 25, 50, 100]:
+        per_page = 20
     
     # 필터 파라미터
     status = request.args.get('status', '')
@@ -536,7 +540,6 @@ def transactions():
     if search:
         # 대소문자 구분 없는 검색을 위해 ilike 사용
         search_pattern = f'%{search.strip()}%'
-        print(f"검색어: '{search}', 패턴: '{search_pattern}'")  # 디버그 로그
         
         # 업체, 거래처, 거래내용에서 검색
         query = query.filter(
@@ -546,9 +549,6 @@ def transactions():
                 Transaction.vendor.has(Vendor.name.ilike(search_pattern))  # 업체명
             )
         )
-        # 검색된 거래 수를 로그로 출력
-        search_count = query.count()
-        print(f"검색된 거래 수: {search_count}")  # 디버그 로그
     
     # 페이지네이션
     transactions_page = query.order_by(desc(Transaction.transaction_date)).paginate(
@@ -579,7 +579,8 @@ def transactions():
                              'department_id': department_id,
                              'category_id': category_id,
                              'account_id': account_id,
-                             'search': search
+                             'search': search,
+                             'per_page': per_page
                          })
 
 @app.route('/transaction/<int:transaction_id>/details', methods=['GET'])
