@@ -1,185 +1,167 @@
-{% extends "base.html" %}
+{% extends "layout.html" %}
 
 {% block title %}사용자 관리 - 한국형 오픈뱅킹 회계시스템{% endblock %}
 
 {% block content %}
-<div class="row">
+<div class="row mb-4">
     <div class="col-12">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2><i data-feather="users" class="me-2"></i>사용자 관리</h2>
-            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addUserModal">
-                <i data-feather="user-plus" class="me-2"></i>새 사용자 추가
-            </button>
-        </div>
+        <h1 class="h3 mb-0">사용자 관리</h1>
+        <p class="text-muted">시스템 사용자 및 권한 관리</p>
     </div>
 </div>
 
-<!-- 사용자 통계 카드 -->
+<!-- Summary Cards -->
 <div class="row mb-4">
     <div class="col-md-3">
-        <div class="card bg-primary text-white">
+        <div class="card text-center">
             <div class="card-body">
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <h5 class="card-title">전체 사용자</h5>
-                        <h3 class="mb-0">{{ users|length }}</h3>
-                    </div>
-                    <div class="align-self-center">
-                        <i data-feather="users" style="width: 2rem; height: 2rem;"></i>
-                    </div>
-                </div>
+                <i data-feather="users" class="text-primary mb-2" style="width: 48px; height: 48px;"></i>
+                <h4>{{ users|length }}</h4>
+                <p class="text-muted mb-0">전체 사용자</p>
             </div>
         </div>
     </div>
     <div class="col-md-3">
-        <div class="card bg-success text-white">
+        <div class="card text-center">
             <div class="card-body">
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <h5 class="card-title">활성 사용자</h5>
-                        <h3 class="mb-0">{{ users|selectattr('is_active')|list|length }}</h3>
-                    </div>
-                    <div class="align-self-center">
-                        <i data-feather="user-check" style="width: 2rem; height: 2rem;"></i>
-                    </div>
-                </div>
+                <i data-feather="user-check" class="text-success mb-2" style="width: 48px; height: 48px;"></i>
+                <h4>{{ users|selectattr('is_active')|list|length }}</h4>
+                <p class="text-muted mb-0">활성 사용자</p>
             </div>
         </div>
     </div>
     <div class="col-md-3">
-        <div class="card bg-warning text-white">
+        <div class="card text-center">
             <div class="card-body">
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <h5 class="card-title">관리자</h5>
-                        <h3 class="mb-0">{{ users|selectattr('role', 'equalto', 'admin')|list|length }}</h3>
-                    </div>
-                    <div class="align-self-center">
-                        <i data-feather="shield" style="width: 2rem; height: 2rem;"></i>
-                    </div>
-                </div>
+                <i data-feather="shield" class="text-warning mb-2" style="width: 48px; height: 48px;"></i>
+                <h4>{{ users|selectattr('role', 'equalto', 'admin')|list|length }}</h4>
+                <p class="text-muted mb-0">관리자</p>
             </div>
         </div>
     </div>
     <div class="col-md-3">
-        <div class="card bg-danger text-white">
+        <div class="card text-center">
             <div class="card-body">
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <h5 class="card-title">비활성 사용자</h5>
-                        <h3 class="mb-0">{{ users|rejectattr('is_active')|list|length }}</h3>
-                    </div>
-                    <div class="align-self-center">
-                        <i data-feather="user-x" style="width: 2rem; height: 2rem;"></i>
-                    </div>
-                </div>
+                <i data-feather="user-x" class="text-danger mb-2" style="width: 48px; height: 48px;"></i>
+                <h4>{{ users|rejectattr('is_active')|list|length }}</h4>
+                <p class="text-muted mb-0">비활성 사용자</p>
             </div>
         </div>
     </div>
 </div>
 
-<!-- 사용자 목록 테이블 -->
-<div class="card">
-    <div class="card-header">
-        <h5 class="card-title mb-0">사용자 목록</h5>
-    </div>
-    <div class="card-body">
-        <div class="table-responsive">
-            <table class="table table-hover">
-                <thead>
-                    <tr>
-                        <th>이름</th>
-                        <th>이메일</th>
-                        <th>권한</th>
-                        <th>부서</th>
-                        <th>상태</th>
-                        <th>가입일</th>
-                        <th>최근 로그인</th>
-                        <th>관리</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for user in users %}
-                    <tr class="{% if not user.is_active %}table-secondary{% endif %}">
-                        <td>
-                            <div class="d-flex align-items-center">
-                                <div class="avatar-sm bg-primary rounded-circle d-flex align-items-center justify-content-center text-white me-2">
-                                    {{ user.name[0] }}
-                                </div>
-                                <div>
-                                    <strong>{{ user.name }}</strong>
-                                    {% if user.id == current_user.id %}
-                                        <span class="badge bg-info ms-1">나</span>
+<!-- Users List -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i data-feather="list" class="me-2"></i>
+                    사용자 목록
+                </h5>
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addUserModal">
+                    <i data-feather="user-plus" class="me-2"></i>사용자 추가
+                </button>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>이름</th>
+                                <th>이메일</th>
+                                <th>권한</th>
+                                <th>부서</th>
+                                <th>상태</th>
+                                <th>가입일</th>
+                                <th>최근 로그인</th>
+                                <th>관리</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for user in users %}
+                            <tr class="{% if not user.is_active %}table-secondary{% endif %}">
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="avatar-sm bg-primary rounded-circle d-flex align-items-center justify-content-center text-white me-2">
+                                            {{ user.name[0] }}
+                                        </div>
+                                        <div>
+                                            <strong>{{ user.name }}</strong>
+                                            {% if user.id == current_user.id %}
+                                                <span class="badge bg-info ms-1">나</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>{{ user.email }}</td>
+                                <td>
+                                    {% if user.role == 'admin' %}
+                                        <span class="badge bg-warning">관리자</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">일반 사용자</span>
                                     {% endif %}
-                                </div>
-                            </div>
-                        </td>
-                        <td>{{ user.email }}</td>
-                        <td>
-                            {% if user.role == 'admin' %}
-                                <span class="badge bg-warning">관리자</span>
-                            {% else %}
-                                <span class="badge bg-secondary">일반 사용자</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if user.department %}
-                                {{ user.department.name }}
-                            {% else %}
-                                <span class="text-muted">미지정</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if user.is_active %}
-                                <span class="badge bg-success">활성</span>
-                            {% else %}
-                                <span class="badge bg-danger">비활성</span>
-                            {% endif %}
-                        </td>
-                        <td>{{ user.created_at.strftime('%Y-%m-%d') if user.created_at else '-' }}</td>
-                        <td>
-                            {% if user.last_login %}
-                                {{ user.last_login.strftime('%Y-%m-%d %H:%M') }}
-                            {% else %}
-                                <span class="text-muted">없음</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            <div class="btn-group" role="group">
-                                <!-- 활성화/비활성화 버튼 -->
-                                {% if user.id != current_user.id %}
-                                <form method="POST" action="{{ url_for('toggle_user_status', user_id=user.id) }}" class="d-inline">
-                                    <button type="submit" class="btn btn-sm {% if user.is_active %}btn-outline-warning{% else %}btn-outline-success{% endif %}" 
-                                            title="{% if user.is_active %}비활성화{% else %}활성화{% endif %}"
-                                            onclick="return confirm('{{ user.name }} 사용자를 {% if user.is_active %}비활성화{% else %}활성화{% endif %}하시겠습니까?')">
-                                        <i data-feather="{% if user.is_active %}user-x{% else %}user-check{% endif %}"></i>
-                                    </button>
-                                </form>
-                                {% endif %}
-                                
-                                <!-- 편집 버튼 -->
-                                <button type="button" class="btn btn-sm btn-outline-primary" 
-                                        title="편집"
-                                        data-bs-toggle="modal" data-bs-target="#editUserModal{{ user.id }}">
-                                    <i data-feather="edit"></i>
-                                </button>
-                                
-                                <!-- 삭제 버튼 -->
-                                {% if user.id != current_user.id %}
-                                <form method="POST" action="{{ url_for('delete_user', user_id=user.id) }}" class="d-inline">
-                                    <button type="submit" class="btn btn-sm btn-outline-danger" 
-                                            title="삭제"
-                                            onclick="return confirm('{{ user.name }} 사용자를 완전히 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')">
-                                        <i data-feather="trash-2"></i>
-                                    </button>
-                                </form>
-                                {% endif %}
-                            </div>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+                                </td>
+                                <td>
+                                    {% if user.department %}
+                                        {{ user.department.name }}
+                                    {% else %}
+                                        <span class="text-muted">미지정</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if user.is_active %}
+                                        <span class="badge bg-success">활성</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">비활성</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ user.created_at.strftime('%Y-%m-%d') if user.created_at else '-' }}</td>
+                                <td>
+                                    {% if user.last_login %}
+                                        {{ user.last_login.strftime('%Y-%m-%d %H:%M') }}
+                                    {% else %}
+                                        <span class="text-muted">없음</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="btn-group" role="group">
+                                        <!-- 활성화/비활성화 버튼 -->
+                                        {% if user.id != current_user.id %}
+                                        <form method="POST" action="{{ url_for('toggle_user_status', user_id=user.id) }}" class="d-inline">
+                                            <button type="submit" class="btn btn-sm {% if user.is_active %}btn-outline-warning{% else %}btn-outline-success{% endif %}" 
+                                                    title="{% if user.is_active %}비활성화{% else %}활성화{% endif %}"
+                                                    onclick="return confirm('{{ user.name }} 사용자를 {% if user.is_active %}비활성화{% else %}활성화{% endif %}하시겠습니까?')">
+                                                <i data-feather="{% if user.is_active %}user-x{% else %}user-check{% endif %}"></i>
+                                            </button>
+                                        </form>
+                                        {% endif %}
+                                        
+                                        <!-- 편집 버튼 -->
+                                        <button type="button" class="btn btn-sm btn-outline-primary" 
+                                                title="편집"
+                                                data-bs-toggle="modal" data-bs-target="#editUserModal{{ user.id }}">
+                                            <i data-feather="edit"></i>
+                                        </button>
+                                        
+                                        <!-- 삭제 버튼 -->
+                                        {% if user.id != current_user.id %}
+                                        <form method="POST" action="{{ url_for('delete_user', user_id=user.id) }}" class="d-inline">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger" 
+                                                    title="삭제"
+                                                    onclick="return confirm('{{ user.name }} 사용자를 완전히 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')">
+                                                <i data-feather="trash-2"></i>
+                                            </button>
+                                        </form>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     </div>
 </div>
