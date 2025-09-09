@@ -237,6 +237,7 @@ def profile():
     if request.method == 'POST':
         name = request.form.get('name')
         email = request.form.get('email')
+        department_id = request.form.get('department_id') or None
         current_password = request.form.get('current_password')
         new_password = request.form.get('new_password')
         confirm_password = request.form.get('confirm_password')
@@ -275,6 +276,7 @@ def profile():
         # 프로필 정보 업데이트
         current_user.name = name
         current_user.email = email
+        current_user.department_id = int(department_id) if department_id else None
         current_user.updated_at = datetime.utcnow()
         
         db.session.commit()
