@@ -772,8 +772,27 @@ def rules():
     departments = Department.query.all()
     vendors = Vendor.query.all()
     
+    # 규칙을 딕셔너리로 변환 (JSON 직렬화를 위해)
+    rules_dict = []
+    for rule in rules:
+        rule_dict = {
+            'id': rule.id,
+            'name': rule.name,
+            'priority': rule.priority,
+            'is_active': rule.is_active,
+            'condition_type': rule.condition_type,
+            'condition_field': rule.condition_field,
+            'condition_value': rule.condition_value,
+            'target_category_id': rule.target_category_id,
+            'target_department_id': rule.target_department_id,
+            'target_vendor_id': rule.target_vendor_id,
+            'created_at': rule.created_at.isoformat() if rule.created_at else None
+        }
+        rules_dict.append(rule_dict)
+    
     return render_template('rules.html',
                          rules=rules,
+                         rules_dict=rules_dict,
                          categories=categories,
                          departments=departments,
                          vendors=vendors)

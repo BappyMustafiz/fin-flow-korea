@@ -485,7 +485,7 @@ function editRule(ruleId) {
     console.log('Editing rule:', ruleId);
     
     // 규칙 데이터를 위한 API 호출 (실제로는 페이지 데이터에서 찾음)
-    const rules = {{ rules|tojson }};
+    const rules = {{ rules_dict|tojson }};
     const rule = rules.find(r => r.id === ruleId);
     
     if (!rule) {
