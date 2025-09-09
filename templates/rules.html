@@ -150,24 +150,19 @@
                                                 <i data-feather="play"></i>
                                             </a>
                                         {% else %}
-                                            <button class="btn btn-outline-secondary" 
-                                                    disabled
-                                                    title="비활성화된 규칙 (적용 불가)">
-                                                <i data-feather="pause"></i>
-                                            </button>
+                                            <form method="POST" action="{{ url_for('toggle_rule', rule_id=rule.id) }}" style="display: inline;">
+                                                <button type="submit" 
+                                                        class="btn btn-outline-secondary" 
+                                                        title="비활성화된 규칙 - 클릭하여 활성화">
+                                                    <i data-feather="pause"></i>
+                                                </button>
+                                            </form>
                                         {% endif %}
                                         <button class="btn btn-outline-primary" 
                                                 onclick="editRule({{ rule.id }})" 
                                                 title="편집">
                                             <i data-feather="edit"></i>
                                         </button>
-                                        <form method="POST" action="{{ url_for('toggle_rule', rule_id=rule.id) }}" style="display: inline;">
-                                            <button type="submit" 
-                                                    class="btn {% if rule.is_active %}btn-outline-warning{% else %}btn-outline-success{% endif %}" 
-                                                    title="{% if rule.is_active %}비활성화{% else %}활성화{% endif %}">
-                                                <i data-feather="{% if rule.is_active %}pause-circle{% else %}play-circle{% endif %}"></i>
-                                            </button>
-                                        </form>
                                         <button class="btn btn-outline-info" 
                                                 onclick="testRule({{ rule.id }})" 
                                                 title="테스트">
