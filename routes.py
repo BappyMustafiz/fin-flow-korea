@@ -844,6 +844,24 @@ def edit_rule(rule_id):
     
     return redirect(url_for('rules'))
 
+@app.route('/rule/<int:rule_id>/toggle', methods=['POST'])
+@login_required
+def toggle_rule(rule_id):
+    """분류 규칙 활성/비활성 토글"""
+    try:
+        rule = MappingRule.query.get_or_404(rule_id)
+        rule.is_active = not rule.is_active
+        db.session.commit()
+        
+        status = "활성화" if rule.is_active else "비활성화"
+        flash(f'규칙 "{rule.name}"이 {status}되었습니다.', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'규칙 상태 변경 중 오류가 발생했습니다: {str(e)}', 'error')
+    
+    return redirect(url_for('rules'))
+
 @app.route('/rule/<int:rule_id>/apply')
 @login_required
 def apply_rule(rule_id):
