@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-한국형 오픈뱅킹 회계시스템 사용자 매뉴얼 PDF 생성기
+Vlan24 사용자 매뉴얼 PDF 생성기
 """
 
 import markdown
@@ -174,7 +174,7 @@ def generate_pdf_manual():
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>한국형 오픈뱅킹 회계시스템 사용자 매뉴얼</title>
+            <title>Vlan24 사용자 매뉴얼</title>
             {css_style}
         </head>
         <body>

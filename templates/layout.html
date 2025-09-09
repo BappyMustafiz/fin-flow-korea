@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}한국형 오픈뱅킹 회계시스템{% endblock %}</title>
+    <title>{% block title %}Vlan24{% endblock %}</title>
     
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -116,7 +116,7 @@
                             </a></li>
                             {% endif %}
                             <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item text-danger" href="javascript:void(0)" onclick="forceLogout()">
+                            <li><a class="dropdown-item text-danger" href="{{ url_for('logout') }}">
                                 <i data-feather="log-out" class="me-2"></i>로그아웃
                             </a></li>
                             {% endif %}
@@ -124,7 +124,7 @@
                     </li>
                     {% if current_user.is_authenticated %}
                     <li class="nav-item">
-                        <a class="nav-link text-danger fw-bold" href="javascript:void(0)" onclick="forceLogout()">
+                        <a class="nav-link text-danger fw-bold" href="{{ url_for('logout') }}">
                             <i data-feather="log-out" class="me-1"></i>로그아웃
                         </a>
                     </li>

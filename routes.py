@@ -18,7 +18,7 @@ import io
 TEXTS = {
     'ko': {
         # 네비게이션
-        'brand': '회계시스템',
+        'brand': 'Vlan24',
         'dashboard': '대시보드',
         'connections': '연결 관리',
         'transactions': '거래 내역',
@@ -88,7 +88,7 @@ TEXTS = {
     },
     'en': {
         # 네비게이션
-        'brand': 'Accounting System',
+        'brand': 'Vlan24',
         'dashboard': 'Dashboard',
         'connections': 'Connections',
         'transactions': 'Transactions',
@@ -1987,7 +1987,7 @@ def export_csv(data, report_type, start_date, end_date):
     writer = csv.writer(output)
     
     # 리포트 헤더 정보
-    writer.writerow(['한국형 오픈뱅킹 회계시스템 - 재무 리포트'])
+    writer.writerow(['Vlan24 - 재무 리포트'])
     writer.writerow([f'기간: {start_date} ~ {end_date}'])
     writer.writerow([f'생성일: {datetime.now().strftime("%Y-%m-%d %H:%M")}'])
     writer.writerow([''])
@@ -2080,7 +2080,7 @@ def export_excel(data, report_type, start_date, end_date):
     metadata = {
         '정보': ['리포트명', '생성일시', '기간', '데이터 건수'],
         '값': [
-            '한국형 오픈뱅킹 회계시스템 재무리포트',
+            'Vlan24 재무리포트',
             datetime.now().strftime('%Y년 %m월 %d일 %H:%M'),
             f'{start_date} ~ {end_date}',
             f'{len(data)}개월'
