@@ -3100,7 +3100,9 @@ def edit_user(user_id):
     # 폼 데이터 가져오기
     name = request.form.get('name', '').strip()
     email = request.form.get('email', '').strip()
+    current_password = request.form.get('current_password', '').strip()
     password = request.form.get('password', '').strip()
+    password_confirm = request.form.get('password_confirm', '').strip()
     role = request.form.get('role')
     department_id = request.form.get('department_id') or None
     
@@ -3137,9 +3139,26 @@ def edit_user(user_id):
     
     # 패스워드 업데이트 (비어있지 않은 경우만)
     if password:
+        # 패스워드 길이 검증
         if len(password) < 6:
             flash('패스워드는 최소 6자 이상이어야 합니다.', 'error')
             return redirect(url_for('users'))
+        
+        # 패스워드 확인 검증
+        if password != password_confirm:
+            flash('새 패스워드가 일치하지 않습니다.', 'error')
+            return redirect(url_for('users'))
+        
+        # 자기 자신의 패스워드를 변경하는 경우 현재 패스워드 확인
+        if user.id == current_user.id:
+            if not current_password:
+                flash('자신의 패스워드를 변경하려면 현재 패스워드를 입력해야 합니다.', 'error')
+                return redirect(url_for('users'))
+            
+            if not user.check_password(current_password):
+                flash('현재 패스워드가 올바르지 않습니다.', 'error')
+                return redirect(url_for('users'))
+        
         user.set_password(password)
     
     db.session.commit()
