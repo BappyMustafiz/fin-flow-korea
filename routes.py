@@ -537,10 +537,15 @@ def transactions():
         # 대소문자 구분 없는 검색을 위해 ilike 사용
         search_pattern = f'%{search}%'
         print(f"검색어: '{search}', 패턴: '{search_pattern}'")  # 디버그 로그
+        
+        # 검색 시에는 거래내용, 거래처명뿐만 아니라 더 넓은 범위에서 검색
         query = query.filter(
             db.or_(
                 Transaction.description.ilike(search_pattern),
-                Transaction.counterparty.ilike(search_pattern)
+                Transaction.counterparty.ilike(search_pattern),
+                # 계좌명이나 기관명에서도 검색할 수 있도록 조인
+                Transaction.account.has(Account.account_name.ilike(search_pattern)),
+                Transaction.account.has(Account.institution.has(Institution.name.ilike(search_pattern)))
             )
         )
         # 검색된 거래 수를 로그로 출력
