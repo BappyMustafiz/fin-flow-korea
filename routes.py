@@ -868,6 +868,11 @@ def apply_rule(rule_id):
     """규칙 적용 실행"""
     rule = MappingRule.query.get_or_404(rule_id)
     
+    # 비활성화된 규칙은 적용하지 않음
+    if not rule.is_active:
+        flash(f'규칙 "{rule.name}"이 비활성화 상태입니다. 먼저 활성화해주세요.', 'warning')
+        return redirect(url_for('rules'))
+    
     # 미분류 거래에 규칙 적용
     query = Transaction.query.filter_by(classification_status='pending')
     
