@@ -1,8 +1,8 @@
-# Vlan24 Accounting System
+# Vlan24
 
 ## Overview
 
-This is a Flask-based Vlan24 Accounting System designed for managing financial transactions, accounts, and institutional connections. The system provides comprehensive financial management capabilities including transaction classification, budget tracking, department-based accounting, and automated rule-based transaction categorization. It integrates with Korean financial institutions through open banking APIs and provides real-time financial dashboards, reporting, and audit capabilities.
+This is a Flask-based Vlan24 system designed for managing financial transactions, accounts, and institutional connections. The system provides comprehensive financial management capabilities including transaction classification, budget tracking, department-based accounting, and automated rule-based transaction categorization. It integrates with Korean financial institutions through open banking APIs and provides real-time financial dashboards, reporting, and audit capabilities.
 
 ## User Preferences
 
