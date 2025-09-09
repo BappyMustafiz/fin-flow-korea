@@ -210,24 +210,77 @@
                             <h6 class="mb-0">자동 거래 생성 설정</h6>
                         </div>
                         <div class="card-body">
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="form-check mb-3">
-                                        <input class="form-check-input" type="checkbox" id="autoGenerateTransactions" name="auto_generate_transactions">
-                                        <label class="form-check-label" for="autoGenerateTransactions">
-                                            자동으로 거래 생성하기
-                                        </label>
-                                        <div class="form-text">체크하면 계약에 따라 자동으로 거래가 생성됩니다</div>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="paymentCycle" class="form-label">결제 주기</label>
-                                        <select class="form-select" id="paymentCycle" name="payment_cycle">
-                                            <option value="monthly">월별</option>
-                                            <option value="quarterly">분기별</option>
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" id="autoGenerateTransactions" name="auto_generate_transactions" onchange="toggleTransactionSettings()">
+                                <label class="form-check-label" for="autoGenerateTransactions">
+                                    <strong>자동으로 거래 생성하기</strong>
+                                </label>
+                                <div class="form-text">체크하면 계약에 따라 자동으로 거래가 생성됩니다</div>
+                            </div>
+                            
+                            <div id="transactionSettings" style="display: none;">
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <label for="paymentCycle" class="form-label">결제 주기 *</label>
+                                        <select class="form-select" id="paymentCycle" name="payment_cycle" onchange="updatePaymentOptions()">
+                                            <option value="daily">일별</option>
+                                            <option value="weekly">주별</option>
+                                            <option value="monthly" selected>월별</option>
+                                            <option value="quarterly">분기별 (3개월)</option>
                                             <option value="yearly">연간</option>
                                             <option value="one_time">일시불</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="intervalCount" class="form-label">주기 간격</label>
+                                        <input type="number" class="form-control" id="intervalCount" name="interval_count" value="1" min="1" max="12">
+                                        <div class="form-text" id="intervalHelp">예: 2개월마다, 3주마다</div>
+                                    </div>
+                                </div>
+                                
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <label for="transactionCount" class="form-label">총 거래 횟수</label>
+                                        <input type="number" class="form-control" id="transactionCount" name="transaction_count" min="1" placeholder="비워두면 계약기간 동안 계속">
+                                        <div class="form-text">특정 횟수만 거래하려면 입력</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="firstTransactionDate" class="form-label">첫 거래 날짜</label>
+                                        <input type="date" class="form-control" id="firstTransactionDate" name="first_transaction_date">
+                                        <div class="form-text">비워두면 계약 시작일부터</div>
+                                    </div>
+                                </div>
+                                
+                                <!-- 월별 결제일 설정 -->
+                                <div class="row mb-3" id="monthlySettings" style="display: none;">
+                                    <div class="col-md-6">
+                                        <label for="paymentDay" class="form-label">매월 결제일</label>
+                                        <select class="form-select" id="paymentDay" name="payment_day">
+                                            <option value="">계약 시작일과 동일</option>
+                                            <option value="1">매월 1일</option>
+                                            <option value="5">매월 5일</option>
+                                            <option value="10">매월 10일</option>
+                                            <option value="15">매월 15일</option>
+                                            <option value="20">매월 20일</option>
+                                            <option value="25">매월 25일</option>
+                                            <option value="31">매월 말일</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <!-- 주별 결제일 설정 -->
+                                <div class="row mb-3" id="weeklySettings" style="display: none;">
+                                    <div class="col-md-6">
+                                        <label for="paymentWeekday" class="form-label">매주 결제 요일</label>
+                                        <select class="form-select" id="paymentWeekday" name="payment_weekday">
+                                            <option value="">계약 시작일과 동일</option>
+                                            <option value="0">월요일</option>
+                                            <option value="1">화요일</option>
+                                            <option value="2">수요일</option>
+                                            <option value="3">목요일</option>
+                                            <option value="4">금요일</option>
+                                            <option value="5">토요일</option>
+                                            <option value="6">일요일</option>
                                         </select>
                                     </div>
                                 </div>
@@ -507,6 +560,55 @@ function generateTransaction(contractId, contractName) {
             console.error('Error:', error);
             alert('거래 생성 중 오류가 발생했습니다.');
         });
+    }
+}
+
+// 자동 거래 생성 설정 토글
+function toggleTransactionSettings() {
+    const checkbox = document.getElementById('autoGenerateTransactions');
+    const settings = document.getElementById('transactionSettings');
+    
+    if (checkbox.checked) {
+        settings.style.display = 'block';
+        updatePaymentOptions(); // 초기 설정 적용
+    } else {
+        settings.style.display = 'none';
+    }
+}
+
+// 결제 주기에 따른 옵션 업데이트
+function updatePaymentOptions() {
+    const cycle = document.getElementById('paymentCycle').value;
+    const monthlySettings = document.getElementById('monthlySettings');
+    const weeklySettings = document.getElementById('weeklySettings');
+    const intervalHelp = document.getElementById('intervalHelp');
+    
+    // 모든 설정 숨기기
+    monthlySettings.style.display = 'none';
+    weeklySettings.style.display = 'none';
+    
+    // 주기별 설정 표시 및 도움말 업데이트
+    switch(cycle) {
+        case 'daily':
+            intervalHelp.textContent = '예: 2일마다, 3일마다';
+            break;
+        case 'weekly':
+            weeklySettings.style.display = 'block';
+            intervalHelp.textContent = '예: 2주마다, 3주마다';
+            break;
+        case 'monthly':
+            monthlySettings.style.display = 'block';
+            intervalHelp.textContent = '예: 2개월마다, 3개월마다';
+            break;
+        case 'quarterly':
+            intervalHelp.textContent = '예: 2분기마다 (6개월)';
+            break;
+        case 'yearly':
+            intervalHelp.textContent = '예: 2년마다, 3년마다';
+            break;
+        case 'one_time':
+            intervalHelp.textContent = '일시불은 간격 설정이 적용되지 않습니다';
+            break;
     }
 }
 </script>

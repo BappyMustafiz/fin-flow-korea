@@ -193,8 +193,15 @@ class Contract(db.Model):
     
     # 자동 거래 생성 관련 필드
     auto_generate_transactions = db.Column(db.Boolean, default=False)
-    payment_cycle = db.Column(db.String(20), default='monthly')  # monthly, quarterly, yearly, one_time
+    payment_cycle = db.Column(db.String(20), default='monthly')  # daily, weekly, monthly, quarterly, yearly, one_time
     category_id = db.Column(db.Integer, db.ForeignKey('category.id'))
+    
+    # 상세 스케줄링 설정
+    transaction_count = db.Column(db.Integer)  # 총 거래 횟수 (None이면 계약기간 동안 계속)
+    first_transaction_date = db.Column(db.Date)  # 첫 거래 날짜
+    payment_day = db.Column(db.Integer)  # 매월 결제일 (1-31)
+    payment_weekday = db.Column(db.Integer)  # 매주 결제 요일 (0=월요일, 6=일요일)
+    interval_count = db.Column(db.Integer, default=1)  # 간격 (예: 2주마다, 3개월마다)
     
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
