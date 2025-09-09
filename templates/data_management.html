@@ -145,11 +145,16 @@
                                     {% endif %}
                                 </td>
                                 <td>
-                                    {% if upload.status == 'completed' %}
-                                    <button class="btn btn-outline-info btn-sm" onclick="checkUpload({{ upload.id }})">
-                                        <i data-feather="search" class="me-1"></i>확인
-                                    </button>
-                                    {% endif %}
+                                    <div class="btn-group" role="group">
+                                        {% if upload.status == 'completed' %}
+                                        <button class="btn btn-outline-info btn-sm" onclick="checkUpload({{ upload.id }})">
+                                            <i data-feather="search" class="me-1"></i>확인
+                                        </button>
+                                        {% endif %}
+                                        <button class="btn btn-outline-danger btn-sm" onclick="deleteUpload({{ upload.id }}, '{{ upload.filename }}')" title="업로드 기록 삭제">
+                                            <i data-feather="trash-2"></i>
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -391,6 +396,59 @@ function checkUpload(uploadId) {
             <div class="alert alert-danger">
                 <i data-feather="alert-circle" class="me-2"></i>
                 확인 중 오류가 발생했습니다.
+            </div>
+        `;
+        feather.replace();
+    });
+}
+
+function deleteUpload(uploadId, filename) {
+    if (!confirm(`'${filename}' 업로드 기록을 삭제하시겠습니까?\n\n주의: 이 작업은 되돌릴 수 없으며, 해당 업로드로 등록된 모든 거래 내역도 함께 삭제됩니다.`)) {
+        return;
+    }
+    
+    const resultsDiv = document.getElementById('verificationResults');
+    resultsDiv.innerHTML = `
+        <div class="alert alert-info">
+            <i data-feather="loader" class="me-2"></i>업로드 기록 삭제 중...
+        </div>
+    `;
+    resultsDiv.style.display = 'block';
+    
+    fetch(`/delete-upload/${uploadId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            resultsDiv.innerHTML = `
+                <div class="alert alert-success">
+                    <i data-feather="check-circle" class="me-2"></i>
+                    업로드 기록이 성공적으로 삭제되었습니다.
+                </div>
+            `;
+            // 페이지 새로고침으로 업로드 목록 업데이트
+            setTimeout(() => {
+                window.location.reload();
+            }, 1500);
+        } else {
+            resultsDiv.innerHTML = `
+                <div class="alert alert-danger">
+                    <i data-feather="alert-circle" class="me-2"></i>
+                    삭제 실패: ${data.error}
+                </div>
+            `;
+        }
+        feather.replace();
+    })
+    .catch(error => {
+        resultsDiv.innerHTML = `
+            <div class="alert alert-danger">
+                <i data-feather="alert-circle" class="me-2"></i>
+                삭제 중 오류가 발생했습니다.
             </div>
         `;
         feather.replace();

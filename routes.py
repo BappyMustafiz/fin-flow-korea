@@ -3792,6 +3792,63 @@ def check_upload(upload_id):
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
+@app.route('/delete-upload/<int:upload_id>', methods=['POST'])
+@login_required
+def delete_upload(upload_id):
+    """업로드 기록 삭제"""
+    try:
+        # 해당 업로드 날짜의 모든 거래를 찾아서 삭제
+        target_transaction = Transaction.query.get(upload_id)
+        
+        if not target_transaction:
+            return jsonify({
+                'success': False,
+                'error': '해당 업로드 기록을 찾을 수 없습니다.'
+            })
+        
+        # 같은 날짜, 같은 계정의 모든 거래를 삭제
+        upload_date = target_transaction.created_at.date()
+        account_id = target_transaction.account_id
+        
+        # 해당 날짜에 생성된 모든 거래 삭제
+        transactions_to_delete = Transaction.query.filter(
+            func.date(Transaction.created_at) == upload_date,
+            Transaction.account_id == account_id
+        ).all()
+        
+        deleted_count = len(transactions_to_delete)
+        
+        # 거래들을 소프트 삭제 (is_active = False)
+        for transaction in transactions_to_delete:
+            transaction.is_active = False
+        
+        db.session.commit()
+        
+        # 감사 로그 추가
+        audit_log = AuditLog()
+        audit_log.user_id = current_user.id
+        audit_log.action = 'delete_upload'
+        audit_log.table_name = 'transactions'
+        audit_log.record_id = upload_id
+        audit_log.changes = f'업로드 기록 삭제: {deleted_count}건의 거래 삭제'
+        audit_log.created_at = datetime.now()
+        
+        db.session.add(audit_log)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'{deleted_count}건의 거래가 성공적으로 삭제되었습니다.',
+            'deleted_count': deleted_count
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'error': f'삭제 중 오류가 발생했습니다: {str(e)}'
+        })
+
 
 def create_tables():
     """앱 시작시 테이블 생성 및 초기 데이터 로드"""
