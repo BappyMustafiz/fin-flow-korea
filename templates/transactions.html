@@ -872,31 +872,51 @@ function viewDetails(transactionId) {
     
     modal.show();
     
-    // 시뮬레이션된 상세 정보
-    setTimeout(() => {
-        document.getElementById('transactionDetailsContent').innerHTML = `
-            <div class="row">
-                <div class="col-md-6">
-                    <h6>기본 정보</h6>
-                    <table class="table table-sm">
-                        <tr><td>거래 ID:</td><td>TXN-${transactionId}</td></tr>
-                        <tr><td>거래일시:</td><td>2024-01-15 14:30:25</td></tr>
-                        <tr><td>거래처:</td><td>스타벅스 강남점</td></tr>
-                        <tr><td>금액:</td><td class="text-danger">-5,500원</td></tr>
-                    </table>
+    // 실제 거래 상세 정보 가져오기
+    fetch(`/transaction/${transactionId}/details`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const transaction = data.transaction;
+                document.getElementById('transactionDetailsContent').innerHTML = `
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>기본 정보</h6>
+                            <table class="table table-sm">
+                                <tr><td>거래 ID:</td><td>${transaction.id}</td></tr>
+                                <tr><td>거래일시:</td><td>${new Date(transaction.transaction_date).toLocaleString('ko-KR')}</td></tr>
+                                <tr><td>거래처:</td><td>${transaction.counterparty || '-'}</td></tr>
+                                <tr><td>금액:</td><td class="${transaction.amount < 0 ? 'text-danger' : 'text-success'}">${transaction.amount.toLocaleString()}원</td></tr>
+                                <tr><td>계좌:</td><td>${transaction.account ? transaction.account.account_name : '-'}</td></tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>거래 설명</h6>
+                            <p class="text-muted">${transaction.description || '-'}</p>
+                            <h6>분류 상태</h6>
+                            <span class="badge ${transaction.classification_status === 'classified' ? 'bg-success' : transaction.classification_status === 'manual' ? 'bg-primary' : 'bg-secondary'}">
+                                ${transaction.classification_status === 'classified' ? '자동분류' : transaction.classification_status === 'manual' ? '수동분류' : '미분류'}
+                            </span>
+                        </div>
+                    </div>
+                `;
+            } else {
+                document.getElementById('transactionDetailsContent').innerHTML = `
+                    <div class="alert alert-danger">
+                        <i data-feather="alert-circle" class="me-2"></i>
+                        거래 정보를 불러올 수 없습니다: ${data.error}
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            document.getElementById('transactionDetailsContent').innerHTML = `
+                <div class="alert alert-danger">
+                    <i data-feather="alert-circle" class="me-2"></i>
+                    거래 정보 로드 중 오류가 발생했습니다.
                 </div>
-                <div class="col-md-6">
-                    <h6>분류 정보</h6>
-                    <table class="table table-sm">
-                        <tr><td>카테고리:</td><td>식비</td></tr>
-                        <tr><td>부서:</td><td>개발팀</td></tr>
-                        <tr><td>거래처:</td><td>스타벅스</td></tr>
-                        <tr><td>분류상태:</td><td><span class="badge bg-success">자동분류</span></td></tr>
-                    </table>
-                </div>
-            </div>
-        `;
-    }, 1000);
+            `;
+        });
 }
 </script>
 
