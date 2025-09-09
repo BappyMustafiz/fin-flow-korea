@@ -25,7 +25,7 @@
         <div class="card text-center">
             <div class="card-body">
                 <i data-feather="check-circle" class="text-success mb-2" style="width: 48px; height: 48px;"></i>
-                <h4 class="text-success">{{ contracts | selectattr('status', 'equalto', 'active') | list | length }}</h4>
+                <h4 class="text-success">{{ active_contracts_count }}</h4>
                 <p class="text-muted mb-0">활성 계약</p>
             </div>
         </div>
@@ -34,7 +34,7 @@
         <div class="card text-center">
             <div class="card-body">
                 <i data-feather="clock" class="text-warning mb-2" style="width: 48px; height: 48px;"></i>
-                <h4 class="text-warning">{{ contracts | selectattr('status', 'equalto', 'expired') | list | length }}</h4>
+                <h4 class="text-warning">{{ expired_contracts_count }}</h4>
                 <p class="text-muted mb-0">만료 계약</p>
             </div>
         </div>
@@ -43,7 +43,7 @@
         <div class="card text-center">
             <div class="card-body">
                 <i data-feather="dollar-sign" class="text-info mb-2" style="width: 48px; height: 48px;"></i>
-                <h4 class="text-info">{{ (contracts | sum(attribute='contract_amount') | default(0) / 1000000) | round(1) }}M</h4>
+                <h4 class="text-info">₩{{ "{:,.0f}".format(total_contract_amount) }}</h4>
                 <p class="text-muted mb-0">총 계약금액</p>
             </div>
         </div>

@@ -2118,7 +2118,20 @@ def contracts():
     vendors = Vendor.query.all()
     departments = Department.query.all()
     categories = Category.query.all()
-    return render_template('contracts.html', contracts=contracts, vendors=vendors, departments=departments, categories=categories)
+    
+    # 계약 통계 계산
+    total_contract_amount = sum(contract.contract_amount for contract in contracts) if contracts else 0
+    active_contracts_count = sum(1 for contract in contracts if contract.status == 'active')
+    expired_contracts_count = sum(1 for contract in contracts if contract.status == 'expired')
+    
+    return render_template('contracts.html', 
+                         contracts=contracts, 
+                         vendors=vendors, 
+                         departments=departments, 
+                         categories=categories,
+                         total_contract_amount=total_contract_amount,
+                         active_contracts_count=active_contracts_count,
+                         expired_contracts_count=expired_contracts_count)
 
 @app.route('/contracts/add', methods=['POST'])
 @login_required
