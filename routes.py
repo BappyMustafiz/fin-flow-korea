@@ -2115,11 +2115,23 @@ def contracts():
         return redirect(url_for('dashboard'))
     from models import Contract, Vendor, Department, Category
     contracts = Contract.query.order_by(desc(Contract.created_at)).all()
+    
+    # 만료된 계약들의 상태를 자동으로 업데이트
+    updated_count = 0
+    for contract in contracts:
+        if contract.update_status_if_expired():
+            updated_count += 1
+    
+    # 변경사항이 있으면 DB에 저장
+    if updated_count > 0:
+        db.session.commit()
+        flash(f'{updated_count}건의 계약이 자동으로 만료 상태로 변경되었습니다.', 'info')
+    
     vendors = Vendor.query.all()
     departments = Department.query.all()
     categories = Category.query.all()
     
-    # 계약 통계 계산
+    # 계약 통계 계산 (상태 업데이트 후)
     total_contract_amount = sum(contract.contract_amount for contract in contracts) if contracts else 0
     active_contracts_count = sum(1 for contract in contracts if contract.status == 'active')
     expired_contracts_count = sum(1 for contract in contracts if contract.status == 'expired')

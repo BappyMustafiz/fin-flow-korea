@@ -193,6 +193,19 @@ class Contract(db.Model):
     # Relationships
     vendor = db.relationship('Vendor', backref='contracts')
     department = db.relationship('Department', backref='contracts')
+    
+    @property
+    def is_expired(self):
+        """계약이 만료되었는지 확인"""
+        from datetime import date
+        return self.end_date < date.today()
+    
+    def update_status_if_expired(self):
+        """만료된 경우 상태를 자동으로 업데이트"""
+        if self.is_expired and self.status == 'active':
+            self.status = 'expired'
+            return True
+        return False
 
 class AuditLog(db.Model):
     """감사 로그"""
