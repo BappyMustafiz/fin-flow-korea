@@ -73,7 +73,7 @@
                 <thead>
                     <tr>
                         <th>부서명</th>
-                        <th>설명</th>
+                        <th>부서 코드</th>
                         <th>예산</th>
                         <th>직원 수</th>
                         <th>생성일</th>
@@ -87,7 +87,7 @@
                             <strong>{{ department.name }}</strong>
                         </td>
                         <td>
-                            <span class="text-muted">{{ department.description or '-' }}</span>
+                            <span class="text-muted">{{ department.code or '-' }}</span>
                         </td>
                         <td>
                             <span class="text-success">₩{{ "{:,.0f}".format(department.budget or 0) }}</span>
@@ -100,7 +100,7 @@
                         </td>
                         <td>
                             <button class="btn btn-sm btn-outline-primary me-1" 
-                                    onclick="editDepartment({{ department.id }}, '{{ department.name }}', '{{ department.description or '' }}')">
+                                    onclick="editDepartment({{ department.id }}, '{{ department.name }}', '{{ department.code or '' }}', {{ department.budget or 0 }})">
                                 <i data-feather="edit-2"></i>
                             </button>
                             {% if not department.users or department.users|length == 0 %}
@@ -148,8 +148,12 @@
                         <input type="text" class="form-control" id="name" name="name" required>
                     </div>
                     <div class="mb-3">
-                        <label for="description" class="form-label">설명</label>
-                        <textarea class="form-control" id="description" name="description" rows="3"></textarea>
+                        <label for="code" class="form-label">부서 코드 *</label>
+                        <input type="text" class="form-control" id="code" name="code" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="budget" class="form-label">예산 (원)</label>
+                        <input type="number" class="form-control" id="budget" name="budget" step="1" min="0" placeholder="예: 1000000">
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -176,8 +180,12 @@
                         <input type="text" class="form-control" id="editName" name="name" required>
                     </div>
                     <div class="mb-3">
-                        <label for="editDescription" class="form-label">설명</label>
-                        <textarea class="form-control" id="editDescription" name="description" rows="3"></textarea>
+                        <label for="editCode" class="form-label">부서 코드 *</label>
+                        <input type="text" class="form-control" id="editCode" name="code" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editBudget" class="form-label">예산 (원)</label>
+                        <input type="number" class="form-control" id="editBudget" name="budget" step="1" min="0" placeholder="예: 1000000">
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -216,9 +224,10 @@
 feather.replace();
 
 // 부서 수정 모달 열기
-function editDepartment(id, name, description) {
+function editDepartment(id, name, code, budget) {
     document.getElementById('editName').value = name;
-    document.getElementById('editDescription').value = description;
+    document.getElementById('editCode').value = code;
+    document.getElementById('editBudget').value = budget || '';
     document.getElementById('editForm').action = '/departments/' + id + '/edit';
     
     var modal = new bootstrap.Modal(document.getElementById('editDepartmentModal'));
