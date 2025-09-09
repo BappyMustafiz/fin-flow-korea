@@ -893,6 +893,84 @@ def apply_rule(rule_id):
     flash(f'{len(transactions)}건의 거래가 분류되었습니다.', 'success')
     return redirect(url_for('rules'))
 
+@app.route('/rule/<int:rule_id>/test')
+@login_required
+def test_rule(rule_id):
+    """규칙 테스트 - 실제 거래 데이터에서 매칭되는 거래들 찾기"""
+    try:
+        rule = MappingRule.query.get_or_404(rule_id)
+        
+        # 모든 거래 조회 (최근 100건으로 제한)
+        transactions = Transaction.query.order_by(Transaction.transaction_date.desc()).limit(100).all()
+        
+        matched_transactions = []
+        
+        for transaction in transactions:
+            match = False
+            
+            # 조건 타입에 따른 매칭 로직
+            if rule.condition_type == 'contains':
+                if rule.condition_field == 'description':
+                    match = rule.condition_value.lower() in (transaction.description or '').lower()
+                elif rule.condition_field == 'counterparty':
+                    match = rule.condition_value.lower() in (transaction.counterparty or '').lower()
+            
+            elif rule.condition_type == 'equals':
+                if rule.condition_field == 'description':
+                    match = (transaction.description or '').lower() == rule.condition_value.lower()
+                elif rule.condition_field == 'counterparty':
+                    match = (transaction.counterparty or '').lower() == rule.condition_value.lower()
+            
+            elif rule.condition_type == 'amount_range':
+                try:
+                    # 금액 범위 조건 (예: "1000-5000")
+                    range_parts = rule.condition_value.split('-')
+                    if len(range_parts) == 2:
+                        min_amount = float(range_parts[0])
+                        max_amount = float(range_parts[1])
+                        transaction_amount = abs(transaction.amount)
+                        match = min_amount <= transaction_amount <= max_amount
+                except:
+                    match = False
+            
+            elif rule.condition_type == 'regex':
+                try:
+                    import re
+                    if rule.condition_field == 'description':
+                        match = bool(re.search(rule.condition_value, transaction.description or '', re.IGNORECASE))
+                    elif rule.condition_field == 'counterparty':
+                        match = bool(re.search(rule.condition_value, transaction.counterparty or '', re.IGNORECASE))
+                except:
+                    match = False
+            
+            if match:
+                matched_transactions.append({
+                    'date': transaction.transaction_date.strftime('%Y-%m-%d') if transaction.transaction_date else '',
+                    'description': transaction.description or '',
+                    'counterparty': transaction.counterparty or '',
+                    'amount': transaction.amount,
+                    'current_category': transaction.category.name if transaction.category else '미분류',
+                    'target_category': rule.target_category.name if rule.target_category else '',
+                    'target_department': rule.target_department.name if rule.target_department else '',
+                    'target_vendor': rule.target_vendor.name if rule.target_vendor else ''
+                })
+        
+        result = {
+            'rule_name': rule.name,
+            'matched_count': len(matched_transactions),
+            'transactions': matched_transactions[:10],  # 최대 10건만 표시
+            'condition_info': {
+                'type': rule.condition_type,
+                'field': rule.condition_field,
+                'value': rule.condition_value
+            }
+        }
+        
+        return jsonify(result)
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/reports')
 @login_required
 def reports():
