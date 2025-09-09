@@ -536,12 +536,16 @@ def transactions():
     if search:
         # 대소문자 구분 없는 검색을 위해 ilike 사용
         search_pattern = f'%{search}%'
+        print(f"검색어: '{search}', 패턴: '{search_pattern}'")  # 디버그 로그
         query = query.filter(
             db.or_(
                 Transaction.description.ilike(search_pattern),
                 Transaction.counterparty.ilike(search_pattern)
             )
         )
+        # 검색된 거래 수를 로그로 출력
+        search_count = query.count()
+        print(f"검색된 거래 수: {search_count}")  # 디버그 로그
     
     # 페이지네이션
     transactions_page = query.order_by(desc(Transaction.transaction_date)).paginate(
