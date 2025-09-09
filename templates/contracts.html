@@ -170,7 +170,8 @@
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label for="contractAmount" class="form-label">계약금액 (원) *</label>
-                                <input type="number" class="form-control" id="contractAmount" name="contract_amount" required min="0" step="10000">
+                                <input type="text" class="form-control" id="contractAmount" name="contract_amount" required placeholder="예: 1,000,000">
+                                <input type="hidden" id="contractAmountHidden" name="contract_amount_raw">
                             </div>
                         </div>
                     </div>
@@ -249,7 +250,8 @@
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label for="editContractAmount" class="form-label">계약금액 (원) *</label>
-                                <input type="number" class="form-control" id="editContractAmount" name="contract_amount" required min="0" step="10000">
+                                <input type="text" class="form-control" id="editContractAmount" name="contract_amount" required placeholder="예: 1,000,000">
+                                <input type="hidden" id="editContractAmountHidden" name="contract_amount_raw">
                             </div>
                         </div>
                     </div>
