@@ -145,11 +145,13 @@
                                         <form method="POST" action="{{ url_for('toggle_rule', rule_id=rule.id) }}" style="display: inline;">
                                             <button type="submit" 
                                                     class="btn {% if rule.is_active %}btn-outline-success{% else %}btn-outline-warning{% endif %}" 
+                                                    style="border-top-right-radius: 0; border-bottom-right-radius: 0;"
                                                     title="{% if rule.is_active %}활성 - 클릭하여 비활성화{% else %}비활성 - 클릭하여 활성화{% endif %}">
                                                 <i data-feather="{% if rule.is_active %}play{% else %}pause{% endif %}"></i>
                                             </button>
                                         </form>
                                         <button class="btn btn-outline-primary" 
+                                                style="border-top-left-radius: 0; border-bottom-left-radius: 0;"
                                                 onclick="editRule({{ rule.id }})" 
                                                 title="편집">
                                             <i data-feather="edit"></i>
