@@ -2139,6 +2139,12 @@ def add_contract():
             flash('필수 정보가 누락되었습니다.', 'error')
             return redirect(url_for('contracts'))
         
+        # 계약금액에서 콤마 제거 후 숫자 변환
+        clean_amount = contract_amount.replace(',', '')
+        if not clean_amount.replace('.', '').isdigit():
+            flash('올바른 계약금액을 입력해주세요.', 'error')
+            return redirect(url_for('contracts'))
+        
         # 날짜 변환
         from datetime import datetime
         start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
@@ -2148,7 +2154,7 @@ def add_contract():
             name=name,
             vendor_id=int(vendor_id),
             department_id=int(department_id),
-            contract_amount=float(contract_amount),
+            contract_amount=float(clean_amount),
             start_date=start_date,
             end_date=end_date,
             description=description
@@ -2177,7 +2183,11 @@ def edit_contract(contract_id):
         contract.name = request.form.get('name', contract.name)
         contract.vendor_id = int(request.form.get('vendor_id', contract.vendor_id))
         contract.department_id = int(request.form.get('department_id', contract.department_id))
-        contract.contract_amount = float(request.form.get('contract_amount', contract.contract_amount))
+        
+        # 계약금액에서 콤마 제거 후 숫자 변환
+        contract_amount_str = request.form.get('contract_amount', str(contract.contract_amount))
+        clean_amount = contract_amount_str.replace(',', '')
+        contract.contract_amount = float(clean_amount)
         
         start_date_str = request.form.get('start_date')
         end_date_str = request.form.get('end_date')
