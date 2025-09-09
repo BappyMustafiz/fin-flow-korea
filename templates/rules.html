@@ -482,9 +482,40 @@ function applyAllRules() {
 }
 
 function editRule(ruleId) {
-    // 규칙 편집 (실제로는 모달이나 페이지로 이동)
     console.log('Editing rule:', ruleId);
-    alert('규칙 편집 기능은 곧 추가될 예정입니다.');
+    
+    // 규칙 데이터를 위한 API 호출 (실제로는 페이지 데이터에서 찾음)
+    const rules = {{ rules|tojson }};
+    const rule = rules.find(r => r.id === ruleId);
+    
+    if (!rule) {
+        alert('규칙을 찾을 수 없습니다.');
+        return;
+    }
+    
+    // 폼 액션 설정
+    document.getElementById('editRuleForm').action = `/rule/${ruleId}/edit`;
+    
+    // 기본 정보 입력
+    document.getElementById('editRuleName').value = rule.name || '';
+    document.getElementById('editRulePriority').value = rule.priority || 5;
+    
+    // 조건 정보 입력
+    document.getElementById('editConditionType').value = rule.condition_type || '';
+    document.getElementById('editConditionField').value = rule.condition_field || '';
+    document.getElementById('editConditionValue').value = rule.condition_value || '';
+    
+    // 분류 대상 정보 입력
+    document.getElementById('editTargetCategory').value = rule.target_category_id || '';
+    document.getElementById('editTargetDepartment').value = rule.target_department_id || '';
+    document.getElementById('editTargetVendor').value = rule.target_vendor_id || '';
+    
+    // 활성화 상태 설정
+    document.getElementById('editRuleActive').checked = rule.is_active !== false;
+    
+    // 모달 표시
+    const modal = new bootstrap.Modal(document.getElementById('editRuleModal'));
+    modal.show();
 }
 
 function testRule(ruleId) {
