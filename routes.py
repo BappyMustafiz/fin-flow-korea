@@ -3143,13 +3143,16 @@ def edit_user(user_id):
     db.session.commit()
     
     # 감사 로그 기록
-    create_audit_log(
-        user_id=current_user.id,
-        action='사용자 정보 수정',
-        target_type='사용자',
-        target_id=user.id,
-        details=f'{user.name} 사용자 정보 수정 완료'
-    )
+    audit_log = AuditLog()
+    audit_log.user_id = str(current_user.id)
+    audit_log.action = '사용자 정보 수정'
+    audit_log.table_name = 'users'
+    audit_log.record_id = user.id
+    audit_log.new_values = f'{user.name} 사용자 정보 수정 완료'
+    audit_log.created_at = datetime.utcnow()
+    
+    db.session.add(audit_log)
+    db.session.commit()
     
     flash(f'{user.name} 사용자 정보가 성공적으로 업데이트되었습니다.', 'success')
     return redirect(url_for('users'))
