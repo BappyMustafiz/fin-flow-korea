@@ -3054,6 +3054,75 @@ def add_user():
     flash(f'{user.name} 사용자가 추가되었습니다.', 'success')
     return redirect(url_for('users'))
 
+@app.route('/user/<int:user_id>/edit', methods=['POST'])
+@login_required
+def edit_user(user_id):
+    """사용자 정보 수정 (관리자 전용)"""
+    if not current_user.is_admin():
+        flash('관리자만 접근할 수 있습니다.', 'error')
+        return redirect(url_for('dashboard'))
+    
+    user = User.query.get_or_404(user_id)
+    
+    # 폼 데이터 가져오기
+    name = request.form.get('name', '').strip()
+    email = request.form.get('email', '').strip()
+    password = request.form.get('password', '').strip()
+    role = request.form.get('role')
+    department_id = request.form.get('department_id') or None
+    
+    # 이름 검증
+    if not name:
+        flash('이름은 필수입니다.', 'error')
+        return redirect(url_for('users'))
+    
+    # 이메일 검증 및 중복 확인
+    if not email:
+        flash('이메일은 필수입니다.', 'error')
+        return redirect(url_for('users'))
+    
+    existing_user = User.query.filter_by(email=email).first()
+    if existing_user and existing_user.id != user.id:
+        flash('이미 존재하는 이메일입니다.', 'error')
+        return redirect(url_for('users'))
+    
+    # 권한 검증
+    if role not in ['admin', 'user']:
+        flash('잘못된 권한입니다.', 'error')
+        return redirect(url_for('users'))
+    
+    # 자기 자신의 관리자 권한 해제 방지
+    if user.id == current_user.id and role != 'admin':
+        flash('자기 자신의 관리자 권한은 해제할 수 없습니다.', 'error')
+        return redirect(url_for('users'))
+    
+    # 정보 업데이트
+    user.name = name
+    user.email = email
+    user.role = role
+    user.department_id = department_id
+    
+    # 패스워드 업데이트 (비어있지 않은 경우만)
+    if password:
+        if len(password) < 6:
+            flash('패스워드는 최소 6자 이상이어야 합니다.', 'error')
+            return redirect(url_for('users'))
+        user.set_password(password)
+    
+    db.session.commit()
+    
+    # 감사 로그 기록
+    create_audit_log(
+        user_id=current_user.id,
+        action='사용자 정보 수정',
+        target_type='사용자',
+        target_id=user.id,
+        details=f'{user.name} 사용자 정보 수정 완료'
+    )
+    
+    flash(f'{user.name} 사용자 정보가 성공적으로 업데이트되었습니다.', 'success')
+    return redirect(url_for('users'))
+
 @app.route('/user/<int:user_id>/delete', methods=['POST'])
 @login_required
 def delete_user(user_id):
