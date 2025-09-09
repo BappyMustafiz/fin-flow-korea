@@ -153,6 +153,13 @@
                                                 title="편집">
                                             <i data-feather="edit"></i>
                                         </button>
+                                        <form method="POST" action="{{ url_for('toggle_rule', rule_id=rule.id) }}" style="display: inline;">
+                                            <button type="submit" 
+                                                    class="btn {% if rule.is_active %}btn-outline-warning{% else %}btn-outline-success{% endif %}" 
+                                                    title="{% if rule.is_active %}비활성화{% else %}활성화{% endif %}">
+                                                <i data-feather="{% if rule.is_active %}pause{% else %}play{% endif %}"></i>
+                                            </button>
+                                        </form>
                                         <button class="btn btn-outline-info" 
                                                 onclick="testRule({{ rule.id }})" 
                                                 title="테스트">
