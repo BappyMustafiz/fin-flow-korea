@@ -3200,13 +3200,15 @@ def data_management():
     categories = Category.query.all()
     departments = Department.query.all()
     vendors = Vendor.query.all()
-    # 최근 업로드 기록 조회 (Transaction 모델을 활용)
+    # 최근 업로드 기록 조회 (활성 거래만)
     recent_uploads_query = db.session.query(
         func.date(Transaction.created_at).label('upload_date'),
         func.max(Transaction.created_at).label('latest_time'),
         Transaction.account_id,
         func.count(Transaction.id).label('processed_count'),
         func.max(Transaction.id).label('max_id')
+    ).filter(
+        Transaction.is_active == True
     ).group_by(
         func.date(Transaction.created_at),
         Transaction.account_id
