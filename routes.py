@@ -2633,15 +2633,10 @@ def add_department():
         from models import Department
         
         name = request.form.get('name', '').strip()
-        code = request.form.get('code', '').strip()
         budget_str = request.form.get('budget', '').strip()
         
         if not name:
             flash('부서명은 필수입니다.', 'error')
-            return redirect(url_for('departments'))
-        
-        if not code:
-            flash('부서 코드는 필수입니다.', 'error')
             return redirect(url_for('departments'))
         
         # 예산 처리
@@ -2662,10 +2657,14 @@ def add_department():
             flash('이미 존재하는 부서명입니다.', 'error')
             return redirect(url_for('departments'))
         
-        existing_code = Department.query.filter_by(code=code).first()
-        if existing_code:
-            flash('이미 존재하는 부서 코드입니다.', 'error')
-            return redirect(url_for('departments'))
+        # 부서 코드 자동 생성
+        dept_count = Department.query.count()
+        code = f"DEPT{dept_count + 1:03d}"  # DEPT001, DEPT002, ...
+        
+        # 코드 중복 확인 (만약을 위해)
+        while Department.query.filter_by(code=code).first():
+            dept_count += 1
+            code = f"DEPT{dept_count + 1:03d}"
         
         department = Department(name=name, code=code, budget=budget)
         db.session.add(department)
@@ -2688,15 +2687,10 @@ def edit_department(dept_id):
         
         department = Department.query.get_or_404(dept_id)
         name = request.form.get('name', '').strip()
-        code = request.form.get('code', '').strip()
         budget_str = request.form.get('budget', '').strip()
         
         if not name:
             flash('부서명은 필수입니다.', 'error')
-            return redirect(url_for('departments'))
-        
-        if not code:
-            flash('부서 코드는 필수입니다.', 'error')
             return redirect(url_for('departments'))
         
         # 예산 처리
@@ -2720,17 +2714,9 @@ def edit_department(dept_id):
             flash('이미 존재하는 부서명입니다.', 'error')
             return redirect(url_for('departments'))
         
-        existing_code = Department.query.filter(
-            Department.code == code, 
-            Department.id != dept_id
-        ).first()
-        if existing_code:
-            flash('이미 존재하는 부서 코드입니다.', 'error')
-            return redirect(url_for('departments'))
-        
         department.name = name
-        department.code = code
         department.budget = budget
+        # 부서 코드는 수정하지 않고 기존 값 유지
         db.session.commit()
         
         flash(f'부서 "{name}"이 수정되었습니다.', 'success')
