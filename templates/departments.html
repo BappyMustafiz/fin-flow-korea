@@ -137,7 +137,7 @@
                 <h5 class="modal-title">부서 추가</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form action="{{ url_for('add_department') }}" method="POST">
+            <form action="{{ url_for('add_department') }}" method="POST" onsubmit="prepareFormSubmission(this)">
                 <div class="modal-body">
                     <div class="mb-3">
                         <label for="name" class="form-label">부서명 *</label>
@@ -145,7 +145,7 @@
                     </div>
                     <div class="mb-3">
                         <label for="budget" class="form-label">예산 (원)</label>
-                        <input type="number" class="form-control" id="budget" name="budget" step="1" min="0" placeholder="예: 1000000">
+                        <input type="text" class="form-control" id="budget" name="budget" placeholder="예: 1,000,000" oninput="formatNumberInput(this)">
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -165,7 +165,7 @@
                 <h5 class="modal-title">부서 수정</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form id="editForm" method="POST">
+            <form id="editForm" method="POST" onsubmit="prepareFormSubmission(this)">
                 <div class="modal-body">
                     <div class="mb-3">
                         <label for="editName" class="form-label">부서명 *</label>
@@ -173,7 +173,7 @@
                     </div>
                     <div class="mb-3">
                         <label for="editBudget" class="form-label">예산 (원)</label>
-                        <input type="number" class="form-control" id="editBudget" name="budget" step="1" min="0" placeholder="예: 1000000">
+                        <input type="text" class="form-control" id="editBudget" name="budget" placeholder="예: 1,000,000" oninput="formatNumberInput(this)">
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -211,10 +211,40 @@
 // Feather Icons 초기화
 feather.replace();
 
+// 숫자 입력 포맷팅 함수
+function formatNumberInput(input) {
+    // 숫자가 아닌 문자 제거
+    let value = input.value.replace(/[^\d]/g, '');
+    
+    // 천단위 콤마 추가
+    if (value) {
+        value = parseInt(value).toLocaleString();
+    }
+    
+    input.value = value;
+}
+
+// 폼 제출 준비 함수
+function prepareFormSubmission(form) {
+    // 예산 필드에서 콤마 제거
+    const budgetFields = form.querySelectorAll('input[name="budget"]');
+    budgetFields.forEach(field => {
+        if (field.value) {
+            field.value = field.value.replace(/[^\d]/g, '');
+        }
+    });
+    return true;
+}
+
 // 부서 수정 모달 열기
 function editDepartment(id, name, budget) {
     document.getElementById('editName').value = name;
-    document.getElementById('editBudget').value = budget || '';
+    // 예산 값에 콤마 포맷팅 적용
+    if (budget && budget > 0) {
+        document.getElementById('editBudget').value = parseInt(budget).toLocaleString();
+    } else {
+        document.getElementById('editBudget').value = '';
+    }
     document.getElementById('editForm').action = '/departments/' + id + '/edit';
     
     var modal = new bootstrap.Modal(document.getElementById('editDepartmentModal'));
