@@ -844,17 +844,89 @@ def edit_rule(rule_id):
     
     return redirect(url_for('rules'))
 
+def revert_rule_classifications(rule):
+    """규칙으로 분류된 거래들을 미분류 상태로 되돌리는 함수"""
+    # 해당 규칙으로 분류된 거래들 찾기 (조건 매칭)
+    all_transactions = Transaction.query.filter_by(classification_status='classified').all()
+    reverted_count = 0
+    
+    for transaction in all_transactions:
+        match = False
+        
+        # 조건 타입에 따른 매칭 로직 (apply_rule_to_transactions와 동일)
+        if rule.condition_type == 'contains':
+            if rule.condition_field == 'description':
+                match = rule.condition_value.lower() in (transaction.description or '').lower()
+            elif rule.condition_field == 'counterparty':
+                match = rule.condition_value.lower() in (transaction.counterparty or '').lower()
+        
+        elif rule.condition_type == 'equals':
+            if rule.condition_field == 'description':
+                match = (transaction.description or '').lower() == rule.condition_value.lower()
+            elif rule.condition_field == 'counterparty':
+                match = (transaction.counterparty or '').lower() == rule.condition_value.lower()
+        
+        elif rule.condition_type == 'amount_range':
+            try:
+                range_parts = rule.condition_value.split('-')
+                if len(range_parts) == 2:
+                    min_amount = float(range_parts[0])
+                    max_amount = float(range_parts[1])
+                    transaction_amount = abs(transaction.amount)
+                    match = min_amount <= transaction_amount <= max_amount
+            except:
+                match = False
+        
+        elif rule.condition_type == 'regex':
+            try:
+                import re
+                if rule.condition_field == 'description':
+                    match = bool(re.search(rule.condition_value, transaction.description or '', re.IGNORECASE))
+                elif rule.condition_field == 'counterparty':
+                    match = bool(re.search(rule.condition_value, transaction.counterparty or '', re.IGNORECASE))
+            except:
+                match = False
+        
+        # 매칭되고 현재 규칙의 설정과 일치하는 거래인 경우 미분류로 되돌림
+        if match:
+            same_category = (not rule.target_category_id) or (transaction.category_id == rule.target_category_id)
+            same_department = (not rule.target_department_id) or (transaction.department_id == rule.target_department_id)
+            same_vendor = (not rule.target_vendor_id) or (transaction.vendor_id == rule.target_vendor_id)
+            
+            if same_category and same_department and same_vendor:
+                transaction.classification_status = 'pending'
+                transaction.category_id = None
+                transaction.department_id = None
+                transaction.vendor_id = None
+                reverted_count += 1
+    
+    return reverted_count
+
 @app.route('/rule/<int:rule_id>/toggle', methods=['POST'])
 @login_required
 def toggle_rule(rule_id):
     """분류 규칙 활성/비활성 토글"""
     try:
         rule = MappingRule.query.get_or_404(rule_id)
+        was_active = rule.is_active
         rule.is_active = not rule.is_active
-        db.session.commit()
         
-        status = "활성화" if rule.is_active else "비활성화"
-        flash(f'규칙 "{rule.name}"이 {status}되었습니다.', 'success')
+        # 활성화 시: 모든 거래에 규칙 적용
+        if rule.is_active and not was_active:
+            matched_transactions = apply_rule_to_transactions(rule)
+            db.session.commit()
+            flash(f'규칙 "{rule.name}"이 활성화되어 {len(matched_transactions)}건의 거래가 자동 분류되었습니다.', 'success')
+        
+        # 비활성화 시: 해당 규칙으로 분류된 거래들을 미분류로 되돌림
+        elif not rule.is_active and was_active:
+            reverted_count = revert_rule_classifications(rule)
+            db.session.commit()
+            flash(f'규칙 "{rule.name}"이 비활성화되어 {reverted_count}건의 거래가 미분류 상태로 변경되었습니다.', 'success')
+        
+        else:
+            db.session.commit()
+            status = "활성화" if rule.is_active else "비활성화"
+            flash(f'규칙 "{rule.name}"이 {status}되었습니다.', 'success')
         
     except Exception as e:
         db.session.rollback()
