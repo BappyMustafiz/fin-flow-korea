@@ -43,7 +43,7 @@
         <div class="card text-center">
             <div class="card-body">
                 <i data-feather="zap" class="text-info mb-2" style="width: 48px; height: 48px;"></i>
-                <h4>{{ rules | selectattr('priority', 'greaterthanequal', 8) | list | length }}</h4>
+                <h4>{{ rules | selectattr('priority', 'greaterthan', 7) | list | length }}</h4>
                 <p class="text-muted mb-0">고우선순위</p>
             </div>
         </div>
