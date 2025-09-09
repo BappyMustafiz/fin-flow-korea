@@ -21,7 +21,6 @@ TEXTS = {
         'brand': '회계시스템',
         'dashboard': '대시보드',
         'connections': '연결 관리',
-        'accounts': '계정 관리',
         'transactions': '거래 내역',
         'rules': '분류 규칙',
         'contracts': '계약 관리',
@@ -92,7 +91,6 @@ TEXTS = {
         'brand': 'Accounting System',
         'dashboard': 'Dashboard',
         'connections': 'Connections',
-        'accounts': 'Accounts',
         'transactions': 'Transactions',
         'rules': 'Rules',
         'contracts': 'Contracts',
@@ -503,66 +501,6 @@ def refresh_connection(consent_id):
         return jsonify({'success': False, 'error': str(e)})
 
 
-@app.route('/accounts')
-@login_required
-def accounts():
-    """계정 관리"""
-    accounts = Account.query.join(Institution).all()
-    departments = Department.query.all()
-    institutions = Institution.query.all()
-    
-    return render_template('accounts.html', 
-                         accounts=accounts,
-                         departments=departments,
-                         institutions=institutions)
-
-@app.route('/account/add', methods=['POST'])
-@login_required
-def add_account():
-    """계좌 추가"""
-    try:
-        # 새 계좌 생성
-        account = Account()
-        account.institution_id = request.form.get('institution_id')
-        account.account_name = request.form.get('account_name')
-        account.account_number = request.form.get('account_number')
-        account.account_type = request.form.get('account_type')
-        account.balance = float(request.form.get('balance', 0))
-        account.currency = request.form.get('currency', 'KRW')
-        account.department_id = request.form.get('department_id') or None
-        account.is_active = True
-        
-        db.session.add(account)
-        db.session.commit()
-        
-        flash('계좌가 성공적으로 추가되었습니다.', 'success')
-    except Exception as e:
-        db.session.rollback()
-        flash(f'계좌 추가 중 오류가 발생했습니다: {str(e)}', 'error')
-    
-    return redirect(url_for('accounts'))
-
-@app.route('/account/<int:account_id>/edit', methods=['POST'])
-@login_required
-def edit_account(account_id):
-    """계좌 정보 수정"""
-    try:
-        account = Account.query.get_or_404(account_id)
-        
-        # 계좌 정보 업데이트
-        account.account_name = request.form.get('account_name')
-        account.account_number = request.form.get('account_number')
-        account.account_type = request.form.get('account_type')
-        account.balance = float(request.form.get('balance', account.balance))
-        account.department_id = request.form.get('department_id') or None
-        
-        db.session.commit()
-        flash('계좌 정보가 성공적으로 수정되었습니다.', 'success')
-    except Exception as e:
-        db.session.rollback()
-        flash(f'계좌 수정 중 오류가 발생했습니다: {str(e)}', 'error')
-    
-    return redirect(url_for('accounts'))
 
 @app.route('/transactions')
 @login_required
