@@ -6,73 +6,49 @@
 <div class="row">
     <div class="col-12">
         <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2><i data-feather="briefcase" class="me-2"></i>업체 관리</h2>
+            <h1><i data-feather="briefcase" class="me-2"></i>업체 관리</h1>
             <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addVendorModal">
-                <i data-feather="plus" class="me-2"></i>새 업체 추가
+                <i data-feather="plus" class="me-1"></i>업체 추가
             </button>
         </div>
     </div>
 </div>
 
-<!-- 업체 통계 카드 -->
+<!-- 통계 카드 -->
 <div class="row mb-4">
     <div class="col-md-3">
-        <div class="card bg-primary text-white">
+        <div class="card text-center">
             <div class="card-body">
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <h5 class="card-title">전체 업체</h5>
-                        <h3 class="mb-0">{{ vendors|length }}</h3>
-                    </div>
-                    <div class="align-self-center">
-                        <i data-feather="briefcase" style="width: 2rem; height: 2rem;"></i>
-                    </div>
-                </div>
+                <i data-feather="briefcase" class="text-primary mb-2" style="width: 48px; height: 48px;"></i>
+                <h4 class="text-primary">{{ vendors|length }}</h4>
+                <p class="text-muted mb-0">총 업체</p>
             </div>
         </div>
     </div>
     <div class="col-md-3">
-        <div class="card bg-success text-white">
+        <div class="card text-center">
             <div class="card-body">
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <h5 class="card-title">분류 지정됨</h5>
-                        <h3 class="mb-0">{{ vendors|selectattr('category')|list|length }}</h3>
-                    </div>
-                    <div class="align-self-center">
-                        <i data-feather="tag" style="width: 2rem; height: 2rem;"></i>
-                    </div>
-                </div>
+                <i data-feather="tag" class="text-success mb-2" style="width: 48px; height: 48px;"></i>
+                <h4 class="text-success">{{ vendors|selectattr('category')|list|length }}</h4>
+                <p class="text-muted mb-0">분류 지정됨</p>
             </div>
         </div>
     </div>
     <div class="col-md-3">
-        <div class="card bg-info text-white">
+        <div class="card text-center">
             <div class="card-body">
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <h5 class="card-title">사업자번호 있음</h5>
-                        <h3 class="mb-0">{{ vendors|selectattr('business_number')|list|length }}</h3>
-                    </div>
-                    <div class="align-self-center">
-                        <i data-feather="file-text" style="width: 2rem; height: 2rem;"></i>
-                    </div>
-                </div>
+                <i data-feather="file-text" class="text-info mb-2" style="width: 48px; height: 48px;"></i>
+                <h4 class="text-info">{{ vendors|selectattr('business_number')|list|length }}</h4>
+                <p class="text-muted mb-0">사업자번호 있음</p>
             </div>
         </div>
     </div>
     <div class="col-md-3">
-        <div class="card bg-warning text-white">
+        <div class="card text-center">
             <div class="card-body">
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <h5 class="card-title">연락처 있음</h5>
-                        <h3 class="mb-0">{{ vendors|selectattr('contact_info')|list|length }}</h3>
-                    </div>
-                    <div class="align-self-center">
-                        <i data-feather="phone" style="width: 2rem; height: 2rem;"></i>
-                    </div>
-                </div>
+                <i data-feather="phone" class="text-warning mb-2" style="width: 48px; height: 48px;"></i>
+                <h4 class="text-warning">{{ vendors|selectattr('contact_info')|list|length }}</h4>
+                <p class="text-muted mb-0">연락처 있음</p>
             </div>
         </div>
     </div>
