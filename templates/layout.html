@@ -44,6 +44,7 @@
                             <i data-feather="bar-chart-2" class="me-1"></i>{{ get_text('reports') }}
                         </a>
                     </li>
+                    {% if current_user.is_authenticated and current_user.role == 'admin' %}
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                             <i data-feather="settings" class="me-1"></i>관리
@@ -80,6 +81,7 @@
                             </a></li>
                         </ul>
                     </li>
+                    {% endif %}
                     {% if current_user.is_authenticated and current_user.role == 'admin' %}
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('users') }}">
