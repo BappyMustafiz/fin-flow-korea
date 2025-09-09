@@ -128,7 +128,7 @@
     <div class="col-12">
         <div class="card">
             <div class="card-body">
-                <form method="GET" class="row g-3">
+                <form method="GET" class="row g-3" id="filterForm">
                     <div class="col-md-2">
                         <label for="status" class="form-label">분류상태</label>
                         <select class="form-select" id="status" name="status">
@@ -175,21 +175,26 @@
                         </select>
                     </div>
                     
-                    <div class="col-md-2">
+                    <div class="col-md-4">
                         <label for="search" class="form-label">통합 검색</label>
                         <input type="text" class="form-control" id="search" name="search" 
                                placeholder="업체, 거래처, 거래내용 검색" value="{{ current_filters.search }}">
                     </div>
-                    
-                    <div class="col-md-2">
-                        <label class="form-label">&nbsp;</label>
-                        <div class="d-grid">
-                            <button type="submit" class="btn btn-primary">
+                </form>
+                
+                <!-- Search Buttons -->
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <div class="d-flex justify-content-center gap-2">
+                            <button type="submit" form="filterForm" class="btn btn-primary">
                                 <i data-feather="search" class="me-1"></i>검색
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" onclick="clearFilters()">
+                                <i data-feather="x-circle" class="me-1"></i>검색 초기화
                             </button>
                         </div>
                     </div>
-                </form>
+                </div>
             </div>
         </div>
     </div>
@@ -1249,6 +1254,19 @@ function changePerPage() {
     
     // 새 URL로 이동
     window.location.search = urlParams.toString();
+}
+
+// 검색 필터 초기화 함수
+function clearFilters() {
+    // 모든 필터 필드 초기화
+    document.getElementById('status').value = '';
+    document.getElementById('department_id').value = '';
+    document.getElementById('account_id').value = '';
+    document.getElementById('category_id').value = '';
+    document.getElementById('search').value = '';
+    
+    // 필터 없이 페이지 새로고침
+    window.location.href = window.location.pathname;
 }
 </script>
 {% endblock %}
