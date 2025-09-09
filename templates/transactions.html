@@ -348,6 +348,11 @@
                                                 title="상세">
                                             <i data-feather="eye"></i>
                                         </button>
+                                        <button class="btn btn-outline-danger" 
+                                                onclick="deleteTransaction({{ transaction.id }}, '{{ transaction.description | replace("'", "\\'") }}')" 
+                                                title="삭제">
+                                            <i data-feather="trash-2"></i>
+                                        </button>
                                     </div>
                                 </td>
                             </tr>
@@ -430,6 +435,11 @@
                                 onclick="viewDetails({{ transaction.id }})" 
                                 title="상세">
                             <i data-feather="eye" style="width: 12px; height: 12px;"></i>
+                        </button>
+                        <button class="btn btn-outline-danger btn-sm" 
+                                onclick="deleteTransaction({{ transaction.id }}, '{{ transaction.description | replace("'", "\\'") }}')" 
+                                title="삭제">
+                            <i data-feather="trash-2" style="width: 12px; height: 12px;"></i>
                         </button>
                     </div>
                 </div>
@@ -917,6 +927,79 @@ function viewDetails(transactionId) {
                 </div>
             `;
         });
+}
+
+// 거래 삭제 함수
+function deleteTransaction(transactionId, transactionDescription) {
+    if (!confirm(`'${transactionDescription}' 거래를 삭제하시겠습니까?\n\n주의: 이 작업은 되돌릴 수 없습니다.`)) {
+        return;
+    }
+    
+    const resultsContainer = document.querySelector('.d-flex.justify-content-between.align-items-center.mb-4');
+    
+    // 결과 표시 영역이 없으면 생성
+    let resultsDiv = document.getElementById('transactionResults');
+    if (!resultsDiv) {
+        resultsDiv = document.createElement('div');
+        resultsDiv.id = 'transactionResults';
+        resultsDiv.style.display = 'none';
+        resultsContainer.parentNode.insertBefore(resultsDiv, resultsContainer.nextSibling);
+    }
+    
+    resultsDiv.innerHTML = `
+        <div class="alert alert-info">
+            <i data-feather="loader" class="me-2"></i>거래 삭제 중...
+        </div>
+    `;
+    resultsDiv.style.display = 'block';
+    
+    fetch(`/transaction/${transactionId}/delete`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            resultsDiv.innerHTML = `
+                <div class="alert alert-success">
+                    <i data-feather="check-circle" class="me-2"></i>
+                    거래가 성공적으로 삭제되었습니다.
+                </div>
+            `;
+            // 페이지 새로고침으로 목록 업데이트
+            setTimeout(() => {
+                window.location.reload();
+            }, 1500);
+        } else {
+            resultsDiv.innerHTML = `
+                <div class="alert alert-danger">
+                    <i data-feather="alert-circle" class="me-2"></i>
+                    삭제 실패: ${data.error}
+                </div>
+            `;
+        }
+        feather.replace();
+        
+        // 3초 후 결과 메시지 숨기기
+        setTimeout(() => {
+            resultsDiv.style.display = 'none';
+        }, 3000);
+    })
+    .catch(error => {
+        resultsDiv.innerHTML = `
+            <div class="alert alert-danger">
+                <i data-feather="alert-circle" class="me-2"></i>
+                삭제 중 오류가 발생했습니다.
+            </div>
+        `;
+        feather.replace();
+        
+        setTimeout(() => {
+            resultsDiv.style.display = 'none';
+        }, 3000);
+    });
 }
 </script>
 

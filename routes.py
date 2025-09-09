@@ -592,6 +592,47 @@ def transaction_details(transaction_id):
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
+@app.route('/transaction/<int:transaction_id>/delete', methods=['POST'])
+@login_required
+def delete_transaction(transaction_id):
+    """거래 삭제"""
+    try:
+        transaction = Transaction.query.get(transaction_id)
+        
+        if not transaction:
+            return jsonify({
+                'success': False,
+                'error': '해당 거래를 찾을 수 없습니다.'
+            })
+        
+        # 거래를 소프트 삭제 (is_active = False)
+        transaction.is_active = False
+        db.session.commit()
+        
+        # 감사 로그 추가
+        audit_log = AuditLog()
+        audit_log.user_id = current_user.id
+        audit_log.action = 'delete_transaction'
+        audit_log.table_name = 'transactions'
+        audit_log.record_id = transaction_id
+        audit_log.changes = f'거래 삭제: {transaction.description}'
+        audit_log.created_at = datetime.now()
+        
+        db.session.add(audit_log)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': '거래가 성공적으로 삭제되었습니다.'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'error': f'삭제 중 오류가 발생했습니다: {str(e)}'
+        })
+
 @app.route('/transaction/<int:transaction_id>/split', methods=['POST'])
 @login_required
 def split_transaction(transaction_id):
