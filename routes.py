@@ -798,6 +798,33 @@ def add_rule():
     flash('분류 규칙이 추가되었습니다.', 'success')
     return redirect(url_for('rules'))
 
+@app.route('/rule/<int:rule_id>/edit', methods=['POST'])
+@login_required
+def edit_rule(rule_id):
+    """분류 규칙 수정"""
+    try:
+        rule = MappingRule.query.get_or_404(rule_id)
+        
+        rule.name = request.form['name']
+        rule.priority = int(request.form.get('priority', 0))
+        rule.condition_type = request.form['condition_type']
+        rule.condition_field = request.form['condition_field']
+        rule.condition_value = request.form['condition_value']
+        rule.target_category_id = request.form.get('target_category_id') or None
+        rule.target_department_id = request.form.get('target_department_id') or None
+        rule.target_vendor_id = request.form.get('target_vendor_id') or None
+        rule.is_active = 'is_active' in request.form
+        
+        db.session.commit()
+        
+        flash('분류 규칙이 수정되었습니다.', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'분류 규칙 수정 중 오류가 발생했습니다: {str(e)}', 'error')
+    
+    return redirect(url_for('rules'))
+
 @app.route('/rule/<int:rule_id>/apply')
 @login_required
 def apply_rule(rule_id):
