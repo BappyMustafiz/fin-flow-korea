@@ -197,6 +197,47 @@
                         </div>
                     </div>
                     
+                    <!-- 자동 거래 생성 설정 -->
+                    <div class="card mb-3">
+                        <div class="card-header">
+                            <h6 class="mb-0">자동 거래 생성 설정</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-check mb-3">
+                                        <input class="form-check-input" type="checkbox" id="autoGenerateTransactions" name="auto_generate_transactions">
+                                        <label class="form-check-label" for="autoGenerateTransactions">
+                                            자동으로 거래 생성하기
+                                        </label>
+                                        <div class="form-text">체크하면 계약에 따라 자동으로 거래가 생성됩니다</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="paymentCycle" class="form-label">결제 주기</label>
+                                        <select class="form-select" id="paymentCycle" name="payment_cycle">
+                                            <option value="monthly">월별</option>
+                                            <option value="quarterly">분기별</option>
+                                            <option value="yearly">연간</option>
+                                            <option value="one_time">일시불</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="contractCategory" class="form-label">거래 분류</label>
+                                <select class="form-select" id="contractCategory" name="category_id">
+                                    <option value="">분류 선택 (선택사항)</option>
+                                    {% for category in categories %}
+                                    <option value="{{ category.id }}">{{ category.name }}</option>
+                                    {% endfor %}
+                                </select>
+                                <div class="form-text">자동 생성되는 거래에 적용될 분류를 선택하세요</div>
+                            </div>
+                        </div>
+                    </div>
+                    
                     <div class="mb-3">
                         <label for="contractDescription" class="form-label">계약설명</label>
                         <textarea class="form-control" id="contractDescription" name="description" rows="3" placeholder="계약에 대한 추가 설명을 입력하세요"></textarea>

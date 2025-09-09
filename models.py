@@ -136,6 +136,7 @@ class Transaction(db.Model):
     category_id = db.Column(db.Integer, db.ForeignKey('category.id'))
     department_id = db.Column(db.Integer, db.ForeignKey('department.id'))
     vendor_id = db.Column(db.Integer, db.ForeignKey('vendor.id'))
+    contract_id = db.Column(db.Integer, db.ForeignKey('contract.id'))  # 계약 연결
     classification_status = db.Column(db.String(20), default='pending')  # pending, classified, manual
     
     # Split transaction fields
@@ -151,6 +152,7 @@ class Transaction(db.Model):
     category = db.relationship('Category', backref='transactions')
     department = db.relationship('Department', backref='transactions')
     vendor = db.relationship('Vendor', backref='transactions')
+    contract = db.relationship('Contract', backref='transactions')
 
 class MappingRule(db.Model):
     """거래 자동 분류 규칙"""
@@ -213,6 +215,34 @@ class Contract(db.Model):
             self.status = 'expired'
             return True
         return False
+    
+    def generate_transaction(self, date=None):
+        """계약에 기반한 거래 생성"""
+        from datetime import date as dt
+        if not self.auto_generate_transactions or self.status != 'active':
+            return None
+            
+        transaction_date = date or dt.today()
+        
+        # 결제 주기에 따른 금액 계산
+        amount = self.contract_amount
+        if self.payment_cycle == 'quarterly':
+            amount = self.contract_amount * 3
+        elif self.payment_cycle == 'yearly':
+            amount = self.contract_amount * 12
+            
+        transaction = Transaction(
+            date=transaction_date,
+            amount=-amount,  # 지출은 음수
+            description=f"{self.name} ({self.payment_cycle})",
+            counterparty=self.vendor.name if self.vendor else "미지정",
+            category_id=self.category_id,
+            department_id=self.department_id,
+            classification_status='classified',
+            contract_id=self.id
+        )
+        
+        return transaction
 
 class AuditLog(db.Model):
     """감사 로그"""
