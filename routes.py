@@ -413,7 +413,10 @@ def dashboard():
 @app.route('/connections')
 @login_required
 def connections():
-    """연결 관리 - 금융기관 연결 현황"""
+    """연결 관리 - 금융기관 연결 현황 (관리자 전용)"""
+    if not current_user.is_admin():
+        flash('관리자만 접근할 수 있습니다.', 'error')
+        return redirect(url_for('dashboard'))
     institutions = Institution.query.all()
     consents = Consent.query.join(Institution).all()
     
@@ -748,7 +751,10 @@ def edit_transaction(transaction_id):
 @app.route('/rules')
 @login_required
 def rules():
-    """분류 규칙 관리"""
+    """분류 규칙 관리 (관리자 전용)"""
+    if not current_user.is_admin():
+        flash('관리자만 접근할 수 있습니다.', 'error')
+        return redirect(url_for('dashboard'))
     rules = MappingRule.query.order_by(MappingRule.priority.desc()).all()
     categories = Category.query.all()
     departments = Department.query.all()
@@ -1098,7 +1104,10 @@ def settings():
 @app.route('/alerts')
 @login_required
 def alerts():
-    """알림 관리"""
+    """알림 관리 (관리자 전용)"""
+    if not current_user.is_admin():
+        flash('관리자만 접근할 수 있습니다.', 'error')
+        return redirect(url_for('dashboard'))
     from models import AlertSetting
     alerts = Alert.query.order_by(desc(Alert.created_at)).limit(50).all()
     alert_settings = AlertSetting.query.order_by(desc(AlertSetting.created_at)).all()
@@ -1803,7 +1812,10 @@ def edit_alert_setting():
 @app.route('/contracts')
 @login_required
 def contracts():
-    """계약 관리"""
+    """계약 관리 (관리자 전용)"""
+    if not current_user.is_admin():
+        flash('관리자만 접근할 수 있습니다.', 'error')
+        return redirect(url_for('dashboard'))
     from models import Contract, Vendor, Department, Category
     contracts = Contract.query.order_by(desc(Contract.created_at)).all()
     vendors = Vendor.query.all()
@@ -2451,7 +2463,10 @@ def export_pdf(data, report_type, start_date, end_date):
 @app.route('/budgets')
 @login_required
 def budgets():
-    """예산 관리"""
+    """예산 관리 (관리자 전용)"""
+    if not current_user.is_admin():
+        flash('관리자만 접근할 수 있습니다.', 'error')
+        return redirect(url_for('dashboard'))
     from models import Department, Category, CategoryBudget
     from datetime import datetime
     
@@ -2590,7 +2605,10 @@ def delete_category_budget(budget_id):
 @app.route('/departments')
 @login_required
 def departments():
-    """부서 관리"""
+    """부서 관리 (관리자 전용)"""
+    if not current_user.is_admin():
+        flash('관리자만 접근할 수 있습니다.', 'error')
+        return redirect(url_for('dashboard'))
     from models import Department
     departments = Department.query.all()
     return render_template('departments.html', departments=departments)
@@ -2693,7 +2711,10 @@ def delete_department(dept_id):
 @app.route('/categories')
 @login_required
 def categories():
-    """분류 관리"""
+    """분류 관리 (관리자 전용)"""
+    if not current_user.is_admin():
+        flash('관리자만 접근할 수 있습니다.', 'error')
+        return redirect(url_for('dashboard'))
     from models import Category
     categories = Category.query.all()
     return render_template('categories.html', categories=categories)
@@ -2821,7 +2842,10 @@ def delete_category(category_id):
 @app.route('/vendors')
 @login_required
 def vendors():
-    """업체 관리"""
+    """업체 관리 (관리자 전용)"""
+    if not current_user.is_admin():
+        flash('관리자만 접근할 수 있습니다.', 'error')
+        return redirect(url_for('dashboard'))
     from models import Vendor, Category
     vendors = Vendor.query.all()
     categories = Category.query.all()
@@ -3354,7 +3378,10 @@ def init_sample_data():
 @app.route('/data-management')
 @login_required
 def data_management():
-    """데이터 관리 페이지"""
+    """데이터 관리 페이지 (관리자 전용)"""
+    if not current_user.is_admin():
+        flash('관리자만 접근할 수 있습니다.', 'error')
+        return redirect(url_for('dashboard'))
     accounts = Account.query.all()
     categories = Category.query.all()
     departments = Department.query.all()
