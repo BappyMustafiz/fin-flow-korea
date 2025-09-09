@@ -124,13 +124,6 @@
                             {% endif %}
                         </ul>
                     </li>
-                    {% if current_user.is_authenticated %}
-                    <li class="nav-item">
-                        <a class="nav-link text-danger fw-bold" href="{{ url_for('logout') }}">
-                            <i data-feather="log-out" class="me-1"></i>로그아웃
-                        </a>
-                    </li>
-                    {% endif %}
                 </ul>
             </div>
         </div>
