@@ -625,7 +625,7 @@ def delete_transaction(transaction_id):
         audit_log.action = 'delete_transaction'
         audit_log.table_name = 'transactions'
         audit_log.record_id = transaction_id
-        audit_log.changes = f'거래 삭제: {transaction.description}'
+        audit_log.new_values = f'거래 삭제: {transaction.description}'
         audit_log.created_at = datetime.now()
         
         db.session.add(audit_log)
@@ -1388,7 +1388,7 @@ def delete_alert(alert_id):
         audit_log.action = 'delete_alert'
         audit_log.table_name = 'alerts'
         audit_log.record_id = alert_id
-        audit_log.changes = f'알림 삭제: {alert_title}'
+        audit_log.new_values = f'알림 삭제: {alert_title}'
         audit_log.created_at = datetime.now()
         
         db.session.add(audit_log)
@@ -4018,7 +4018,7 @@ def delete_upload(upload_id):
         audit_log.action = 'delete_upload'
         audit_log.table_name = 'transactions'
         audit_log.record_id = upload_id
-        audit_log.changes = f'업로드 기록 삭제: {deleted_count}건의 거래 삭제'
+        audit_log.new_values = f'업로드 기록 삭제: {deleted_count}건의 거래 삭제'
         audit_log.created_at = datetime.now()
         
         db.session.add(audit_log)
