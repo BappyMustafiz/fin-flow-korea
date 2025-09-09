@@ -343,12 +343,74 @@
 <script>
 feather.replace();
 
+// 천단위 콤마 추가 함수
+function addCommas(num) {
+    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
+// 콤마 제거 함수
+function removeCommas(str) {
+    return str.replace(/,/g, '');
+}
+
+// 숫자만 입력 허용하고 콤마 자동 추가
+function formatNumber(input) {
+    let value = removeCommas(input.value);
+    // 숫자가 아닌 문자 제거
+    value = value.replace(/[^0-9]/g, '');
+    // 콤마 추가
+    if (value) {
+        input.value = addCommas(value);
+    } else {
+        input.value = '';
+    }
+}
+
+// 계약금액 입력 필드에 이벤트 리스너 추가
+document.getElementById('contractAmount').addEventListener('input', function() {
+    formatNumber(this);
+});
+
+document.getElementById('editContractAmount').addEventListener('input', function() {
+    formatNumber(this);
+});
+
+// 폼 제출 시 콤마 제거
+document.querySelector('#addContractModal form').addEventListener('submit', function(e) {
+    const amountField = document.getElementById('contractAmount');
+    const cleanValue = removeCommas(amountField.value);
+    
+    if (!cleanValue || isNaN(cleanValue) || parseFloat(cleanValue) <= 0) {
+        e.preventDefault();
+        alert('올바른 계약금액을 입력해주세요.');
+        return false;
+    }
+    
+    // 원본 값을 숫자로 변경
+    amountField.value = cleanValue;
+});
+
+document.querySelector('#editContractModal form').addEventListener('submit', function(e) {
+    const amountField = document.getElementById('editContractAmount');
+    const cleanValue = removeCommas(amountField.value);
+    
+    if (!cleanValue || isNaN(cleanValue) || parseFloat(cleanValue) <= 0) {
+        e.preventDefault();
+        alert('올바른 계약금액을 입력해주세요.');
+        return false;
+    }
+    
+    // 원본 값을 숫자로 변경
+    amountField.value = cleanValue;
+});
+
 function editContract(id, name, vendorId, departmentId, amount, startDate, endDate, description, status) {
     document.getElementById('editContractForm').action = `/contracts/${id}/edit`;
     document.getElementById('editContractName').value = name;
     document.getElementById('editContractVendor').value = vendorId;
     document.getElementById('editContractDepartment').value = departmentId;
-    document.getElementById('editContractAmount').value = amount;
+    // 금액을 콤마 형태로 표시
+    document.getElementById('editContractAmount').value = addCommas(amount.toString());
     document.getElementById('editContractStartDate').value = startDate;
     document.getElementById('editContractEndDate').value = endDate;
     document.getElementById('editContractDescription').value = description;
