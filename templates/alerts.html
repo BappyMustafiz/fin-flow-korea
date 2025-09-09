@@ -483,6 +483,9 @@
 <!-- Alert List -->
 <div class="row">
     <div class="col-12">
+        <!-- Alert Results -->
+        <div id="alertResults" style="display:none;"></div>
+        
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="card-title mb-0">
@@ -500,7 +503,7 @@
             <div class="card-body p-0">
                 <div class="alert-list">
                     {% for alert in alerts %}
-                    <div class="alert-item {{ 'unread' if not alert.is_read else '' }}" data-alert-type="{{ alert.alert_type }}">
+                    <div class="alert-item {{ 'unread' if not alert.is_read else '' }}" data-alert-type="{{ alert.alert_type }}" data-alert-id="{{ alert.id }}">
                         <div class="d-flex">
                             <div class="alert-icon me-3">
                                 {% if alert.alert_type == 'budget' %}
@@ -521,8 +524,13 @@
                                         <small class="text-muted me-3">{{ alert.created_at.strftime('%m/%d %H:%M') }}</small>
                                         {% if not alert.is_read %}
                                             <a href="{{ url_for('mark_alert_read', alert_id=alert.id) }}" 
-                                               class="btn btn-sm btn-outline-primary">읽음</a>
+                                               class="btn btn-sm btn-outline-primary me-1">읽음</a>
                                         {% endif %}
+                                        <button class="btn btn-sm btn-outline-danger" 
+                                                onclick="deleteAlert({{ alert.id }}, '{{ alert.title }}')"
+                                                title="알림 삭제">
+                                            <i data-feather="trash-2"></i>
+                                        </button>
                                     </div>
                                 </div>
                                 
@@ -1685,6 +1693,75 @@ function showToast(message, type = 'success') {
     setTimeout(() => {
         toast.remove();
     }, 3000);
+}
+
+// 알림 삭제 함수
+function deleteAlert(alertId, alertTitle) {
+    if (!confirm(`'${alertTitle}' 알림을 삭제하시겠습니까?\n\n주의: 이 작업은 되돌릴 수 없습니다.`)) {
+        return;
+    }
+    
+    const resultsDiv = document.getElementById('alertResults');
+    resultsDiv.innerHTML = `
+        <div class="alert alert-info">
+            <i data-feather="loader" class="me-2"></i>알림 삭제 중...
+        </div>
+    `;
+    resultsDiv.style.display = 'block';
+    
+    fetch(`/alerts/${alertId}/delete`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            resultsDiv.innerHTML = `
+                <div class="alert alert-success">
+                    <i data-feather="check-circle" class="me-2"></i>
+                    알림이 성공적으로 삭제되었습니다.
+                </div>
+            `;
+            // 해당 알림 아이템을 DOM에서 제거
+            const alertItem = document.querySelector(`[data-alert-id="${alertId}"]`);
+            if (alertItem) {
+                alertItem.remove();
+            } else {
+                // 페이지 새로고침으로 목록 업데이트
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+            }
+        } else {
+            resultsDiv.innerHTML = `
+                <div class="alert alert-danger">
+                    <i data-feather="alert-circle" class="me-2"></i>
+                    삭제 실패: ${data.error}
+                </div>
+            `;
+        }
+        feather.replace();
+        
+        // 3초 후 결과 메시지 숨기기
+        setTimeout(() => {
+            resultsDiv.style.display = 'none';
+        }, 3000);
+    })
+    .catch(error => {
+        resultsDiv.innerHTML = `
+            <div class="alert alert-danger">
+                <i data-feather="alert-circle" class="me-2"></i>
+                삭제 중 오류가 발생했습니다.
+            </div>
+        `;
+        feather.replace();
+        
+        setTimeout(() => {
+            resultsDiv.style.display = 'none';
+        }, 3000);
+    });
 }
 </script>
 {% endblock %}

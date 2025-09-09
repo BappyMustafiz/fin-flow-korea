@@ -1307,6 +1307,48 @@ def mark_alert_read(alert_id):
     
     return redirect(url_for('alerts'))
 
+@app.route('/alerts/<int:alert_id>/delete', methods=['POST'])
+@login_required
+def delete_alert(alert_id):
+    """알림 삭제"""
+    try:
+        alert = Alert.query.get(alert_id)
+        
+        if not alert:
+            return jsonify({
+                'success': False,
+                'error': '해당 알림을 찾을 수 없습니다.'
+            })
+        
+        # 알림 삭제
+        alert_title = alert.title
+        db.session.delete(alert)
+        db.session.commit()
+        
+        # 감사 로그 추가
+        audit_log = AuditLog()
+        audit_log.user_id = current_user.id
+        audit_log.action = 'delete_alert'
+        audit_log.table_name = 'alerts'
+        audit_log.record_id = alert_id
+        audit_log.changes = f'알림 삭제: {alert_title}'
+        audit_log.created_at = datetime.now()
+        
+        db.session.add(audit_log)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': '알림이 성공적으로 삭제되었습니다.'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'error': f'삭제 중 오류가 발생했습니다: {str(e)}'
+        })
+
 @app.route('/alerts/settings', methods=['POST'])
 @login_required
 def save_alert_settings():
