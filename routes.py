@@ -595,7 +595,14 @@ def transaction_details(transaction_id):
 @app.route('/transaction/<int:transaction_id>/delete', methods=['POST'])
 @login_required
 def delete_transaction(transaction_id):
-    """거래 삭제"""
+    """거래 삭제 (관리자 전용)"""
+    # 관리자 권한 확인
+    if not current_user.is_admin():
+        return jsonify({
+            'success': False,
+            'error': '관리자만 거래를 삭제할 수 있습니다.'
+        })
+    
     try:
         transaction = Transaction.query.get(transaction_id)
         
