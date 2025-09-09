@@ -2634,6 +2634,7 @@ def add_department():
         
         name = request.form.get('name', '').strip()
         code = request.form.get('code', '').strip()
+        budget_str = request.form.get('budget', '').strip()
         
         if not name:
             flash('부서명은 필수입니다.', 'error')
@@ -2642,6 +2643,18 @@ def add_department():
         if not code:
             flash('부서 코드는 필수입니다.', 'error')
             return redirect(url_for('departments'))
+        
+        # 예산 처리
+        budget = None
+        if budget_str:
+            try:
+                budget = float(budget_str.replace(',', ''))
+                if budget < 0:
+                    flash('예산은 0 이상이어야 합니다.', 'error')
+                    return redirect(url_for('departments'))
+            except ValueError:
+                flash('올바른 예산 금액을 입력해주세요.', 'error')
+                return redirect(url_for('departments'))
         
         # 중복 체크
         existing = Department.query.filter_by(name=name).first()
@@ -2654,7 +2667,7 @@ def add_department():
             flash('이미 존재하는 부서 코드입니다.', 'error')
             return redirect(url_for('departments'))
         
-        department = Department(name=name, code=code)
+        department = Department(name=name, code=code, budget=budget)
         db.session.add(department)
         db.session.commit()
         
@@ -2676,6 +2689,7 @@ def edit_department(dept_id):
         department = Department.query.get_or_404(dept_id)
         name = request.form.get('name', '').strip()
         code = request.form.get('code', '').strip()
+        budget_str = request.form.get('budget', '').strip()
         
         if not name:
             flash('부서명은 필수입니다.', 'error')
@@ -2684,6 +2698,18 @@ def edit_department(dept_id):
         if not code:
             flash('부서 코드는 필수입니다.', 'error')
             return redirect(url_for('departments'))
+        
+        # 예산 처리
+        budget = None
+        if budget_str:
+            try:
+                budget = float(budget_str.replace(',', ''))
+                if budget < 0:
+                    flash('예산은 0 이상이어야 합니다.', 'error')
+                    return redirect(url_for('departments'))
+            except ValueError:
+                flash('올바른 예산 금액을 입력해주세요.', 'error')
+                return redirect(url_for('departments'))
         
         # 중복 체크 (자기 자신 제외)
         existing = Department.query.filter(
@@ -2704,6 +2730,7 @@ def edit_department(dept_id):
         
         department.name = name
         department.code = code
+        department.budget = budget
         db.session.commit()
         
         flash(f'부서 "{name}"이 수정되었습니다.', 'success')
