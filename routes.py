@@ -862,6 +862,64 @@ def toggle_rule(rule_id):
     
     return redirect(url_for('rules'))
 
+def apply_rule_to_transactions(rule, target_transactions=None):
+    """규칙을 거래에 적용하는 공통 함수"""
+    if target_transactions is None:
+        # 모든 거래 대상
+        target_transactions = Transaction.query.all()
+    
+    matched_transactions = []
+    
+    for transaction in target_transactions:
+        match = False
+        
+        # 조건 타입에 따른 매칭 로직
+        if rule.condition_type == 'contains':
+            if rule.condition_field == 'description':
+                match = rule.condition_value.lower() in (transaction.description or '').lower()
+            elif rule.condition_field == 'counterparty':
+                match = rule.condition_value.lower() in (transaction.counterparty or '').lower()
+        
+        elif rule.condition_type == 'equals':
+            if rule.condition_field == 'description':
+                match = (transaction.description or '').lower() == rule.condition_value.lower()
+            elif rule.condition_field == 'counterparty':
+                match = (transaction.counterparty or '').lower() == rule.condition_value.lower()
+        
+        elif rule.condition_type == 'amount_range':
+            try:
+                range_parts = rule.condition_value.split('-')
+                if len(range_parts) == 2:
+                    min_amount = float(range_parts[0])
+                    max_amount = float(range_parts[1])
+                    transaction_amount = abs(transaction.amount)
+                    match = min_amount <= transaction_amount <= max_amount
+            except:
+                match = False
+        
+        elif rule.condition_type == 'regex':
+            try:
+                import re
+                if rule.condition_field == 'description':
+                    match = bool(re.search(rule.condition_value, transaction.description or '', re.IGNORECASE))
+                elif rule.condition_field == 'counterparty':
+                    match = bool(re.search(rule.condition_value, transaction.counterparty or '', re.IGNORECASE))
+            except:
+                match = False
+        
+        if match:
+            # 규칙 적용
+            if rule.target_category_id:
+                transaction.category_id = rule.target_category_id
+            if rule.target_department_id:
+                transaction.department_id = rule.target_department_id
+            if rule.target_vendor_id:
+                transaction.vendor_id = rule.target_vendor_id
+            transaction.classification_status = 'classified'
+            matched_transactions.append(transaction)
+    
+    return matched_transactions
+
 @app.route('/rule/<int:rule_id>/apply')
 @login_required
 def apply_rule(rule_id):
@@ -873,29 +931,12 @@ def apply_rule(rule_id):
         flash(f'규칙 "{rule.name}"이 비활성화 상태입니다. 먼저 활성화해주세요.', 'warning')
         return redirect(url_for('rules'))
     
-    # 미분류 거래에 규칙 적용
-    query = Transaction.query.filter_by(classification_status='pending')
-    
-    if rule.condition_type == 'contains':
-        if rule.condition_field == 'description':
-            query = query.filter(Transaction.description.contains(rule.condition_value))
-        elif rule.condition_field == 'counterparty':
-            query = query.filter(Transaction.counterparty.contains(rule.condition_value))
-    
-    transactions = query.all()
-    
-    for transaction in transactions:
-        if rule.target_category_id:
-            transaction.category_id = rule.target_category_id
-        if rule.target_department_id:
-            transaction.department_id = rule.target_department_id
-        if rule.target_vendor_id:
-            transaction.vendor_id = rule.target_vendor_id
-        transaction.classification_status = 'classified'
+    # 모든 거래에 규칙 적용
+    matched_transactions = apply_rule_to_transactions(rule)
     
     db.session.commit()
     
-    flash(f'{len(transactions)}건의 거래가 분류되었습니다.', 'success')
+    flash(f'{len(matched_transactions)}건의 거래가 분류되었습니다.', 'success')
     return redirect(url_for('rules'))
 
 @app.route('/rule/<int:rule_id>/test')
