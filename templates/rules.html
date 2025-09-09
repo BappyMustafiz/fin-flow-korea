@@ -144,7 +144,7 @@
                                     <div class="btn-group btn-group-sm">
                                         <form method="POST" action="{{ url_for('toggle_rule', rule_id=rule.id) }}" style="display: inline;">
                                             <button type="submit" 
-                                                    class="btn {% if rule.is_active %}btn-outline-success{% else %}btn-outline-secondary{% endif %}" 
+                                                    class="btn {% if rule.is_active %}btn-outline-success{% else %}btn-outline-warning{% endif %}" 
                                                     title="{% if rule.is_active %}활성 - 클릭하여 비활성화{% else %}비활성 - 클릭하여 활성화{% endif %}">
                                                 <i data-feather="{% if rule.is_active %}play{% else %}pause{% endif %}"></i>
                                             </button>
