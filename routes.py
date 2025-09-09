@@ -534,10 +534,12 @@ def transactions():
     if account_id:
         query = query.filter(Transaction.account_id == account_id)
     if search:
+        # 대소문자 구분 없는 검색을 위해 ilike 사용
+        search_pattern = f'%{search}%'
         query = query.filter(
             db.or_(
-                Transaction.description.contains(search),
-                Transaction.counterparty.contains(search)
+                Transaction.description.ilike(search_pattern),
+                Transaction.counterparty.ilike(search_pattern)
             )
         )
     
