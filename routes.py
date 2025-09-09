@@ -2160,6 +2160,11 @@ def add_contract():
         end_date_str = request.form.get('end_date')
         description = request.form.get('description', '')
         
+        # 자동 거래 생성 관련 필드
+        auto_generate_transactions = request.form.get('auto_generate_transactions') == 'on'
+        payment_cycle = request.form.get('payment_cycle', 'monthly')
+        category_id = request.form.get('category_id')
+        
         if not all([name, vendor_id, department_id, contract_amount, start_date_str, end_date_str]):
             flash('필수 정보가 누락되었습니다.', 'error')
             return redirect(url_for('contracts'))
@@ -2182,13 +2187,46 @@ def add_contract():
             contract_amount=float(clean_amount),
             start_date=start_date,
             end_date=end_date,
-            description=description
+            description=description,
+            auto_generate_transactions=auto_generate_transactions,
+            payment_cycle=payment_cycle,
+            category_id=int(category_id) if category_id else None
         )
         
         db.session.add(contract)
+        db.session.flush()  # contract.id를 얻기 위해 flush 먼저 실행
+        
+        # 자동 거래 생성이 체크되었고 일시불인 경우 즉시 거래 생성
+        if auto_generate_transactions and payment_cycle == 'one_time':
+            from models import Transaction, Account
+            import uuid
+            
+            # 기본 계정 가져오기 (첫 번째 계정 사용)
+            default_account = Account.query.first()
+            if default_account:
+                transaction = Transaction(
+                    account_id=default_account.id,
+                    transaction_id=str(uuid.uuid4())[:20],  # 고유 ID 생성
+                    amount=-float(clean_amount),  # 지출은 음수
+                    currency='KRW',
+                    transaction_type='debit',
+                    description=f"{name} (일시불)",
+                    counterparty=contract.vendor.name if contract.vendor else "미지정",
+                    transaction_date=datetime.now(),
+                    category_id=int(category_id) if category_id else None,
+                    department_id=int(department_id),
+                    vendor_id=int(vendor_id),
+                    contract_id=contract.id,
+                    classification_status='classified'
+                )
+                db.session.add(transaction)
+        
         db.session.commit()
         
-        flash(f'계약 "{name}"이 추가되었습니다.', 'success')
+        success_msg = f'계약 "{name}"이 추가되었습니다.'
+        if auto_generate_transactions and payment_cycle == 'one_time':
+            success_msg += ' 일시불 거래도 자동으로 생성되었습니다.'
+        flash(success_msg, 'success')
         return redirect(url_for('contracts'))
         
     except Exception as e:
@@ -2237,6 +2275,68 @@ def edit_contract(contract_id):
         db.session.rollback()
         flash(f'계약 수정 중 오류가 발생했습니다: {str(e)}', 'error')
         return redirect(url_for('contracts'))
+
+@app.route('/contracts/<int:contract_id>/generate-transaction', methods=['POST'])
+@login_required
+def generate_contract_transaction(contract_id):
+    """계약에서 거래 생성"""
+    try:
+        from models import Contract, Transaction, Account
+        from flask import jsonify
+        import uuid
+        from datetime import datetime
+        
+        contract = Contract.query.get_or_404(contract_id)
+        
+        if contract.status != 'active':
+            return jsonify({'success': False, 'message': '활성 계약만 거래를 생성할 수 있습니다.'})
+        
+        # 기본 계정 가져오기
+        default_account = Account.query.first()
+        if not default_account:
+            return jsonify({'success': False, 'message': '계정이 존재하지 않습니다. 먼저 계정을 생성해주세요.'})
+        
+        # 결제 주기에 따른 금액 계산
+        amount = contract.contract_amount
+        description_suffix = ""
+        if contract.payment_cycle == 'monthly':
+            description_suffix = " (월별)"
+        elif contract.payment_cycle == 'quarterly':
+            amount = contract.contract_amount * 3
+            description_suffix = " (분기별)"
+        elif contract.payment_cycle == 'yearly':
+            amount = contract.contract_amount * 12
+            description_suffix = " (연간)"
+        elif contract.payment_cycle == 'one_time':
+            description_suffix = " (일시불)"
+        
+        transaction = Transaction(
+            account_id=default_account.id,
+            transaction_id=str(uuid.uuid4())[:20],
+            amount=-float(amount),  # 지출은 음수
+            currency='KRW',
+            transaction_type='debit',
+            description=f"{contract.name}{description_suffix}",
+            counterparty=contract.vendor.name if contract.vendor else "미지정",
+            transaction_date=datetime.now(),
+            category_id=contract.category_id,
+            department_id=contract.department_id,
+            vendor_id=contract.vendor_id,
+            contract_id=contract.id,
+            classification_status='classified'
+        )
+        
+        db.session.add(transaction)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True, 
+            'message': f'계약 "{contract.name}"에 대한 거래가 생성되었습니다. (금액: ₩{amount:,.0f})'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'거래 생성 중 오류가 발생했습니다: {str(e)}'})
 
 @app.route('/reports/export')
 @login_required

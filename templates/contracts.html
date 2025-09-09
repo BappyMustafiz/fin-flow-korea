@@ -102,9 +102,16 @@
                             {% endif %}
                         </td>
                         <td>
-                            <button class="btn btn-sm btn-outline-primary" onclick="editContract({{ contract.id }}, '{{ contract.name }}', {{ contract.vendor_id }}, {{ contract.department_id }}, {{ contract.contract_amount }}, '{{ contract.start_date }}', '{{ contract.end_date }}', '{{ contract.description }}', '{{ contract.status }}')">
-                                <i data-feather="edit" style="width: 14px; height: 14px;"></i>
-                            </button>
+                            <div class="btn-group" role="group">
+                                <button class="btn btn-sm btn-outline-primary" onclick="editContract({{ contract.id }}, '{{ contract.name }}', {{ contract.vendor_id }}, {{ contract.department_id }}, {{ contract.contract_amount }}, '{{ contract.start_date }}', '{{ contract.end_date }}', '{{ contract.description }}', '{{ contract.status }}')">
+                                    <i data-feather="edit" style="width: 14px; height: 14px;"></i>
+                                </button>
+                                {% if contract.status == 'active' %}
+                                <button class="btn btn-sm btn-outline-success" onclick="generateTransaction({{ contract.id }}, '{{ contract.name }}')" title="거래 생성">
+                                    <i data-feather="plus-circle" style="width: 14px; height: 14px;"></i>
+                                </button>
+                                {% endif %}
+                            </div>
                         </td>
                     </tr>
                     {% endfor %}
@@ -477,5 +484,30 @@ document.getElementById('contractStartDate').addEventListener('change', function
 document.getElementById('editContractStartDate').addEventListener('change', function() {
     document.getElementById('editContractEndDate').min = this.value;
 });
+
+// 거래 생성 함수
+function generateTransaction(contractId, contractName) {
+    if (confirm(`"${contractName}" 계약에 대한 거래를 생성하시겠습니까?`)) {
+        fetch(`/contracts/${contractId}/generate-transaction`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                location.reload();
+            } else {
+                alert('거래 생성 실패: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('거래 생성 중 오류가 발생했습니다.');
+        });
+    }
+}
 </script>
 {% endblock %}
