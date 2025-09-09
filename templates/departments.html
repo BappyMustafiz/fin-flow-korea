@@ -99,17 +99,10 @@
                                     onclick="editDepartment({{ department.id }}, '{{ department.name }}', {{ department.budget or 0 }})">
                                 <i data-feather="edit-2"></i>
                             </button>
-                            {% if not department.users or department.users|length == 0 %}
                             <button class="btn btn-sm btn-outline-danger" 
                                     onclick="deleteDepartment({{ department.id }}, '{{ department.name }}')">
                                 <i data-feather="trash-2"></i>
                             </button>
-                            {% else %}
-                            <button class="btn btn-sm btn-outline-secondary" disabled 
-                                    title="직원이 있는 부서는 삭제할 수 없습니다">
-                                <i data-feather="trash-2"></i>
-                            </button>
-                            {% endif %}
                         </td>
                     </tr>
                     {% endfor %}

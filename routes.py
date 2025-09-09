@@ -2736,16 +2736,19 @@ def delete_department(dept_id):
         
         department = Department.query.get_or_404(dept_id)
         
-        # 부서에 속한 사용자가 있는지 확인
-        users_count = User.query.filter_by(department_id=dept_id).count()
-        if users_count > 0:
-            flash(f'부서에 {users_count}명의 사용자가 있어 삭제할 수 없습니다.', 'error')
-            return redirect(url_for('departments'))
+        # 부서에 속한 사용자들의 부서를 None으로 설정
+        users_in_department = User.query.filter_by(department_id=dept_id).all()
+        for user in users_in_department:
+            user.department_id = None
         
         db.session.delete(department)
         db.session.commit()
         
-        flash(f'부서 "{department.name}"이 삭제되었습니다.', 'success')
+        users_count = len(users_in_department)
+        if users_count > 0:
+            flash(f'부서 "{department.name}"이 삭제되었습니다. {users_count}명의 직원이 부서 없음 상태로 변경되었습니다.', 'success')
+        else:
+            flash(f'부서 "{department.name}"이 삭제되었습니다.', 'success')
         
     except Exception as e:
         db.session.rollback()
