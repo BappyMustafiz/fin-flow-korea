@@ -823,7 +823,13 @@ def edit_rule(rule_id):
     """분류 규칙 수정"""
     try:
         rule = MappingRule.query.get_or_404(rule_id)
+        old_rule_active = rule.is_active
         
+        # 수정 전 상태가 활성화였다면 기존 분류 취소
+        if old_rule_active:
+            revert_rule_classifications(rule)
+        
+        # 규칙 정보 업데이트
         rule.name = request.form['name']
         rule.priority = int(request.form.get('priority', 0))
         rule.condition_type = request.form['condition_type']
@@ -834,9 +840,14 @@ def edit_rule(rule_id):
         rule.target_vendor_id = request.form.get('target_vendor_id') or None
         rule.is_active = 'is_active' in request.form
         
-        db.session.commit()
-        
-        flash('분류 규칙이 수정되었습니다.', 'success')
+        # 수정 후 상태가 활성화라면 새로운 조건으로 분류 적용
+        if rule.is_active:
+            matched_transactions = apply_rule_to_transactions(rule)
+            db.session.commit()
+            flash(f'분류 규칙이 수정되어 {len(matched_transactions)}건의 거래가 새로운 조건으로 분류되었습니다.', 'success')
+        else:
+            db.session.commit()
+            flash('분류 규칙이 수정되었습니다.', 'success')
         
     except Exception as e:
         db.session.rollback()
