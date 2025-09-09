@@ -221,81 +221,122 @@
 <!-- 사용자 편집 모달들 -->
 {% for user in users %}
 <div class="modal fade" id="editUserModal{{ user.id }}" tabindex="-1">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">{{ user.name }} 사용자 편집</h5>
+                <h5 class="modal-title">{{ user.name }} 사용자 정보 수정</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body">
-                <!-- 권한 변경 -->
-                <div class="mb-3">
-                    <label class="form-label">권한 변경</label>
-                    <form method="POST" action="{{ url_for('change_user_role', user_id=user.id) }}" class="d-flex gap-2">
-                        <select name="role" class="form-select">
-                            <option value="user" {% if user.role == 'user' %}selected{% endif %}>일반 사용자</option>
-                            <option value="admin" {% if user.role == 'admin' %}selected{% endif %}>관리자</option>
-                        </select>
-                        <button type="submit" class="btn btn-primary"
-                                {% if user.id == current_user.id %}disabled title="자기 자신의 권한은 변경할 수 없습니다"{% endif %}>
-                            변경
-                        </button>
-                    </form>
+            <form method="POST" action="{{ url_for('edit_user', user_id=user.id) }}">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="editName{{ user.id }}" class="form-label">이름 *</label>
+                                <input type="text" class="form-control" id="editName{{ user.id }}" name="name" 
+                                       value="{{ user.name }}" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="editEmail{{ user.id }}" class="form-label">이메일 *</label>
+                                <input type="email" class="form-control" id="editEmail{{ user.id }}" name="email" 
+                                       value="{{ user.email }}" required>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="editRole{{ user.id }}" class="form-label">권한</label>
+                                <select class="form-select" id="editRole{{ user.id }}" name="role"
+                                        {% if user.id == current_user.id %}disabled title="자기 자신의 권한은 변경할 수 없습니다"{% endif %}>
+                                    <option value="user" {% if user.role == 'user' %}selected{% endif %}>일반 사용자</option>
+                                    <option value="admin" {% if user.role == 'admin' %}selected{% endif %}>관리자</option>
+                                </select>
+                                {% if user.id == current_user.id %}
+                                <input type="hidden" name="role" value="{{ user.role }}">
+                                <div class="form-text text-muted">자기 자신의 권한은 변경할 수 없습니다.</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="editDepartment{{ user.id }}" class="form-label">부서</label>
+                                <select class="form-select" id="editDepartment{{ user.id }}" name="department_id">
+                                    <option value="">부서 미지정</option>
+                                    {% for department in departments %}
+                                    <option value="{{ department.id }}" 
+                                            {% if user.department_id == department.id %}selected{% endif %}>
+                                        {{ department.name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="editPassword{{ user.id }}" class="form-label">새 패스워드</label>
+                        <input type="password" class="form-control" id="editPassword{{ user.id }}" name="password" 
+                               placeholder="변경하지 않으려면 비워두세요">
+                        <div class="form-text">패스워드를 변경하려면 최소 6자 이상 입력하세요. 비워두면 기존 패스워드를 유지합니다.</div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-12">
+                            <h6 class="mb-2">계정 정보</h6>
+                            <div class="bg-light p-3 rounded">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <small class="text-muted d-block">가입일</small>
+                                        <strong>{{ user.created_at.strftime('%Y년 %m월 %d일') if user.created_at else '정보 없음' }}</strong>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <small class="text-muted d-block">최근 로그인</small>
+                                        <strong>
+                                            {% if user.last_login %}
+                                                {{ user.last_login.strftime('%Y년 %m월 %d일 %H:%M') }}
+                                            {% else %}
+                                                없음
+                                            {% endif %}
+                                        </strong>
+                                    </div>
+                                </div>
+                                <div class="mt-2">
+                                    <small class="text-muted d-block">계정 상태</small>
+                                    {% if user.is_active %}
+                                        <span class="badge bg-success">활성</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">비활성</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                
-                <!-- 부서 변경 -->
-                <div class="mb-3">
-                    <label class="form-label">부서 변경</label>
-                    <form method="POST" action="{{ url_for('change_user_department', user_id=user.id) }}" class="d-flex gap-2">
-                        <select name="department_id" class="form-select">
-                            <option value="">부서 미지정</option>
-                            {% for department in departments %}
-                            <option value="{{ department.id }}" 
-                                    {% if user.department_id == department.id %}selected{% endif %}>
-                                {{ department.name }}
-                            </option>
-                            {% endfor %}
-                        </select>
-                        <button type="submit" class="btn btn-primary">변경</button>
-                    </form>
-                </div>
-                
-                <!-- 사용자 정보 -->
-                <div class="mb-3">
-                    <h6>사용자 정보</h6>
-                    <ul class="list-unstyled">
-                        <li><strong>이메일:</strong> {{ user.email }}</li>
-                        <li><strong>가입일:</strong> {{ user.created_at.strftime('%Y년 %m월 %d일') if user.created_at else '정보 없음' }}</li>
-                        <li><strong>최근 로그인:</strong> 
-                            {% if user.last_login %}
-                                {{ user.last_login.strftime('%Y년 %m월 %d일 %H시 %M분') }}
-                            {% else %}
-                                없음
-                            {% endif %}
-                        </li>
-                        <li><strong>상태:</strong> 
-                            {% if user.is_active %}
-                                <span class="text-success">활성</span>
-                            {% else %}
-                                <span class="text-danger">비활성</span>
-                            {% endif %}
-                        </li>
-                    </ul>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <div class="me-auto">
-                    {% if user.id != current_user.id %}
-                    <form method="POST" action="{{ url_for('delete_user', user_id=user.id) }}" class="d-inline">
-                        <button type="submit" class="btn btn-danger" 
-                                onclick="return confirm('{{ user.name }} 사용자를 완전히 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')">
+                <div class="modal-footer">
+                    <div class="me-auto">
+                        {% if user.id != current_user.id %}
+                        <button type="button" class="btn btn-danger" 
+                                onclick="if(confirm('{{ user.name }} 사용자를 완전히 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) { 
+                                    const form = document.createElement('form'); 
+                                    form.method = 'POST'; 
+                                    form.action = '{{ url_for("delete_user", user_id=user.id) }}'; 
+                                    document.body.appendChild(form); 
+                                    form.submit(); 
+                                }">
                             <i data-feather="trash-2" class="me-1"></i>사용자 삭제
                         </button>
-                    </form>
-                    {% endif %}
+                        {% endif %}
+                    </div>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i data-feather="save" class="me-1"></i>저장
+                    </button>
                 </div>
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
-            </div>
+            </form>
         </div>
     </div>
 </div>
