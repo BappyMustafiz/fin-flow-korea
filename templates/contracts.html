@@ -43,7 +43,13 @@
         <div class="card text-center">
             <div class="card-body">
                 <i data-feather="dollar-sign" class="text-info mb-2" style="width: 48px; height: 48px;"></i>
-                <h4 class="text-info">₩{{ "{:,.0f}".format(total_contract_amount) }}</h4>
+                <h4 class="text-info">
+                    {% if total_contract_amount >= 100000 %}
+                        {{ (total_contract_amount / 1000000) | round(1) }}M
+                    {% else %}
+                        ₩{{ "{:,.0f}".format(total_contract_amount) }}
+                    {% endif %}
+                </h4>
                 <p class="text-muted mb-0">총 계약금액</p>
             </div>
         </div>
