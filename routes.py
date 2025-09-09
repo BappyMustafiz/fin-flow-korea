@@ -840,11 +840,13 @@ def edit_rule(rule_id):
         rule.target_vendor_id = request.form.get('target_vendor_id') or None
         rule.is_active = 'is_active' in request.form
         
-        # 수정 후 상태가 활성화라면 새로운 조건으로 분류 적용
+        # 수정 후에는 모든 활성 규칙을 다시 적용하여 일관성 보장
+        db.session.commit()  # 규칙 수정사항 먼저 저장
+        
         if rule.is_active:
-            matched_transactions = apply_rule_to_transactions(rule)
+            total_applied = apply_all_active_rules()
             db.session.commit()
-            flash(f'분류 규칙이 수정되어 {len(matched_transactions)}건의 거래가 새로운 조건으로 분류되었습니다.', 'success')
+            flash(f'분류 규칙이 수정되어 {total_applied}건의 거래가 재분류되었습니다.', 'success')
         else:
             db.session.commit()
             flash('분류 규칙이 수정되었습니다.', 'success')
@@ -925,23 +927,26 @@ def apply_all_active_rules():
 @app.route('/rule/<int:rule_id>/toggle', methods=['POST'])
 @login_required
 def toggle_rule(rule_id):
-    """분류 규칙 활성/비활성 토글"""
+    """분류 규칙 활성/비활성 토글 (일관성 보장)"""
     try:
         rule = MappingRule.query.get_or_404(rule_id)
         was_active = rule.is_active
         rule.is_active = not rule.is_active
         
-        # 활성화 시: 모든 거래에 규칙 적용
+        # 활성화 시: 모든 활성 규칙을 우선순위 순서로 다시 적용
         if rule.is_active and not was_active:
-            matched_transactions = apply_rule_to_transactions(rule)
+            db.session.commit()  # 규칙 상태 먼저 저장
+            total_applied = apply_all_active_rules()
             db.session.commit()
-            flash(f'규칙 "{rule.name}"이 활성화되어 {len(matched_transactions)}건의 거래가 자동 분류되었습니다.', 'success')
+            flash(f'규칙 "{rule.name}"이 활성화되어 {total_applied}건의 거래가 재분류되었습니다.', 'success')
         
-        # 비활성화 시: 해당 규칙으로 분류된 거래들을 미분류로 되돌림
+        # 비활성화 시: 해당 규칙 매칭 거래를 미분류로 되돌린 후, 나머지 활성 규칙들 다시 적용
         elif not rule.is_active and was_active:
+            db.session.commit()  # 규칙 상태 먼저 저장
             reverted_count = revert_rule_classifications(rule)
+            reapplied_count = apply_all_active_rules()
             db.session.commit()
-            flash(f'규칙 "{rule.name}"이 비활성화되어 {reverted_count}건의 거래가 미분류 상태로 변경되었습니다.', 'success')
+            flash(f'규칙 "{rule.name}"이 비활성화되어 {reverted_count}건의 거래가 미분류 후 {reapplied_count}건이 재분류되었습니다.', 'success')
         
         else:
             db.session.commit()
