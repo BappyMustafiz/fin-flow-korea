@@ -188,11 +188,18 @@ class Contract(db.Model):
     end_date = db.Column(db.Date, nullable=False)
     status = db.Column(db.String(20), default='active')  # active, expired, terminated
     description = db.Column(db.Text)
+    
+    # 자동 거래 생성 관련 필드
+    auto_generate_transactions = db.Column(db.Boolean, default=False)
+    payment_cycle = db.Column(db.String(20), default='monthly')  # monthly, quarterly, yearly, one_time
+    category_id = db.Column(db.Integer, db.ForeignKey('category.id'))
+    
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     # Relationships
     vendor = db.relationship('Vendor', backref='contracts')
     department = db.relationship('Department', backref='contracts')
+    category = db.relationship('Category', backref='contracts')
     
     @property
     def is_expired(self):
