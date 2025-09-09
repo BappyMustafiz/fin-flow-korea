@@ -14,7 +14,7 @@
         <div class="card text-center">
             <div class="card-body">
                 <i data-feather="home" class="text-primary mb-2" style="width: 48px; height: 48px;"></i>
-                <h4 class="text-primary">{{ departments|length }}</h4>
+                <h4 class="text-primary">{{ stats.total_departments or 0 }}</h4>
                 <p class="text-muted mb-0">총 부서</p>
             </div>
         </div>
@@ -23,13 +23,7 @@
         <div class="card text-center">
             <div class="card-body">
                 <i data-feather="dollar-sign" class="text-success mb-2" style="width: 48px; height: 48px;"></i>
-                {% set total_budget = 0 %}
-                {% for dept in departments %}
-                    {% if dept.budget %}
-                        {% set total_budget = total_budget + (dept.budget | float) %}
-                    {% endif %}
-                {% endfor %}
-                <h4 class="text-success">{{ (total_budget / 1000000) | round(1) }}M</h4>
+                <h4 class="text-success">{{ (stats.total_budget / 1000000) | round(1) if stats.total_budget else 0 }}M</h4>
                 <p class="text-muted mb-0">총 예산</p>
             </div>
         </div>
@@ -38,13 +32,7 @@
         <div class="card text-center">
             <div class="card-body">
                 <i data-feather="users" class="text-info mb-2" style="width: 48px; height: 48px;"></i>
-                {% set total_users = 0 %}
-                {% for dept in departments %}
-                    {% if dept.users %}
-                        {% set total_users = total_users + dept.users|length %}
-                    {% endif %}
-                {% endfor %}
-                <h4 class="text-info">{{ total_users }}</h4>
+                <h4 class="text-info">{{ stats.total_users or 0 }}</h4>
                 <p class="text-muted mb-0">총 직원</p>
             </div>
         </div>
@@ -53,8 +41,7 @@
         <div class="card text-center">
             <div class="card-body">
                 <i data-feather="trending-up" class="text-warning mb-2" style="width: 48px; height: 48px;"></i>
-                {% set avg_budget = (total_budget / departments|length) if departments|length > 0 else 0 %}
-                <h4 class="text-warning">{{ (avg_budget / 1000000) | round(1) }}M</h4>
+                <h4 class="text-warning">{{ (stats.avg_budget / 1000000) | round(1) if stats.avg_budget else 0 }}M</h4>
                 <p class="text-muted mb-0">평균 예산</p>
             </div>
         </div>

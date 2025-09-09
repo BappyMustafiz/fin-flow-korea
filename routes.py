@@ -2621,9 +2621,23 @@ def departments():
     if not current_user.is_admin():
         flash('관리자만 접근할 수 있습니다.', 'error')
         return redirect(url_for('dashboard'))
-    from models import Department
-    departments = Department.query.all()
-    return render_template('departments.html', departments=departments)
+    from models import Department, User
+    departments = Department.query.order_by(Department.name).all()
+    
+    # 통계 계산
+    total_departments = len(departments)
+    total_budget = sum((dept.budget or 0) for dept in departments)
+    total_users = User.query.filter(User.department_id.isnot(None)).count()
+    avg_budget = (total_budget / total_departments) if total_departments > 0 else 0
+    
+    stats = {
+        'total_departments': total_departments,
+        'total_budget': total_budget,
+        'total_users': total_users,
+        'avg_budget': avg_budget
+    }
+    
+    return render_template('departments.html', departments=departments, stats=stats)
 
 @app.route('/departments/add', methods=['POST'])
 @login_required
