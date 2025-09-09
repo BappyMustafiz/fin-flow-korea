@@ -855,63 +855,72 @@ def edit_rule(rule_id):
     
     return redirect(url_for('rules'))
 
+def check_rule_match(rule, transaction):
+    """거래가 규칙 조건에 매칭되는지 확인하는 함수"""
+    match = False
+    
+    if rule.condition_type == 'contains':
+        if rule.condition_field == 'description':
+            match = rule.condition_value.lower() in (transaction.description or '').lower()
+        elif rule.condition_field == 'counterparty':
+            match = rule.condition_value.lower() in (transaction.counterparty or '').lower()
+    
+    elif rule.condition_type == 'equals':
+        if rule.condition_field == 'description':
+            match = (transaction.description or '').lower() == rule.condition_value.lower()
+        elif rule.condition_field == 'counterparty':
+            match = (transaction.counterparty or '').lower() == rule.condition_value.lower()
+    
+    elif rule.condition_type == 'amount_range':
+        try:
+            range_parts = rule.condition_value.split('-')
+            if len(range_parts) == 2:
+                min_amount = float(range_parts[0])
+                max_amount = float(range_parts[1])
+                transaction_amount = abs(transaction.amount)
+                match = min_amount <= transaction_amount <= max_amount
+        except:
+            match = False
+    
+    elif rule.condition_type == 'regex':
+        try:
+            import re
+            if rule.condition_field == 'description':
+                match = bool(re.search(rule.condition_value, transaction.description or '', re.IGNORECASE))
+            elif rule.condition_field == 'counterparty':
+                match = bool(re.search(rule.condition_value, transaction.counterparty or '', re.IGNORECASE))
+        except:
+            match = False
+    
+    return match
+
 def revert_rule_classifications(rule):
-    """규칙으로 분류된 거래들을 미분류 상태로 되돌리는 함수"""
-    # 해당 규칙으로 분류된 거래들 찾기 (조건 매칭)
-    all_transactions = Transaction.query.filter_by(classification_status='classified').all()
+    """규칙에 매칭되는 모든 거래를 미분류로 되돌리는 함수 (일관성 보장)"""
+    # 모든 분류된 거래 조회
+    all_transactions = Transaction.query.filter(Transaction.classification_status.in_(['classified', 'manual'])).all()
     reverted_count = 0
     
     for transaction in all_transactions:
-        match = False
-        
-        # 조건 타입에 따른 매칭 로직 (apply_rule_to_transactions와 동일)
-        if rule.condition_type == 'contains':
-            if rule.condition_field == 'description':
-                match = rule.condition_value.lower() in (transaction.description or '').lower()
-            elif rule.condition_field == 'counterparty':
-                match = rule.condition_value.lower() in (transaction.counterparty or '').lower()
-        
-        elif rule.condition_type == 'equals':
-            if rule.condition_field == 'description':
-                match = (transaction.description or '').lower() == rule.condition_value.lower()
-            elif rule.condition_field == 'counterparty':
-                match = (transaction.counterparty or '').lower() == rule.condition_value.lower()
-        
-        elif rule.condition_type == 'amount_range':
-            try:
-                range_parts = rule.condition_value.split('-')
-                if len(range_parts) == 2:
-                    min_amount = float(range_parts[0])
-                    max_amount = float(range_parts[1])
-                    transaction_amount = abs(transaction.amount)
-                    match = min_amount <= transaction_amount <= max_amount
-            except:
-                match = False
-        
-        elif rule.condition_type == 'regex':
-            try:
-                import re
-                if rule.condition_field == 'description':
-                    match = bool(re.search(rule.condition_value, transaction.description or '', re.IGNORECASE))
-                elif rule.condition_field == 'counterparty':
-                    match = bool(re.search(rule.condition_value, transaction.counterparty or '', re.IGNORECASE))
-            except:
-                match = False
-        
-        # 매칭되고 현재 규칙의 설정과 일치하는 거래인 경우 미분류로 되돌림
-        if match:
-            same_category = (not rule.target_category_id) or (transaction.category_id == rule.target_category_id)
-            same_department = (not rule.target_department_id) or (transaction.department_id == rule.target_department_id)
-            same_vendor = (not rule.target_vendor_id) or (transaction.vendor_id == rule.target_vendor_id)
-            
-            if same_category and same_department and same_vendor:
-                transaction.classification_status = 'pending'
-                transaction.category_id = None
-                transaction.department_id = None
-                transaction.vendor_id = None
-                reverted_count += 1
+        # 해당 규칙 조건에 매칭되는 모든 거래를 미분류로 되돌림 (현재 분류와 무관)
+        if check_rule_match(rule, transaction):
+            transaction.classification_status = 'pending'
+            transaction.category_id = None
+            transaction.department_id = None
+            transaction.vendor_id = None
+            reverted_count += 1
     
     return reverted_count
+
+def apply_all_active_rules():
+    """모든 활성 규칙을 우선순위 순서로 적용하는 함수"""
+    active_rules = MappingRule.query.filter_by(is_active=True).order_by(MappingRule.priority.desc()).all()
+    total_applied = 0
+    
+    for rule in active_rules:
+        matched_transactions = apply_rule_to_transactions(rule)
+        total_applied += len(matched_transactions)
+    
+    return total_applied
 
 @app.route('/rule/<int:rule_id>/toggle', methods=['POST'])
 @login_required
