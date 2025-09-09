@@ -2839,23 +2839,14 @@ def edit_category(category_id):
         from models import Category
         
         category = Category.query.get_or_404(category_id)
-        code = request.form.get('code', '').strip()
         name = request.form.get('name', '').strip()
         description = request.form.get('description', '').strip()
         
-        if not code or not name:
-            flash('분류 코드와 이름은 필수입니다.', 'error')
+        if not name:
+            flash('분류명은 필수입니다.', 'error')
             return redirect(url_for('categories'))
         
-        # 중복 체크 (자기 자신 제외)
-        existing_code = Category.query.filter(
-            Category.code == code, 
-            Category.id != category_id
-        ).first()
-        if existing_code:
-            flash('이미 존재하는 분류 코드입니다.', 'error')
-            return redirect(url_for('categories'))
-        
+        # 분류명 중복 체크 (자기 자신 제외)
         existing_name = Category.query.filter(
             Category.name == name, 
             Category.id != category_id
@@ -2864,7 +2855,7 @@ def edit_category(category_id):
             flash('이미 존재하는 분류명입니다.', 'error')
             return redirect(url_for('categories'))
         
-        category.code = code
+        # 코드는 수정하지 않고 이름과 설명만 수정
         category.name = name
         category.description = description
         db.session.commit()

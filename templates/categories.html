@@ -94,7 +94,7 @@
                         <td>{{ category.created_at.strftime('%Y-%m-%d') if category.created_at else '-' }}</td>
                         <td>
                             <button class="btn btn-sm btn-outline-primary me-1" 
-                                    onclick="editCategory({{ category.id }}, '{{ category.code }}', '{{ category.name }}', '{{ category.description or '' }}')">
+                                    onclick="editCategory({{ category.id }}, '{{ category.name }}', '{{ category.description or '' }}')">
                                 <i data-feather="edit-2"></i>
                             </button>
                             <button class="btn btn-sm btn-outline-danger" 
@@ -167,10 +167,6 @@
             <form method="POST" id="editForm">
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label for="editCategoryCode" class="form-label">분류 코드 *</label>
-                        <input type="text" class="form-control" id="editCategoryCode" name="code" required>
-                    </div>
-                    <div class="mb-3">
                         <label for="editCategoryName" class="form-label">분류명 *</label>
                         <input type="text" class="form-control" id="editCategoryName" name="name" required>
                     </div>
@@ -237,9 +233,8 @@ code.badge {
 {% block scripts %}
 <script>
 // 분류 편집 함수
-function editCategory(id, code, name, description) {
+function editCategory(id, name, description) {
     document.getElementById('editForm').action = '/categories/' + id + '/edit';
-    document.getElementById('editCategoryCode').value = code;
     document.getElementById('editCategoryName').value = name;
     document.getElementById('editCategoryDescription').value = description;
     
