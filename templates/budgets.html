@@ -30,13 +30,13 @@
 </ul>
 
 <!-- Budget Overview -->
-<div class="row mb-4">
+<div class="row mb-4" id="budgetOverview">
     <div class="col-md-3">
         <div class="card text-center">
             <div class="card-body">
                 <i data-feather="users" class="text-primary mb-2" style="width: 48px; height: 48px;"></i>
-                <h4 class="text-primary">{{ departments|length }}</h4>
-                <p class="text-muted mb-0">부서 수</p>
+                <h4 class="text-primary" id="overviewCount">{{ departments|length }}</h4>
+                <p class="text-muted mb-0" id="overviewCountLabel">부서 수</p>
             </div>
         </div>
     </div>
@@ -44,7 +44,7 @@
         <div class="card text-center">
             <div class="card-body">
                 <i data-feather="dollar-sign" class="text-success mb-2" style="width: 48px; height: 48px;"></i>
-                <h4 class="text-success">{{ ((departments | sum(attribute='budget') | default(0) | float) / 1000000) | round(1) }}M</h4>
+                <h4 class="text-success" id="overviewTotal">{{ ((departments | sum(attribute='budget') | default(0) | float) / 1000000) | round(1) }}M</h4>
                 <p class="text-muted mb-0">총 예산</p>
             </div>
         </div>
@@ -53,7 +53,7 @@
         <div class="card text-center">
             <div class="card-body">
                 <i data-feather="trending-up" class="text-info mb-2" style="width: 48px; height: 48px;"></i>
-                <h4 class="text-info">{{ ((departments | sum(attribute='budget') | default(0) | float) / departments|length / 1000000) | round(1) }}M</h4>
+                <h4 class="text-info" id="overviewAverage">{{ ((departments | sum(attribute='budget') | default(0) | float) / departments|length / 1000000) | round(1) }}M</h4>
                 <p class="text-muted mb-0">평균 예산</p>
             </div>
         </div>
@@ -62,7 +62,7 @@
         <div class="card text-center">
             <div class="card-body">
                 <i data-feather="pie-chart" class="text-warning mb-2" style="width: 48px; height: 48px;"></i>
-                <h4 class="text-warning">75%</h4>
+                <h4 class="text-warning" id="overviewUsage">75%</h4>
                 <p class="text-muted mb-0">평균 사용률</p>
             </div>
         </div>
@@ -568,6 +568,49 @@ function deleteCategoryBudget(id, categoryName) {
     modal.show();
 }
 
+// 통계 업데이트 함수
+function updateOverviewStats() {
+    const activeTab = document.querySelector('.nav-link.active').id;
+    
+    if (activeTab === 'category-tab') {
+        // 분류별 예산 통계
+        const categoryBudgets = {{ category_budgets | tojson }};
+        const count = categoryBudgets.length;
+        const total = categoryBudgets.reduce((sum, budget) => sum + parseFloat(budget.budget_amount || 0), 0);
+        const average = count > 0 ? total / count : 0;
+        const usage = 65; // 샘플 사용률
+        
+        document.getElementById('overviewCount').textContent = count;
+        document.getElementById('overviewCountLabel').textContent = '분류별 예산 수';
+        document.getElementById('overviewTotal').textContent = (total / 1000000).toFixed(1) + 'M';
+        document.getElementById('overviewAverage').textContent = (average / 1000000).toFixed(1) + 'M';
+        document.getElementById('overviewUsage').textContent = usage + '%';
+        
+        // 아이콘 변경
+        const countIcon = document.querySelector('#budgetOverview .col-md-3:first-child i');
+        countIcon.setAttribute('data-feather', 'tag');
+        feather.replace();
+    } else {
+        // 부서별 예산 통계 (기본값)
+        const departments = {{ departments | tojson }};
+        const count = departments.length;
+        const total = departments.reduce((sum, dept) => sum + parseFloat(dept.budget || 0), 0);
+        const average = count > 0 ? total / count : 0;
+        const usage = 75; // 샘플 사용률
+        
+        document.getElementById('overviewCount').textContent = count;
+        document.getElementById('overviewCountLabel').textContent = '부서 수';
+        document.getElementById('overviewTotal').textContent = (total / 1000000).toFixed(1) + 'M';
+        document.getElementById('overviewAverage').textContent = (average / 1000000).toFixed(1) + 'M';
+        document.getElementById('overviewUsage').textContent = usage + '%';
+        
+        // 아이콘 변경
+        const countIcon = document.querySelector('#budgetOverview .col-md-3:first-child i');
+        countIcon.setAttribute('data-feather', 'users');
+        feather.replace();
+    }
+}
+
 // 연도/월 변경 함수 (분류별 예산 탭에서만 사용되므로 category 탭으로 고정)
 function changeMonth(month) {
     const year = document.querySelector('select[onchange="changeYear(this.value)"]').value;
@@ -589,7 +632,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // 서버에서 이미 올바른 탭 상태로 렌더링되므로 JavaScript로 추가 처리할 필요 없음
     
-    // 탭 변경 이벤트 리스너 추가 (상태 저장용)
+    // 탭 변경 이벤트 리스너 추가
     document.querySelectorAll('[data-bs-toggle="tab"]').forEach(tab => {
         tab.addEventListener('shown.bs.tab', function() {
             if (this.id === 'category-tab') {
@@ -597,8 +640,13 @@ document.addEventListener('DOMContentLoaded', function() {
             } else {
                 localStorage.setItem('budgetActiveTab', 'department');
             }
+            // 탭 변경 시 통계 업데이트
+            updateOverviewStats();
         });
     });
+    
+    // 초기 통계 업데이트
+    updateOverviewStats();
     
     // 모든 부서의 표시 초기화
     {% for department in departments %}
