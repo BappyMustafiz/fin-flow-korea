@@ -2936,12 +2936,16 @@ def budgets():
         is_active=True
     ).order_by(CategoryBudget.created_at.desc()).all()
     
+    # 활성 탭 정보
+    active_tab = request.args.get('tab', 'department')
+    
     return render_template('budgets.html', 
                          departments=departments,
                          categories=categories,
                          category_budgets=category_budgets,
                          current_year=current_year,
-                         current_month=current_month)
+                         current_month=current_month,
+                         active_tab=active_tab)
 
 @app.route('/budgets/update', methods=['POST'])
 @login_required
