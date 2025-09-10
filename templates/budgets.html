@@ -592,7 +592,7 @@ function updateOverviewStats() {
         feather.replace();
     } else {
         // 부서별 예산 통계 (기본값)
-        const departments = {{ departments | tojson }};
+        const departments = {{ departments_dict | tojson }};
         const count = departments.length;
         const total = departments.reduce((sum, dept) => sum + parseFloat(dept.budget || 0), 0);
         const average = count > 0 ? total / count : 0;

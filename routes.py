@@ -2950,8 +2950,19 @@ def budgets():
             'month': budget.month
         })
     
+    # Department 객체를 딕셔너리로 변환 (JSON 직렬화를 위해)
+    departments_dict = []
+    for dept in departments:
+        departments_dict.append({
+            'id': dept.id,
+            'name': dept.name,
+            'code': dept.code,
+            'budget': float(dept.budget) if dept.budget else 0
+        })
+    
     return render_template('budgets.html', 
                          departments=departments,
+                         departments_dict=departments_dict,
                          categories=categories,
                          category_budgets=category_budgets,
                          category_budgets_dict=category_budgets_dict,
