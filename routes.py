@@ -2926,15 +2926,15 @@ def budgets():
     departments = Department.query.all()
     categories = Category.query.all()
     
-    # 현재 월의 분류별 예산 가져오기
-    current_year = datetime.now().year
-    current_month = datetime.now().month
+    # 분류별 예산 가져오기 (연도/월 파라미터가 있으면 사용, 없으면 현재 월)
+    current_year = int(request.args.get('year', datetime.now().year))
+    current_month = int(request.args.get('month', datetime.now().month))
     
     category_budgets = CategoryBudget.query.filter_by(
         year=current_year, 
         month=current_month, 
         is_active=True
-    ).all()
+    ).order_by(CategoryBudget.created_at.desc()).all()
     
     return render_template('budgets.html', 
                          departments=departments,
