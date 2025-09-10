@@ -2177,38 +2177,44 @@ def add_contract():
             return redirect(url_for('contracts'))
         
         # 계약금액에서 콤마 제거 후 숫자 변환
-        clean_amount = contract_amount.replace(',', '')
+        clean_amount = contract_amount.replace(',', '') if contract_amount else '0'
         if not clean_amount.replace('.', '').isdigit():
             flash('올바른 계약금액을 입력해주세요.', 'error')
             return redirect(url_for('contracts'))
         
         # 날짜 변환
         from datetime import datetime
-        start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
-        end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+        try:
+            start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+        except (ValueError, TypeError):
+            flash('올바른 날짜를 입력해주세요.', 'error')
+            return redirect(url_for('contracts'))
         
         # 첫 거래 날짜 처리
         first_transaction_date = None
         if first_transaction_date_str:
-            first_transaction_date = datetime.strptime(first_transaction_date_str, '%Y-%m-%d').date()
+            try:
+                first_transaction_date = datetime.strptime(first_transaction_date_str, '%Y-%m-%d').date()
+            except (ValueError, TypeError):
+                pass
         
-        contract = Contract(
-            name=name,
-            vendor_id=int(vendor_id),
-            department_id=int(department_id),
-            contract_amount=float(clean_amount),
-            start_date=start_date,
-            end_date=end_date,
-            description=description,
-            auto_generate_transactions=auto_generate_transactions,
-            payment_cycle=payment_cycle,
-            category_id=int(category_id) if category_id else None,
-            transaction_count=int(transaction_count) if transaction_count else None,
-            first_transaction_date=first_transaction_date,
-            payment_day=int(payment_day) if payment_day else None,
-            payment_weekday=int(payment_weekday) if payment_weekday else None,
-            interval_count=int(interval_count) if interval_count else 1
-        )
+        contract = Contract()
+        contract.name = name
+        contract.vendor_id = int(vendor_id)
+        contract.department_id = int(department_id)
+        contract.contract_amount = float(clean_amount)
+        contract.start_date = start_date
+        contract.end_date = end_date
+        contract.description = description
+        contract.auto_generate_transactions = auto_generate_transactions
+        contract.payment_cycle = payment_cycle
+        contract.category_id = int(category_id) if category_id else None
+        contract.transaction_count = int(transaction_count) if transaction_count else None
+        contract.first_transaction_date = first_transaction_date
+        contract.payment_day = int(payment_day) if payment_day else None
+        contract.payment_weekday = int(payment_weekday) if payment_weekday else None
+        contract.interval_count = int(interval_count) if interval_count else 1
         
         db.session.add(contract)
         db.session.flush()  # contract.id를 얻기 위해 flush 먼저 실행
@@ -2221,21 +2227,20 @@ def add_contract():
             # 기본 계정 가져오기 (첫 번째 계정 사용)
             default_account = Account.query.first()
             if default_account:
-                transaction = Transaction(
-                    account_id=default_account.id,
-                    transaction_id=str(uuid.uuid4())[:20],  # 고유 ID 생성
-                    amount=-float(clean_amount),  # 지출은 음수
-                    currency='KRW',
-                    transaction_type='debit',
-                    description=f"{name} (일시불)",
-                    counterparty=contract.vendor.name if contract.vendor else "미지정",
-                    transaction_date=datetime.now(),
-                    category_id=int(category_id) if category_id else None,
-                    department_id=int(department_id),
-                    vendor_id=int(vendor_id),
-                    contract_id=contract.id,
-                    classification_status='classified'
-                )
+                transaction = Transaction()
+                transaction.account_id = default_account.id
+                transaction.transaction_id = str(uuid.uuid4())[:20]
+                transaction.amount = -float(clean_amount)  # 지출은 음수
+                transaction.currency = 'KRW'
+                transaction.transaction_type = 'debit'
+                transaction.description = f"{name} (일시불)"
+                transaction.counterparty = contract.vendor.name if contract.vendor else "미지정"
+                transaction.transaction_date = datetime.now()
+                transaction.category_id = int(category_id) if category_id else None
+                transaction.department_id = int(department_id)
+                transaction.vendor_id = int(vendor_id)
+                transaction.contract_id = contract.id
+                transaction.classification_status = 'classified'
                 db.session.add(transaction)
         
         db.session.commit()
@@ -2327,21 +2332,20 @@ def generate_contract_transaction(contract_id):
         elif contract.payment_cycle == 'one_time':
             description_suffix = " (일시불)"
         
-        transaction = Transaction(
-            account_id=default_account.id,
-            transaction_id=str(uuid.uuid4())[:20],
-            amount=-float(amount),  # 지출은 음수
-            currency='KRW',
-            transaction_type='debit',
-            description=f"{contract.name}{description_suffix}",
-            counterparty=contract.vendor.name if contract.vendor else "미지정",
-            transaction_date=datetime.now(),
-            category_id=contract.category_id,
-            department_id=contract.department_id,
-            vendor_id=contract.vendor_id,
-            contract_id=contract.id,
-            classification_status='classified'
-        )
+        transaction = Transaction()
+        transaction.account_id = default_account.id
+        transaction.transaction_id = str(uuid.uuid4())[:20]
+        transaction.amount = -float(amount)  # 지출은 음수
+        transaction.currency = 'KRW'
+        transaction.transaction_type = 'debit'
+        transaction.description = f"{contract.name}{description_suffix}"
+        transaction.counterparty = contract.vendor.name if contract.vendor else "미지정"
+        transaction.transaction_date = datetime.now()
+        transaction.category_id = contract.category_id
+        transaction.department_id = contract.department_id
+        transaction.vendor_id = contract.vendor_id
+        transaction.contract_id = contract.id
+        transaction.classification_status = 'classified'
         
         db.session.add(transaction)
         db.session.commit()
