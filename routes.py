@@ -2999,13 +2999,12 @@ def add_category_budget():
             flash('해당 분류의 예산이 이미 설정되어 있습니다.', 'error')
             return redirect(url_for('budgets'))
         
-        category_budget = CategoryBudget(
-            category_id=category_id,
-            budget_amount=budget_amount,
-            year=year,
-            month=month,
-            description=description
-        )
+        category_budget = CategoryBudget()
+        category_budget.category_id = category_id
+        category_budget.budget_amount = budget_amount
+        category_budget.year = year
+        category_budget.month = month
+        category_budget.description = description
         
         db.session.add(category_budget)
         db.session.commit()
