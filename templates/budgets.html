@@ -99,14 +99,15 @@
                                 <label for="budget_{{ department.id }}" class="form-label">예산 금액 (원)</label>
                                 <div class="input-group">
                                     <span class="input-group-text">₩</span>
-                                    <input type="number" 
+                                    <input type="text" 
                                            class="form-control budget-input" 
                                            id="budget_{{ department.id }}" 
                                            name="budget_{{ department.id }}" 
-                                           value="{{ department.budget or 0 }}" 
-                                           min="0" 
-                                           step="100000"
-                                           onchange="updateBudgetDisplay({{ department.id }})">
+                                           value="{{ "{:,.0f}".format(department.budget or 0) }}" 
+                                           placeholder="0"
+                                           oninput="formatCurrency(this)"
+                                           onchange="updateBudgetDisplay({{ department.id }})"
+                                           data-original-value="{{ department.budget or 0 }}">
                                 </div>
                             </div>
                             
@@ -293,7 +294,7 @@
                     </div>
                     <div class="mb-3">
                         <label for="budget_amount" class="form-label">예산 금액 (원) *</label>
-                        <input type="number" class="form-control" id="budget_amount" name="budget_amount" required min="0" step="10000">
+                        <input type="text" class="form-control budget-amount-input" id="budget_amount" name="budget_amount" required placeholder="0" oninput="formatCurrency(this)">
                     </div>
                     <div class="row">
                         <div class="col-md-6">
@@ -335,7 +336,7 @@
                 <div class="modal-body">
                     <div class="mb-3">
                         <label for="editBudgetAmount" class="form-label">예산 금액 (원) *</label>
-                        <input type="number" class="form-control" id="editBudgetAmount" name="budget_amount" required min="0" step="10000">
+                        <input type="text" class="form-control budget-amount-input" id="editBudgetAmount" name="budget_amount" required placeholder="0" oninput="formatCurrency(this)">
                     </div>
                     <div class="mb-3">
                         <label for="editDescription" class="form-label">설명</label>
@@ -379,10 +380,16 @@
 <script>
 feather.replace();
 
+// 콤마가 포함된 문자열에서 숫자만 추출
+function unformatNumber(value) {
+    if (!value) return 0;
+    return parseInt(value.replace(/[^\d]/g, '')) || 0;
+}
+
 // 예산 표시 업데이트 함수
 function updateBudgetDisplay(departmentId) {
     const budgetInput = document.getElementById(`budget_${departmentId}`);
-    const budget = parseFloat(budgetInput.value) || 0;
+    const budget = unformatNumber(budgetInput.value) || 0;
     
     // 월 평균 계산
     const monthly = budget / 12;

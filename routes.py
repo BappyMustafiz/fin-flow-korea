@@ -2953,7 +2953,9 @@ def update_budgets():
         for dept_id, budget_str in request.form.items():
             if dept_id.startswith('budget_'):
                 department_id = int(dept_id.replace('budget_', ''))
-                budget_amount = float(budget_str) if budget_str else 0
+                # 콤마 제거 후 숫자 변환
+                clean_budget = budget_str.replace(',', '') if budget_str else '0'
+                budget_amount = float(clean_budget) if clean_budget else 0
                 
                 department = Department.query.get(department_id)
                 if department:
@@ -2977,7 +2979,10 @@ def add_category_budget():
         from datetime import datetime
         
         category_id = int(request.form.get('category_id'))
-        budget_amount = float(request.form.get('budget_amount', 0))
+        # 콤마 제거 후 숫자 변환
+        budget_str = request.form.get('budget_amount', '0')
+        clean_budget = budget_str.replace(',', '') if budget_str else '0'
+        budget_amount = float(clean_budget) if clean_budget else 0
         year = int(request.form.get('year', datetime.now().year))
         month = int(request.form.get('month', datetime.now().month))
         description = request.form.get('description', '').strip()
@@ -3022,7 +3027,10 @@ def edit_category_budget(budget_id):
         
         category_budget = CategoryBudget.query.get_or_404(budget_id)
         
-        category_budget.budget_amount = float(request.form.get('budget_amount', 0))
+        # 콤마 제거 후 숫자 변환
+        budget_str = request.form.get('budget_amount', '0')
+        clean_budget = budget_str.replace(',', '') if budget_str else '0'
+        category_budget.budget_amount = float(clean_budget) if clean_budget else 0
         category_budget.description = request.form.get('description', '').strip()
         
         db.session.commit()

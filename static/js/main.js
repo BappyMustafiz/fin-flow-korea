@@ -26,6 +26,9 @@ function initializeApp() {
     
     // 자동 새로고침 설정
     setupAutoRefresh();
+    
+    // 숫자 입력 필드 초기화
+    initializeCurrencyInputs();
 }
 
 /**
@@ -72,6 +75,83 @@ function initializeDateFilters() {
     if (endDateField && !endDateField.value) {
         endDateField.value = today.toISOString().split('T')[0];
     }
+}
+
+/**
+ * 통화 입력 필드 초기화
+ */
+function initializeCurrencyInputs() {
+    // 기존 통화 입력 필드들에 이벤트 리스너 추가
+    const currencyInputs = document.querySelectorAll('.budget-input, .budget-amount-input');
+    currencyInputs.forEach(input => {
+        // 숫자만 입력 허용
+        input.addEventListener('keydown', function(e) {
+            // 허용할 키: 숫자, 백스페이스, 삭제, 탭, 화살표
+            const allowedKeys = [8, 9, 37, 38, 39, 40, 46]; // Backspace, Tab, Arrows, Delete
+            const isNumber = (e.key >= '0' && e.key <= '9');
+            
+            if (!isNumber && !allowedKeys.includes(e.keyCode) && !e.ctrlKey) {
+                e.preventDefault();
+            }
+        });
+        
+        // 붙여넣기 시 숫자만 허용
+        input.addEventListener('paste', function(e) {
+            e.preventDefault();
+            const paste = (e.clipboardData || window.clipboardData).getData('text');
+            const numericValue = paste.replace(/[^\d]/g, '');
+            if (numericValue) {
+                this.value = formatNumber(numericValue);
+            }
+        });
+    });
+}
+
+/**
+ * 통화 입력 포맷팅
+ */
+function formatCurrency(input) {
+    // 현재 커서 위치 저장
+    const cursorPosition = input.selectionStart;
+    
+    // 숫자만 추출
+    const value = input.value.replace(/[^\d]/g, '');
+    
+    // 빈 값이면 0으로 설정
+    if (!value) {
+        input.value = '';
+        return;
+    }
+    
+    // 천단위 콤마 추가
+    const formattedValue = formatNumber(value);
+    input.value = formattedValue;
+    
+    // 커서 위치 조정 (콤마가 추가된 만큼 조정)
+    const commasAdded = (formattedValue.match(/,/g) || []).length;
+    const originalCommas = (input.value.substring(0, cursorPosition).match(/,/g) || []).length;
+    const newCursorPosition = cursorPosition + (commasAdded - originalCommas);
+    
+    // 새 커서 위치 설정
+    setTimeout(() => {
+        input.setSelectionRange(newCursorPosition, newCursorPosition);
+    }, 0);
+}
+
+/**
+ * 숫자에 천단위 콤마 추가
+ */
+function formatNumber(value) {
+    if (!value) return '';
+    return parseInt(value).toLocaleString('ko-KR');
+}
+
+/**
+ * 콤마가 포함된 문자열에서 숫자만 추출
+ */
+function unformatNumber(value) {
+    if (!value) return 0;
+    return parseInt(value.replace(/[^\d]/g, '')) || 0;
 }
 
 /**
