@@ -568,7 +568,7 @@ function deleteCategoryBudget(id, categoryName) {
     modal.show();
 }
 
-// 연도/월 변경 함수
+// 연도/월 변경 함수 (분류별 예산 탭에서만 사용되므로 category 탭으로 고정)
 function changeMonth(month) {
     const year = document.querySelector('select[onchange="changeYear(this.value)"]').value;
     window.location.href = `/budgets?year=${year}&month=${month}&tab=category`;
@@ -590,13 +590,38 @@ document.addEventListener('DOMContentLoaded', function() {
     // URL 파라미터에 따라 탭 활성화
     const urlParams = new URLSearchParams(window.location.search);
     const tab = urlParams.get('tab');
+    
     if (tab === 'category') {
-        // 분류별 예산 탭 활성화
-        document.getElementById('department-tab').classList.remove('active');
-        document.getElementById('category-tab').classList.add('active');
-        document.getElementById('department-content').classList.remove('show', 'active');
-        document.getElementById('category-content').classList.add('show', 'active');
+        // 분류별 예산 탭 활성화 (더 강력한 방법 사용)
+        setTimeout(() => {
+            // 모든 탭과 컨텐츠 비활성화
+            document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
+            document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('show', 'active'));
+            
+            // 분류별 예산 탭과 컨텐츠 활성화
+            const categoryTab = document.getElementById('category-tab');
+            const categoryContent = document.getElementById('category-content');
+            
+            if (categoryTab && categoryContent) {
+                categoryTab.classList.add('active');
+                categoryContent.classList.add('show', 'active');
+                
+                // Bootstrap 탭 트리거
+                categoryTab.click();
+            }
+        }, 200);
     }
+    
+    // 탭 변경 이벤트 리스너 추가 (상태 저장용)
+    document.querySelectorAll('[data-bs-toggle="tab"]').forEach(tab => {
+        tab.addEventListener('shown.bs.tab', function() {
+            if (this.id === 'category-tab') {
+                localStorage.setItem('budgetActiveTab', 'category');
+            } else {
+                localStorage.setItem('budgetActiveTab', 'department');
+            }
+        });
+    });
     
     // 모든 부서의 표시 초기화
     {% for department in departments %}
