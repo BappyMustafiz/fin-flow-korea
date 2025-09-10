@@ -18,25 +18,25 @@
 <!-- Navigation Tabs -->
 <ul class="nav nav-tabs mb-4" id="budgetTabs" role="tablist">
     <li class="nav-item" role="presentation">
-        <button class="nav-link active" id="department-tab" data-bs-toggle="tab" data-bs-target="#department-content" type="button" role="tab">
+        <button class="nav-link {% if active_tab == 'department' %}active{% endif %}" id="department-tab" data-bs-toggle="tab" data-bs-target="#department-content" type="button" role="tab">
             <i data-feather="home" class="me-1"></i>부서별 예산
         </button>
     </li>
     <li class="nav-item" role="presentation">
-        <button class="nav-link" id="category-tab" data-bs-toggle="tab" data-bs-target="#category-content" type="button" role="tab">
+        <button class="nav-link {% if active_tab == 'category' %}active{% endif %}" id="category-tab" data-bs-toggle="tab" data-bs-target="#category-content" type="button" role="tab">
             <i data-feather="tag" class="me-1"></i>분류별 예산
         </button>
     </li>
 </ul>
 
 <!-- Budget Overview -->
-<div class="row mb-4">
+<div class="row mb-4" id="budgetOverview">
     <div class="col-md-3">
         <div class="card text-center">
             <div class="card-body">
                 <i data-feather="users" class="text-primary mb-2" style="width: 48px; height: 48px;"></i>
-                <h4 class="text-primary">{{ departments|length }}</h4>
-                <p class="text-muted mb-0">부서 수</p>
+                <h4 class="text-primary" id="overviewCount">{{ departments|length }}</h4>
+                <p class="text-muted mb-0" id="overviewCountLabel">부서 수</p>
             </div>
         </div>
     </div>
@@ -44,7 +44,7 @@
         <div class="card text-center">
             <div class="card-body">
                 <i data-feather="dollar-sign" class="text-success mb-2" style="width: 48px; height: 48px;"></i>
-                <h4 class="text-success">{{ ((departments | sum(attribute='budget') | default(0) | float) / 1000000) | round(1) }}M</h4>
+                <h4 class="text-success" id="overviewTotal">{{ ((departments | sum(attribute='budget') | default(0) | float) / 1000000) | round(1) }}M</h4>
                 <p class="text-muted mb-0">총 예산</p>
             </div>
         </div>
@@ -53,7 +53,7 @@
         <div class="card text-center">
             <div class="card-body">
                 <i data-feather="trending-up" class="text-info mb-2" style="width: 48px; height: 48px;"></i>
-                <h4 class="text-info">{{ ((departments | sum(attribute='budget') | default(0) | float) / departments|length / 1000000) | round(1) }}M</h4>
+                <h4 class="text-info" id="overviewAverage">{{ ((departments | sum(attribute='budget') | default(0) | float) / departments|length / 1000000) | round(1) }}M</h4>
                 <p class="text-muted mb-0">평균 예산</p>
             </div>
         </div>
@@ -62,7 +62,7 @@
         <div class="card text-center">
             <div class="card-body">
                 <i data-feather="pie-chart" class="text-warning mb-2" style="width: 48px; height: 48px;"></i>
-                <h4 class="text-warning">75%</h4>
+                <h4 class="text-warning" id="overviewUsage">75%</h4>
                 <p class="text-muted mb-0">평균 사용률</p>
             </div>
         </div>
@@ -72,7 +72,7 @@
 <!-- Tab Content -->
 <div class="tab-content" id="budgetTabContent">
     <!-- 부서별 예산 탭 -->
-    <div class="tab-pane fade show active" id="department-content" role="tabpanel">
+    <div class="tab-pane fade {% if active_tab == 'department' %}show active{% endif %}" id="department-content" role="tabpanel">
         <div class="card">
             <div class="card-header">
                 <h5 class="card-title mb-0">부서별 예산 설정</h5>
@@ -99,14 +99,15 @@
                                 <label for="budget_{{ department.id }}" class="form-label">예산 금액 (원)</label>
                                 <div class="input-group">
                                     <span class="input-group-text">₩</span>
-                                    <input type="number" 
+                                    <input type="text" 
                                            class="form-control budget-input" 
                                            id="budget_{{ department.id }}" 
                                            name="budget_{{ department.id }}" 
-                                           value="{{ department.budget or 0 }}" 
-                                           min="0" 
-                                           step="100000"
-                                           onchange="updateBudgetDisplay({{ department.id }})">
+                                           value="{{ "{:,.0f}".format(department.budget or 0) }}" 
+                                           placeholder="0"
+                                           oninput="formatCurrency(this)"
+                                           onchange="updateBudgetDisplay({{ department.id }})"
+                                           data-original-value="{{ department.budget or 0 }}">
                                 </div>
                             </div>
                             
@@ -154,10 +155,24 @@
     </div>
 
     <!-- 분류별 예산 탭 -->
-    <div class="tab-pane fade" id="category-content" role="tabpanel">
+    <div class="tab-pane fade {% if active_tab == 'category' %}show active{% endif %}" id="category-content" role="tabpanel">
         <div class="card">
             <div class="card-header">
-                <h5 class="card-title mb-0">분류별 예산 관리 ({{ current_year }}년 {{ current_month }}월)</h5>
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">분류별 예산 관리 ({{ current_year }}년 {{ current_month }}월)</h5>
+                    <div class="d-flex gap-2 align-items-center">
+                        <select class="form-select form-select-sm" style="width: 100px;" onchange="changeMonth(this.value)">
+                            {% for i in range(1, 13) %}
+                            <option value="{{ i }}" {% if i == current_month %}selected{% endif %}>{{ i }}월</option>
+                            {% endfor %}
+                        </select>
+                        <select class="form-select form-select-sm" style="width: 100px;" onchange="changeYear(this.value)">
+                            {% for year in range(2020, 2031) %}
+                            <option value="{{ year }}" {% if year == current_year %}selected{% endif %}>{{ year }}년</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
             </div>
             <div class="card-body">
                 {% if category_budgets %}
@@ -293,7 +308,7 @@
                     </div>
                     <div class="mb-3">
                         <label for="budget_amount" class="form-label">예산 금액 (원) *</label>
-                        <input type="number" class="form-control" id="budget_amount" name="budget_amount" required min="0" step="10000">
+                        <input type="text" class="form-control budget-amount-input" id="budget_amount" name="budget_amount" required placeholder="0" oninput="formatCurrency(this)">
                     </div>
                     <div class="row">
                         <div class="col-md-6">
@@ -335,7 +350,7 @@
                 <div class="modal-body">
                     <div class="mb-3">
                         <label for="editBudgetAmount" class="form-label">예산 금액 (원) *</label>
-                        <input type="number" class="form-control" id="editBudgetAmount" name="budget_amount" required min="0" step="10000">
+                        <input type="text" class="form-control budget-amount-input" id="editBudgetAmount" name="budget_amount" required placeholder="0" oninput="formatCurrency(this)">
                     </div>
                     <div class="mb-3">
                         <label for="editDescription" class="form-label">설명</label>
@@ -379,10 +394,80 @@
 <script>
 feather.replace();
 
+// 숫자에 천단위 콤마 추가
+function formatNumber(value) {
+    if (!value) return '';
+    return parseInt(value).toLocaleString('ko-KR');
+}
+
+// 콤마가 포함된 문자열에서 숫자만 추출
+function unformatNumber(value) {
+    if (!value) return 0;
+    return parseInt(value.replace(/[^\d]/g, '')) || 0;
+}
+
+// 통화 입력 포맷팅
+function formatCurrency(input) {
+    // 현재 커서 위치 저장
+    const cursorPosition = input.selectionStart;
+    
+    // 숫자만 추출
+    const value = input.value.replace(/[^\d]/g, '');
+    
+    // 빈 값이면 빈 문자열로 설정
+    if (!value) {
+        input.value = '';
+        return;
+    }
+    
+    // 천단위 콤마 추가
+    const formattedValue = formatNumber(value);
+    input.value = formattedValue;
+    
+    // 커서 위치 조정 (콤마가 추가된 만큼 조정)
+    const commasAdded = (formattedValue.match(/,/g) || []).length;
+    const originalValue = input.value.substring(0, cursorPosition);
+    const originalCommas = (originalValue.match(/,/g) || []).length;
+    const newCursorPosition = cursorPosition + (commasAdded - originalCommas);
+    
+    // 새 커서 위치 설정
+    setTimeout(() => {
+        input.setSelectionRange(newCursorPosition, newCursorPosition);
+    }, 0);
+}
+
+// 통화 입력 필드 초기화
+function initializeCurrencyInputs() {
+    // 기존 통화 입력 필드들에 이벤트 리스너 추가
+    const currencyInputs = document.querySelectorAll('.budget-input, .budget-amount-input');
+    currencyInputs.forEach(input => {
+        // 숫자만 입력 허용
+        input.addEventListener('keydown', function(e) {
+            // 허용할 키: 숫자, 백스페이스, 삭제, 탭, 화살표
+            const allowedKeys = [8, 9, 37, 38, 39, 40, 46]; // Backspace, Tab, Arrows, Delete
+            const isNumber = (e.key >= '0' && e.key <= '9');
+            
+            if (!isNumber && !allowedKeys.includes(e.keyCode) && !e.ctrlKey) {
+                e.preventDefault();
+            }
+        });
+        
+        // 붙여넣기 시 숫자만 허용
+        input.addEventListener('paste', function(e) {
+            e.preventDefault();
+            const paste = (e.clipboardData || window.clipboardData).getData('text');
+            const numericValue = paste.replace(/[^\d]/g, '');
+            if (numericValue) {
+                this.value = formatNumber(numericValue);
+            }
+        });
+    });
+}
+
 // 예산 표시 업데이트 함수
 function updateBudgetDisplay(departmentId) {
     const budgetInput = document.getElementById(`budget_${departmentId}`);
-    const budget = parseFloat(budgetInput.value) || 0;
+    const budget = unformatNumber(budgetInput.value) || 0;
     
     // 월 평균 계산
     const monthly = budget / 12;
@@ -483,10 +568,85 @@ function deleteCategoryBudget(id, categoryName) {
     modal.show();
 }
 
+// 통계 업데이트 함수
+function updateOverviewStats() {
+    const activeTab = document.querySelector('.nav-link.active').id;
+    
+    if (activeTab === 'category-tab') {
+        // 분류별 예산 통계
+        const categoryBudgets = {{ category_budgets_dict | tojson }};
+        const count = categoryBudgets.length;
+        const total = categoryBudgets.reduce((sum, budget) => sum + parseFloat(budget.budget_amount || 0), 0);
+        const average = count > 0 ? total / count : 0;
+        const usage = 65; // 샘플 사용률
+        
+        document.getElementById('overviewCount').textContent = count;
+        document.getElementById('overviewCountLabel').textContent = '분류별 예산 수';
+        document.getElementById('overviewTotal').textContent = (total / 1000000).toFixed(1) + 'M';
+        document.getElementById('overviewAverage').textContent = (average / 1000000).toFixed(1) + 'M';
+        document.getElementById('overviewUsage').textContent = usage + '%';
+        
+        // 아이콘 변경
+        const countIcon = document.querySelector('#budgetOverview .col-md-3:first-child i');
+        countIcon.setAttribute('data-feather', 'tag');
+        feather.replace();
+    } else {
+        // 부서별 예산 통계 (기본값)
+        const departments = {{ departments_dict | tojson }};
+        const count = departments.length;
+        const total = departments.reduce((sum, dept) => sum + parseFloat(dept.budget || 0), 0);
+        const average = count > 0 ? total / count : 0;
+        const usage = 75; // 샘플 사용률
+        
+        document.getElementById('overviewCount').textContent = count;
+        document.getElementById('overviewCountLabel').textContent = '부서 수';
+        document.getElementById('overviewTotal').textContent = (total / 1000000).toFixed(1) + 'M';
+        document.getElementById('overviewAverage').textContent = (average / 1000000).toFixed(1) + 'M';
+        document.getElementById('overviewUsage').textContent = usage + '%';
+        
+        // 아이콘 변경
+        const countIcon = document.querySelector('#budgetOverview .col-md-3:first-child i');
+        countIcon.setAttribute('data-feather', 'users');
+        feather.replace();
+    }
+}
+
+// 연도/월 변경 함수 (분류별 예산 탭에서만 사용되므로 category 탭으로 고정)
+function changeMonth(month) {
+    const year = document.querySelector('select[onchange="changeYear(this.value)"]').value;
+    window.location.href = `/budgets?year=${year}&month=${month}&tab=category`;
+}
+
+function changeYear(year) {
+    const month = document.querySelector('select[onchange="changeMonth(this.value)"]').value;
+    window.location.href = `/budgets?year=${year}&month=${month}&tab=category`;
+}
+
 // 페이지 로드 시 차트 생성
 document.addEventListener('DOMContentLoaded', function() {
     createBudgetChart();
     feather.replace();
+    
+    // 통화 입력 필드 초기화
+    initializeCurrencyInputs();
+    
+    // 서버에서 이미 올바른 탭 상태로 렌더링되므로 JavaScript로 추가 처리할 필요 없음
+    
+    // 탭 변경 이벤트 리스너 추가
+    document.querySelectorAll('[data-bs-toggle="tab"]').forEach(tab => {
+        tab.addEventListener('shown.bs.tab', function() {
+            if (this.id === 'category-tab') {
+                localStorage.setItem('budgetActiveTab', 'category');
+            } else {
+                localStorage.setItem('budgetActiveTab', 'department');
+            }
+            // 탭 변경 시 통계 업데이트
+            updateOverviewStats();
+        });
+    });
+    
+    // 초기 통계 업데이트
+    updateOverviewStats();
     
     // 모든 부서의 표시 초기화
     {% for department in departments %}
