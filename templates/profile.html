@@ -40,9 +40,16 @@
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label for="department" class="form-label">부서</label>
-                                <input type="text" class="form-control" id="department" name="department" 
-                                       value="{% if current_user.department %}{{ current_user.department.name }}{% else %}미지정{% endif %}" readonly>
+                                <label for="department_id" class="form-label">부서</label>
+                                <select class="form-control" id="department_id" name="department_id">
+                                    <option value="">부서 미지정</option>
+                                    {% for department in departments %}
+                                        <option value="{{ department.id }}" 
+                                                {% if current_user.department_id == department.id %}selected{% endif %}>
+                                            {{ department.name }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
                             </div>
                         </div>
                     </div>

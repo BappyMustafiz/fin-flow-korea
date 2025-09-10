@@ -237,6 +237,7 @@ def profile():
     if request.method == 'POST':
         name = request.form.get('name')
         email = request.form.get('email')
+        department_id = request.form.get('department_id') or None
         current_password = request.form.get('current_password')
         new_password = request.form.get('new_password')
         confirm_password = request.form.get('confirm_password')
@@ -275,6 +276,7 @@ def profile():
         # 프로필 정보 업데이트
         current_user.name = name
         current_user.email = email
+        current_user.department_id = int(department_id) if department_id else None
         current_user.updated_at = datetime.utcnow()
         
         db.session.commit()
@@ -413,7 +415,10 @@ def dashboard():
 @app.route('/connections')
 @login_required
 def connections():
-    """연결 관리 - 금융기관 연결 현황"""
+    """연결 관리 - 금융기관 연결 현황 (관리자 전용)"""
+    if not current_user.is_admin():
+        flash('관리자만 접근할 수 있습니다.', 'error')
+        return redirect(url_for('dashboard'))
     institutions = Institution.query.all()
     consents = Consent.query.join(Institution).all()
     
@@ -507,7 +512,11 @@ def refresh_connection(consent_id):
 def transactions():
     """거래 내역 관리"""
     page = request.args.get('page', 1, type=int)
-    per_page = 20
+    per_page = request.args.get('per_page', 20, type=int)
+    
+    # per_page 값 검증 (10, 20, 25, 50, 100만 허용)
+    if per_page not in [10, 20, 25, 50, 100]:
+        per_page = 20
     
     # 필터 파라미터
     status = request.args.get('status', '')
@@ -529,10 +538,15 @@ def transactions():
     if account_id:
         query = query.filter(Transaction.account_id == account_id)
     if search:
+        # 대소문자 구분 없는 검색을 위해 ilike 사용
+        search_pattern = f'%{search.strip()}%'
+        
+        # 업체, 거래처, 거래내용에서 검색
         query = query.filter(
             db.or_(
-                Transaction.description.contains(search),
-                Transaction.counterparty.contains(search)
+                Transaction.description.ilike(search_pattern),  # 거래내용
+                Transaction.counterparty.ilike(search_pattern),  # 거래처
+                Transaction.vendor.has(Vendor.name.ilike(search_pattern))  # 업체명
             )
         )
     
@@ -565,7 +579,8 @@ def transactions():
                              'department_id': department_id,
                              'category_id': category_id,
                              'account_id': account_id,
-                             'search': search
+                             'search': search,
+                             'per_page': per_page
                          })
 
 @app.route('/transaction/<int:transaction_id>/details', methods=['GET'])
@@ -595,7 +610,14 @@ def transaction_details(transaction_id):
 @app.route('/transaction/<int:transaction_id>/delete', methods=['POST'])
 @login_required
 def delete_transaction(transaction_id):
-    """거래 삭제"""
+    """거래 삭제 (관리자 전용)"""
+    # 관리자 권한 확인
+    if not current_user.is_admin():
+        return jsonify({
+            'success': False,
+            'error': '관리자만 거래를 삭제할 수 있습니다.'
+        })
+    
     try:
         transaction = Transaction.query.get(transaction_id)
         
@@ -615,7 +637,7 @@ def delete_transaction(transaction_id):
         audit_log.action = 'delete_transaction'
         audit_log.table_name = 'transactions'
         audit_log.record_id = transaction_id
-        audit_log.changes = f'거래 삭제: {transaction.description}'
+        audit_log.new_values = f'거래 삭제: {transaction.description}'
         audit_log.created_at = datetime.now()
         
         db.session.add(audit_log)
@@ -741,14 +763,36 @@ def edit_transaction(transaction_id):
 @app.route('/rules')
 @login_required
 def rules():
-    """분류 규칙 관리"""
+    """분류 규칙 관리 (관리자 전용)"""
+    if not current_user.is_admin():
+        flash('관리자만 접근할 수 있습니다.', 'error')
+        return redirect(url_for('dashboard'))
     rules = MappingRule.query.order_by(MappingRule.priority.desc()).all()
     categories = Category.query.all()
     departments = Department.query.all()
     vendors = Vendor.query.all()
     
+    # 규칙을 딕셔너리로 변환 (JSON 직렬화를 위해)
+    rules_dict = []
+    for rule in rules:
+        rule_dict = {
+            'id': rule.id,
+            'name': rule.name,
+            'priority': rule.priority,
+            'is_active': rule.is_active,
+            'condition_type': rule.condition_type,
+            'condition_field': rule.condition_field,
+            'condition_value': rule.condition_value,
+            'target_category_id': rule.target_category_id,
+            'target_department_id': rule.target_department_id,
+            'target_vendor_id': rule.target_vendor_id,
+            'created_at': rule.created_at.isoformat() if rule.created_at else None
+        }
+        rules_dict.append(rule_dict)
+    
     return render_template('rules.html',
                          rules=rules,
+                         rules_dict=rules_dict,
                          categories=categories,
                          departments=departments,
                          vendors=vendors)
@@ -773,36 +817,302 @@ def add_rule():
     flash('분류 규칙이 추가되었습니다.', 'success')
     return redirect(url_for('rules'))
 
+@app.route('/rule/<int:rule_id>/edit', methods=['POST'])
+@login_required
+def edit_rule(rule_id):
+    """분류 규칙 수정"""
+    try:
+        rule = MappingRule.query.get_or_404(rule_id)
+        old_rule_active = rule.is_active
+        
+        # 수정 전 상태가 활성화였다면 기존 분류 취소
+        if old_rule_active:
+            revert_rule_classifications(rule)
+        
+        # 규칙 정보 업데이트
+        rule.name = request.form['name']
+        rule.priority = int(request.form.get('priority', 0))
+        rule.condition_type = request.form['condition_type']
+        rule.condition_field = request.form['condition_field']
+        rule.condition_value = request.form['condition_value']
+        rule.target_category_id = request.form.get('target_category_id') or None
+        rule.target_department_id = request.form.get('target_department_id') or None
+        rule.target_vendor_id = request.form.get('target_vendor_id') or None
+        rule.is_active = 'is_active' in request.form
+        
+        # 수정 후에는 모든 활성 규칙을 다시 적용하여 일관성 보장
+        db.session.commit()  # 규칙 수정사항 먼저 저장
+        
+        if rule.is_active:
+            total_applied = apply_all_active_rules()
+            db.session.commit()
+            flash(f'분류 규칙이 수정되어 {total_applied}건의 거래가 재분류되었습니다.', 'success')
+        else:
+            db.session.commit()
+            flash('분류 규칙이 수정되었습니다.', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'분류 규칙 수정 중 오류가 발생했습니다: {str(e)}', 'error')
+    
+    return redirect(url_for('rules'))
+
+def check_rule_match(rule, transaction):
+    """거래가 규칙 조건에 매칭되는지 확인하는 함수"""
+    match = False
+    
+    if rule.condition_type == 'contains':
+        if rule.condition_field == 'description':
+            match = rule.condition_value.lower() in (transaction.description or '').lower()
+        elif rule.condition_field == 'counterparty':
+            match = rule.condition_value.lower() in (transaction.counterparty or '').lower()
+    
+    elif rule.condition_type == 'equals':
+        if rule.condition_field == 'description':
+            match = (transaction.description or '').lower() == rule.condition_value.lower()
+        elif rule.condition_field == 'counterparty':
+            match = (transaction.counterparty or '').lower() == rule.condition_value.lower()
+    
+    elif rule.condition_type == 'amount_range':
+        try:
+            range_parts = rule.condition_value.split('-')
+            if len(range_parts) == 2:
+                min_amount = float(range_parts[0])
+                max_amount = float(range_parts[1])
+                transaction_amount = abs(transaction.amount)
+                match = min_amount <= transaction_amount <= max_amount
+        except:
+            match = False
+    
+    elif rule.condition_type == 'regex':
+        try:
+            import re
+            if rule.condition_field == 'description':
+                match = bool(re.search(rule.condition_value, transaction.description or '', re.IGNORECASE))
+            elif rule.condition_field == 'counterparty':
+                match = bool(re.search(rule.condition_value, transaction.counterparty or '', re.IGNORECASE))
+        except:
+            match = False
+    
+    return match
+
+def revert_rule_classifications(rule):
+    """규칙에 매칭되는 모든 거래를 미분류로 되돌리는 함수 (일관성 보장)"""
+    # 모든 분류된 거래 조회
+    all_transactions = Transaction.query.filter(Transaction.classification_status.in_(['classified', 'manual'])).all()
+    reverted_count = 0
+    
+    for transaction in all_transactions:
+        # 해당 규칙 조건에 매칭되는 모든 거래를 미분류로 되돌림 (현재 분류와 무관)
+        if check_rule_match(rule, transaction):
+            transaction.classification_status = 'pending'
+            transaction.category_id = None
+            transaction.department_id = None
+            transaction.vendor_id = None
+            reverted_count += 1
+    
+    return reverted_count
+
+def apply_all_active_rules():
+    """모든 활성 규칙을 우선순위 순서로 적용하는 함수"""
+    active_rules = MappingRule.query.filter_by(is_active=True).order_by(MappingRule.priority.desc()).all()
+    total_applied = 0
+    
+    for rule in active_rules:
+        matched_transactions = apply_rule_to_transactions(rule)
+        total_applied += len(matched_transactions)
+    
+    return total_applied
+
+@app.route('/rule/<int:rule_id>/toggle', methods=['POST'])
+@login_required
+def toggle_rule(rule_id):
+    """분류 규칙 활성/비활성 토글 (일관성 보장)"""
+    try:
+        rule = MappingRule.query.get_or_404(rule_id)
+        was_active = rule.is_active
+        rule.is_active = not rule.is_active
+        
+        # 활성화 시: 모든 활성 규칙을 우선순위 순서로 다시 적용
+        if rule.is_active and not was_active:
+            db.session.commit()  # 규칙 상태 먼저 저장
+            total_applied = apply_all_active_rules()
+            db.session.commit()
+            flash(f'규칙 "{rule.name}"이 활성화되어 {total_applied}건의 거래가 재분류되었습니다.', 'success')
+        
+        # 비활성화 시: 해당 규칙 매칭 거래를 미분류로 되돌린 후, 나머지 활성 규칙들 다시 적용
+        elif not rule.is_active and was_active:
+            db.session.commit()  # 규칙 상태 먼저 저장
+            reverted_count = revert_rule_classifications(rule)
+            reapplied_count = apply_all_active_rules()
+            db.session.commit()
+            flash(f'규칙 "{rule.name}"이 비활성화되어 {reverted_count}건의 거래가 미분류 후 {reapplied_count}건이 재분류되었습니다.', 'success')
+        
+        else:
+            db.session.commit()
+            status = "활성화" if rule.is_active else "비활성화"
+            flash(f'규칙 "{rule.name}"이 {status}되었습니다.', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'규칙 상태 변경 중 오류가 발생했습니다: {str(e)}', 'error')
+    
+    return redirect(url_for('rules'))
+
+def apply_rule_to_transactions(rule, target_transactions=None):
+    """규칙을 거래에 적용하는 공통 함수"""
+    if target_transactions is None:
+        # 모든 거래 대상
+        target_transactions = Transaction.query.all()
+    
+    matched_transactions = []
+    
+    for transaction in target_transactions:
+        match = False
+        
+        # 조건 타입에 따른 매칭 로직
+        if rule.condition_type == 'contains':
+            if rule.condition_field == 'description':
+                match = rule.condition_value.lower() in (transaction.description or '').lower()
+            elif rule.condition_field == 'counterparty':
+                match = rule.condition_value.lower() in (transaction.counterparty or '').lower()
+        
+        elif rule.condition_type == 'equals':
+            if rule.condition_field == 'description':
+                match = (transaction.description or '').lower() == rule.condition_value.lower()
+            elif rule.condition_field == 'counterparty':
+                match = (transaction.counterparty or '').lower() == rule.condition_value.lower()
+        
+        elif rule.condition_type == 'amount_range':
+            try:
+                range_parts = rule.condition_value.split('-')
+                if len(range_parts) == 2:
+                    min_amount = float(range_parts[0])
+                    max_amount = float(range_parts[1])
+                    transaction_amount = abs(transaction.amount)
+                    match = min_amount <= transaction_amount <= max_amount
+            except:
+                match = False
+        
+        elif rule.condition_type == 'regex':
+            try:
+                import re
+                if rule.condition_field == 'description':
+                    match = bool(re.search(rule.condition_value, transaction.description or '', re.IGNORECASE))
+                elif rule.condition_field == 'counterparty':
+                    match = bool(re.search(rule.condition_value, transaction.counterparty or '', re.IGNORECASE))
+            except:
+                match = False
+        
+        if match:
+            # 규칙 적용
+            if rule.target_category_id:
+                transaction.category_id = rule.target_category_id
+            if rule.target_department_id:
+                transaction.department_id = rule.target_department_id
+            if rule.target_vendor_id:
+                transaction.vendor_id = rule.target_vendor_id
+            transaction.classification_status = 'classified'
+            matched_transactions.append(transaction)
+    
+    return matched_transactions
+
 @app.route('/rule/<int:rule_id>/apply')
 @login_required
 def apply_rule(rule_id):
     """규칙 적용 실행"""
     rule = MappingRule.query.get_or_404(rule_id)
     
-    # 미분류 거래에 규칙 적용
-    query = Transaction.query.filter_by(classification_status='pending')
+    # 비활성화된 규칙은 적용하지 않음
+    if not rule.is_active:
+        flash(f'규칙 "{rule.name}"이 비활성화 상태입니다. 먼저 활성화해주세요.', 'warning')
+        return redirect(url_for('rules'))
     
-    if rule.condition_type == 'contains':
-        if rule.condition_field == 'description':
-            query = query.filter(Transaction.description.contains(rule.condition_value))
-        elif rule.condition_field == 'counterparty':
-            query = query.filter(Transaction.counterparty.contains(rule.condition_value))
-    
-    transactions = query.all()
-    
-    for transaction in transactions:
-        if rule.target_category_id:
-            transaction.category_id = rule.target_category_id
-        if rule.target_department_id:
-            transaction.department_id = rule.target_department_id
-        if rule.target_vendor_id:
-            transaction.vendor_id = rule.target_vendor_id
-        transaction.classification_status = 'classified'
+    # 모든 거래에 규칙 적용
+    matched_transactions = apply_rule_to_transactions(rule)
     
     db.session.commit()
     
-    flash(f'{len(transactions)}건의 거래가 분류되었습니다.', 'success')
+    flash(f'{len(matched_transactions)}건의 거래가 분류되었습니다.', 'success')
     return redirect(url_for('rules'))
+
+@app.route('/rule/<int:rule_id>/test')
+@login_required
+def test_rule(rule_id):
+    """규칙 테스트 - 실제 거래 데이터에서 매칭되는 거래들 찾기"""
+    try:
+        rule = MappingRule.query.get_or_404(rule_id)
+        
+        # 모든 거래 조회 (최근 100건으로 제한)
+        transactions = Transaction.query.order_by(Transaction.transaction_date.desc()).limit(100).all()
+        
+        matched_transactions = []
+        
+        for transaction in transactions:
+            match = False
+            
+            # 조건 타입에 따른 매칭 로직
+            if rule.condition_type == 'contains':
+                if rule.condition_field == 'description':
+                    match = rule.condition_value.lower() in (transaction.description or '').lower()
+                elif rule.condition_field == 'counterparty':
+                    match = rule.condition_value.lower() in (transaction.counterparty or '').lower()
+            
+            elif rule.condition_type == 'equals':
+                if rule.condition_field == 'description':
+                    match = (transaction.description or '').lower() == rule.condition_value.lower()
+                elif rule.condition_field == 'counterparty':
+                    match = (transaction.counterparty or '').lower() == rule.condition_value.lower()
+            
+            elif rule.condition_type == 'amount_range':
+                try:
+                    # 금액 범위 조건 (예: "1000-5000")
+                    range_parts = rule.condition_value.split('-')
+                    if len(range_parts) == 2:
+                        min_amount = float(range_parts[0])
+                        max_amount = float(range_parts[1])
+                        transaction_amount = abs(transaction.amount)
+                        match = min_amount <= transaction_amount <= max_amount
+                except:
+                    match = False
+            
+            elif rule.condition_type == 'regex':
+                try:
+                    import re
+                    if rule.condition_field == 'description':
+                        match = bool(re.search(rule.condition_value, transaction.description or '', re.IGNORECASE))
+                    elif rule.condition_field == 'counterparty':
+                        match = bool(re.search(rule.condition_value, transaction.counterparty or '', re.IGNORECASE))
+                except:
+                    match = False
+            
+            if match:
+                matched_transactions.append({
+                    'date': transaction.transaction_date.strftime('%Y-%m-%d') if transaction.transaction_date else '',
+                    'description': transaction.description or '',
+                    'counterparty': transaction.counterparty or '',
+                    'amount': transaction.amount,
+                    'current_category': transaction.category.name if transaction.category else '미분류',
+                    'target_category': rule.target_category.name if rule.target_category else '',
+                    'target_department': rule.target_department.name if rule.target_department else '',
+                    'target_vendor': rule.target_vendor.name if rule.target_vendor else ''
+                })
+        
+        result = {
+            'rule_name': rule.name,
+            'matched_count': len(matched_transactions),
+            'transactions': matched_transactions[:10],  # 최대 10건만 표시
+            'condition_info': {
+                'type': rule.condition_type,
+                'field': rule.condition_field,
+                'value': rule.condition_value
+            }
+        }
+        
+        return jsonify(result)
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/reports')
 @login_required
@@ -1091,7 +1401,10 @@ def settings():
 @app.route('/alerts')
 @login_required
 def alerts():
-    """알림 관리"""
+    """알림 관리 (관리자 전용)"""
+    if not current_user.is_admin():
+        flash('관리자만 접근할 수 있습니다.', 'error')
+        return redirect(url_for('dashboard'))
     from models import AlertSetting
     alerts = Alert.query.order_by(desc(Alert.created_at)).limit(50).all()
     alert_settings = AlertSetting.query.order_by(desc(AlertSetting.created_at)).all()
@@ -1372,7 +1685,7 @@ def delete_alert(alert_id):
         audit_log.action = 'delete_alert'
         audit_log.table_name = 'alerts'
         audit_log.record_id = alert_id
-        audit_log.changes = f'알림 삭제: {alert_title}'
+        audit_log.new_values = f'알림 삭제: {alert_title}'
         audit_log.created_at = datetime.now()
         
         db.session.add(audit_log)
@@ -1796,13 +2109,41 @@ def edit_alert_setting():
 @app.route('/contracts')
 @login_required
 def contracts():
-    """계약 관리"""
+    """계약 관리 (관리자 전용)"""
+    if not current_user.is_admin():
+        flash('관리자만 접근할 수 있습니다.', 'error')
+        return redirect(url_for('dashboard'))
     from models import Contract, Vendor, Department, Category
     contracts = Contract.query.order_by(desc(Contract.created_at)).all()
+    
+    # 만료된 계약들의 상태를 자동으로 업데이트
+    updated_count = 0
+    for contract in contracts:
+        if contract.update_status_if_expired():
+            updated_count += 1
+    
+    # 변경사항이 있으면 DB에 저장
+    if updated_count > 0:
+        db.session.commit()
+        flash(f'{updated_count}건의 계약이 자동으로 만료 상태로 변경되었습니다.', 'info')
+    
     vendors = Vendor.query.all()
     departments = Department.query.all()
     categories = Category.query.all()
-    return render_template('contracts.html', contracts=contracts, vendors=vendors, departments=departments, categories=categories)
+    
+    # 계약 통계 계산 (상태 업데이트 후)
+    total_contract_amount = sum(contract.contract_amount for contract in contracts) if contracts else 0
+    active_contracts_count = sum(1 for contract in contracts if contract.status == 'active')
+    expired_contracts_count = sum(1 for contract in contracts if contract.status == 'expired')
+    
+    return render_template('contracts.html', 
+                         contracts=contracts, 
+                         vendors=vendors, 
+                         departments=departments, 
+                         categories=categories,
+                         total_contract_amount=total_contract_amount,
+                         active_contracts_count=active_contracts_count,
+                         expired_contracts_count=expired_contracts_count)
 
 @app.route('/contracts/add', methods=['POST'])
 @login_required
@@ -1819,8 +2160,26 @@ def add_contract():
         end_date_str = request.form.get('end_date')
         description = request.form.get('description', '')
         
+        # 자동 거래 생성 관련 필드
+        auto_generate_transactions = request.form.get('auto_generate_transactions') == 'on'
+        payment_cycle = request.form.get('payment_cycle', 'monthly')
+        category_id = request.form.get('category_id')
+        
+        # 상세 스케줄링 필드
+        transaction_count = request.form.get('transaction_count')
+        first_transaction_date_str = request.form.get('first_transaction_date')
+        payment_day = request.form.get('payment_day')
+        payment_weekday = request.form.get('payment_weekday') 
+        interval_count = request.form.get('interval_count', '1')
+        
         if not all([name, vendor_id, department_id, contract_amount, start_date_str, end_date_str]):
             flash('필수 정보가 누락되었습니다.', 'error')
+            return redirect(url_for('contracts'))
+        
+        # 계약금액에서 콤마 제거 후 숫자 변환
+        clean_amount = contract_amount.replace(',', '')
+        if not clean_amount.replace('.', '').isdigit():
+            flash('올바른 계약금액을 입력해주세요.', 'error')
             return redirect(url_for('contracts'))
         
         # 날짜 변환
@@ -1828,20 +2187,63 @@ def add_contract():
         start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
         end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
         
+        # 첫 거래 날짜 처리
+        first_transaction_date = None
+        if first_transaction_date_str:
+            first_transaction_date = datetime.strptime(first_transaction_date_str, '%Y-%m-%d').date()
+        
         contract = Contract(
             name=name,
             vendor_id=int(vendor_id),
             department_id=int(department_id),
-            contract_amount=float(contract_amount),
+            contract_amount=float(clean_amount),
             start_date=start_date,
             end_date=end_date,
-            description=description
+            description=description,
+            auto_generate_transactions=auto_generate_transactions,
+            payment_cycle=payment_cycle,
+            category_id=int(category_id) if category_id else None,
+            transaction_count=int(transaction_count) if transaction_count else None,
+            first_transaction_date=first_transaction_date,
+            payment_day=int(payment_day) if payment_day else None,
+            payment_weekday=int(payment_weekday) if payment_weekday else None,
+            interval_count=int(interval_count) if interval_count else 1
         )
         
         db.session.add(contract)
+        db.session.flush()  # contract.id를 얻기 위해 flush 먼저 실행
+        
+        # 자동 거래 생성이 체크되었고 일시불인 경우 즉시 거래 생성
+        if auto_generate_transactions and payment_cycle == 'one_time':
+            from models import Transaction, Account
+            import uuid
+            
+            # 기본 계정 가져오기 (첫 번째 계정 사용)
+            default_account = Account.query.first()
+            if default_account:
+                transaction = Transaction(
+                    account_id=default_account.id,
+                    transaction_id=str(uuid.uuid4())[:20],  # 고유 ID 생성
+                    amount=-float(clean_amount),  # 지출은 음수
+                    currency='KRW',
+                    transaction_type='debit',
+                    description=f"{name} (일시불)",
+                    counterparty=contract.vendor.name if contract.vendor else "미지정",
+                    transaction_date=datetime.now(),
+                    category_id=int(category_id) if category_id else None,
+                    department_id=int(department_id),
+                    vendor_id=int(vendor_id),
+                    contract_id=contract.id,
+                    classification_status='classified'
+                )
+                db.session.add(transaction)
+        
         db.session.commit()
         
-        flash(f'계약 "{name}"이 추가되었습니다.', 'success')
+        success_msg = f'계약 "{name}"이 추가되었습니다.'
+        if auto_generate_transactions and payment_cycle == 'one_time':
+            success_msg += ' 일시불 거래도 자동으로 생성되었습니다.'
+        flash(success_msg, 'success')
         return redirect(url_for('contracts'))
         
     except Exception as e:
@@ -1861,7 +2263,11 @@ def edit_contract(contract_id):
         contract.name = request.form.get('name', contract.name)
         contract.vendor_id = int(request.form.get('vendor_id', contract.vendor_id))
         contract.department_id = int(request.form.get('department_id', contract.department_id))
-        contract.contract_amount = float(request.form.get('contract_amount', contract.contract_amount))
+        
+        # 계약금액에서 콤마 제거 후 숫자 변환
+        contract_amount_str = request.form.get('contract_amount', str(contract.contract_amount))
+        clean_amount = contract_amount_str.replace(',', '')
+        contract.contract_amount = float(clean_amount)
         
         start_date_str = request.form.get('start_date')
         end_date_str = request.form.get('end_date')
@@ -1886,6 +2292,68 @@ def edit_contract(contract_id):
         db.session.rollback()
         flash(f'계약 수정 중 오류가 발생했습니다: {str(e)}', 'error')
         return redirect(url_for('contracts'))
+
+@app.route('/contracts/<int:contract_id>/generate-transaction', methods=['POST'])
+@login_required
+def generate_contract_transaction(contract_id):
+    """계약에서 거래 생성"""
+    try:
+        from models import Contract, Transaction, Account
+        from flask import jsonify
+        import uuid
+        from datetime import datetime
+        
+        contract = Contract.query.get_or_404(contract_id)
+        
+        if contract.status != 'active':
+            return jsonify({'success': False, 'message': '활성 계약만 거래를 생성할 수 있습니다.'})
+        
+        # 기본 계정 가져오기
+        default_account = Account.query.first()
+        if not default_account:
+            return jsonify({'success': False, 'message': '계정이 존재하지 않습니다. 먼저 계정을 생성해주세요.'})
+        
+        # 결제 주기에 따른 금액 계산
+        amount = contract.contract_amount
+        description_suffix = ""
+        if contract.payment_cycle == 'monthly':
+            description_suffix = " (월별)"
+        elif contract.payment_cycle == 'quarterly':
+            amount = contract.contract_amount * 3
+            description_suffix = " (분기별)"
+        elif contract.payment_cycle == 'yearly':
+            amount = contract.contract_amount * 12
+            description_suffix = " (연간)"
+        elif contract.payment_cycle == 'one_time':
+            description_suffix = " (일시불)"
+        
+        transaction = Transaction(
+            account_id=default_account.id,
+            transaction_id=str(uuid.uuid4())[:20],
+            amount=-float(amount),  # 지출은 음수
+            currency='KRW',
+            transaction_type='debit',
+            description=f"{contract.name}{description_suffix}",
+            counterparty=contract.vendor.name if contract.vendor else "미지정",
+            transaction_date=datetime.now(),
+            category_id=contract.category_id,
+            department_id=contract.department_id,
+            vendor_id=contract.vendor_id,
+            contract_id=contract.id,
+            classification_status='classified'
+        )
+        
+        db.session.add(transaction)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True, 
+            'message': f'계약 "{contract.name}"에 대한 거래가 생성되었습니다. (금액: ₩{amount:,.0f})'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'거래 생성 중 오류가 발생했습니다: {str(e)}'})
 
 @app.route('/reports/export')
 @login_required
@@ -2444,7 +2912,10 @@ def export_pdf(data, report_type, start_date, end_date):
 @app.route('/budgets')
 @login_required
 def budgets():
-    """예산 관리"""
+    """예산 관리 (관리자 전용)"""
+    if not current_user.is_admin():
+        flash('관리자만 접근할 수 있습니다.', 'error')
+        return redirect(url_for('dashboard'))
     from models import Department, Category, CategoryBudget
     from datetime import datetime
     
@@ -2583,10 +3054,27 @@ def delete_category_budget(budget_id):
 @app.route('/departments')
 @login_required
 def departments():
-    """부서 관리"""
-    from models import Department
-    departments = Department.query.all()
-    return render_template('departments.html', departments=departments)
+    """부서 관리 (관리자 전용)"""
+    if not current_user.is_admin():
+        flash('관리자만 접근할 수 있습니다.', 'error')
+        return redirect(url_for('dashboard'))
+    from models import Department, User
+    departments = Department.query.order_by(Department.name).all()
+    
+    # 통계 계산
+    total_departments = len(departments)
+    total_budget = sum((dept.budget or 0) for dept in departments)
+    total_users = User.query.filter(User.department_id.isnot(None)).count()
+    avg_budget = (total_budget / total_departments) if total_departments > 0 else 0
+    
+    stats = {
+        'total_departments': total_departments,
+        'total_budget': total_budget,
+        'total_users': total_users,
+        'avg_budget': avg_budget
+    }
+    
+    return render_template('departments.html', departments=departments, stats=stats)
 
 @app.route('/departments/add', methods=['POST'])
 @login_required
@@ -2596,11 +3084,23 @@ def add_department():
         from models import Department
         
         name = request.form.get('name', '').strip()
-        description = request.form.get('description', '').strip()
+        budget_str = request.form.get('budget', '').strip()
         
         if not name:
             flash('부서명은 필수입니다.', 'error')
             return redirect(url_for('departments'))
+        
+        # 예산 처리
+        budget = None
+        if budget_str:
+            try:
+                budget = float(budget_str.replace(',', ''))
+                if budget < 0:
+                    flash('예산은 0 이상이어야 합니다.', 'error')
+                    return redirect(url_for('departments'))
+            except ValueError:
+                flash('올바른 예산 금액을 입력해주세요.', 'error')
+                return redirect(url_for('departments'))
         
         # 중복 체크
         existing = Department.query.filter_by(name=name).first()
@@ -2608,7 +3108,16 @@ def add_department():
             flash('이미 존재하는 부서명입니다.', 'error')
             return redirect(url_for('departments'))
         
-        department = Department(name=name, description=description)
+        # 부서 코드 자동 생성
+        dept_count = Department.query.count()
+        code = f"DEPT{dept_count + 1:03d}"  # DEPT001, DEPT002, ...
+        
+        # 코드 중복 확인 (만약을 위해)
+        while Department.query.filter_by(code=code).first():
+            dept_count += 1
+            code = f"DEPT{dept_count + 1:03d}"
+        
+        department = Department(name=name, code=code, budget=budget)
         db.session.add(department)
         db.session.commit()
         
@@ -2629,11 +3138,23 @@ def edit_department(dept_id):
         
         department = Department.query.get_or_404(dept_id)
         name = request.form.get('name', '').strip()
-        description = request.form.get('description', '').strip()
+        budget_str = request.form.get('budget', '').strip()
         
         if not name:
             flash('부서명은 필수입니다.', 'error')
             return redirect(url_for('departments'))
+        
+        # 예산 처리
+        budget = None
+        if budget_str:
+            try:
+                budget = float(budget_str.replace(',', ''))
+                if budget < 0:
+                    flash('예산은 0 이상이어야 합니다.', 'error')
+                    return redirect(url_for('departments'))
+            except ValueError:
+                flash('올바른 예산 금액을 입력해주세요.', 'error')
+                return redirect(url_for('departments'))
         
         # 중복 체크 (자기 자신 제외)
         existing = Department.query.filter(
@@ -2645,7 +3166,8 @@ def edit_department(dept_id):
             return redirect(url_for('departments'))
         
         department.name = name
-        department.description = description
+        department.budget = budget
+        # 부서 코드는 수정하지 않고 기존 값 유지
         db.session.commit()
         
         flash(f'부서 "{name}"이 수정되었습니다.', 'success')
@@ -2665,16 +3187,19 @@ def delete_department(dept_id):
         
         department = Department.query.get_or_404(dept_id)
         
-        # 부서에 속한 사용자가 있는지 확인
-        users_count = User.query.filter_by(department_id=dept_id).count()
-        if users_count > 0:
-            flash(f'부서에 {users_count}명의 사용자가 있어 삭제할 수 없습니다.', 'error')
-            return redirect(url_for('departments'))
+        # 부서에 속한 사용자들의 부서를 None으로 설정
+        users_in_department = User.query.filter_by(department_id=dept_id).all()
+        for user in users_in_department:
+            user.department_id = None
         
         db.session.delete(department)
         db.session.commit()
         
-        flash(f'부서 "{department.name}"이 삭제되었습니다.', 'success')
+        users_count = len(users_in_department)
+        if users_count > 0:
+            flash(f'부서 "{department.name}"이 삭제되었습니다. {users_count}명의 직원이 부서 없음 상태로 변경되었습니다.', 'success')
+        else:
+            flash(f'부서 "{department.name}"이 삭제되었습니다.', 'success')
         
     except Exception as e:
         db.session.rollback()
@@ -2686,7 +3211,10 @@ def delete_department(dept_id):
 @app.route('/categories')
 @login_required
 def categories():
-    """분류 관리"""
+    """분류 관리 (관리자 전용)"""
+    if not current_user.is_admin():
+        flash('관리자만 접근할 수 있습니다.', 'error')
+        return redirect(url_for('dashboard'))
     from models import Category
     categories = Category.query.all()
     return render_template('categories.html', categories=categories)
@@ -2699,30 +3227,39 @@ def add_category():
     try:
         from models import Category
         
-        code = request.form.get('code', '').strip()
         name = request.form.get('name', '').strip()
         description = request.form.get('description', '').strip()
         
-        if not code or not name:
-            flash('분류 코드와 이름은 필수입니다.', 'error')
+        if not name:
+            flash('분류명은 필수입니다.', 'error')
             return redirect(url_for('categories'))
         
-        # 중복 체크
-        existing_code = Category.query.filter_by(code=code).first()
-        if existing_code:
-            flash('이미 존재하는 분류 코드입니다.', 'error')
-            return redirect(url_for('categories'))
-        
+        # 분류명 중복 체크
         existing_name = Category.query.filter_by(name=name).first()
         if existing_name:
             flash('이미 존재하는 분류명입니다.', 'error')
             return redirect(url_for('categories'))
         
+        # 자동 코드 생성
+        last_category = Category.query.order_by(Category.id.desc()).first()
+        if last_category:
+            # 마지막 분류의 ID를 기반으로 다음 코드 생성
+            next_id = last_category.id + 1
+        else:
+            next_id = 1
+        
+        code = f"CAT{next_id:03d}"
+        
+        # 혹시 코드 중복이 있는지 확인 (안전장치)
+        while Category.query.filter_by(code=code).first():
+            next_id += 1
+            code = f"CAT{next_id:03d}"
+        
         category = Category(code=code, name=name, description=description)
         db.session.add(category)
         db.session.commit()
         
-        flash(f'분류 "{name}"이 추가되었습니다.', 'success')
+        flash(f'분류 "{name}" (코드: {code})이 추가되었습니다.', 'success')
         
     except Exception as e:
         db.session.rollback()
@@ -2739,23 +3276,14 @@ def edit_category(category_id):
         from models import Category
         
         category = Category.query.get_or_404(category_id)
-        code = request.form.get('code', '').strip()
         name = request.form.get('name', '').strip()
         description = request.form.get('description', '').strip()
         
-        if not code or not name:
-            flash('분류 코드와 이름은 필수입니다.', 'error')
+        if not name:
+            flash('분류명은 필수입니다.', 'error')
             return redirect(url_for('categories'))
         
-        # 중복 체크 (자기 자신 제외)
-        existing_code = Category.query.filter(
-            Category.code == code, 
-            Category.id != category_id
-        ).first()
-        if existing_code:
-            flash('이미 존재하는 분류 코드입니다.', 'error')
-            return redirect(url_for('categories'))
-        
+        # 분류명 중복 체크 (자기 자신 제외)
         existing_name = Category.query.filter(
             Category.name == name, 
             Category.id != category_id
@@ -2764,7 +3292,7 @@ def edit_category(category_id):
             flash('이미 존재하는 분류명입니다.', 'error')
             return redirect(url_for('categories'))
         
-        category.code = code
+        # 코드는 수정하지 않고 이름과 설명만 수정
         category.name = name
         category.description = description
         db.session.commit()
@@ -2814,7 +3342,10 @@ def delete_category(category_id):
 @app.route('/vendors')
 @login_required
 def vendors():
-    """업체 관리"""
+    """업체 관리 (관리자 전용)"""
+    if not current_user.is_admin():
+        flash('관리자만 접근할 수 있습니다.', 'error')
+        return redirect(url_for('dashboard'))
     from models import Vendor, Category
     vendors = Vendor.query.all()
     categories = Category.query.all()
@@ -3054,6 +3585,97 @@ def add_user():
     flash(f'{user.name} 사용자가 추가되었습니다.', 'success')
     return redirect(url_for('users'))
 
+@app.route('/user/<int:user_id>/edit', methods=['POST'])
+@login_required
+def edit_user(user_id):
+    """사용자 정보 수정 (관리자 전용)"""
+    if not current_user.is_admin():
+        flash('관리자만 접근할 수 있습니다.', 'error')
+        return redirect(url_for('dashboard'))
+    
+    user = User.query.get_or_404(user_id)
+    
+    # 폼 데이터 가져오기
+    name = request.form.get('name', '').strip()
+    email = request.form.get('email', '').strip()
+    current_password = request.form.get('current_password', '').strip()
+    password = request.form.get('password', '').strip()
+    password_confirm = request.form.get('password_confirm', '').strip()
+    role = request.form.get('role')
+    department_id = request.form.get('department_id') or None
+    
+    # 이름 검증
+    if not name:
+        flash('이름은 필수입니다.', 'error')
+        return redirect(url_for('users'))
+    
+    # 이메일 검증 및 중복 확인
+    if not email:
+        flash('이메일은 필수입니다.', 'error')
+        return redirect(url_for('users'))
+    
+    existing_user = User.query.filter_by(email=email).first()
+    if existing_user and existing_user.id != user.id:
+        flash('이미 존재하는 이메일입니다.', 'error')
+        return redirect(url_for('users'))
+    
+    # 권한 검증
+    if role not in ['admin', 'user']:
+        flash('잘못된 권한입니다.', 'error')
+        return redirect(url_for('users'))
+    
+    # 자기 자신의 관리자 권한 해제 방지
+    if user.id == current_user.id and role != 'admin':
+        flash('자기 자신의 관리자 권한은 해제할 수 없습니다.', 'error')
+        return redirect(url_for('users'))
+    
+    # 정보 업데이트
+    user.name = name
+    user.email = email
+    user.role = role
+    user.department_id = department_id
+    
+    # 패스워드 업데이트 (비어있지 않은 경우만)
+    if password:
+        # 패스워드 길이 검증
+        if len(password) < 6:
+            flash('패스워드는 최소 6자 이상이어야 합니다.', 'error')
+            return redirect(url_for('users'))
+        
+        # 패스워드 확인 검증
+        if password != password_confirm:
+            flash('새 패스워드가 일치하지 않습니다.', 'error')
+            return redirect(url_for('users'))
+        
+        # 자기 자신의 패스워드를 변경하는 경우 현재 패스워드 확인
+        if user.id == current_user.id:
+            if not current_password:
+                flash('자신의 패스워드를 변경하려면 현재 패스워드를 입력해야 합니다.', 'error')
+                return redirect(url_for('users'))
+            
+            if not user.check_password(current_password):
+                flash('현재 패스워드가 올바르지 않습니다.', 'error')
+                return redirect(url_for('users'))
+        
+        user.set_password(password)
+    
+    db.session.commit()
+    
+    # 감사 로그 기록
+    audit_log = AuditLog()
+    audit_log.user_id = str(current_user.id)
+    audit_log.action = '사용자 정보 수정'
+    audit_log.table_name = 'users'
+    audit_log.record_id = user.id
+    audit_log.new_values = f'{user.name} 사용자 정보 수정 완료'
+    audit_log.created_at = datetime.utcnow()
+    
+    db.session.add(audit_log)
+    db.session.commit()
+    
+    flash(f'{user.name} 사용자 정보가 성공적으로 업데이트되었습니다.', 'success')
+    return redirect(url_for('users'))
+
 @app.route('/user/<int:user_id>/delete', methods=['POST'])
 @login_required
 def delete_user(user_id):
@@ -3278,7 +3900,10 @@ def init_sample_data():
 @app.route('/data-management')
 @login_required
 def data_management():
-    """데이터 관리 페이지"""
+    """데이터 관리 페이지 (관리자 전용)"""
+    if not current_user.is_admin():
+        flash('관리자만 접근할 수 있습니다.', 'error')
+        return redirect(url_for('dashboard'))
     accounts = Account.query.all()
     categories = Category.query.all()
     departments = Department.query.all()
@@ -3915,7 +4540,7 @@ def delete_upload(upload_id):
         audit_log.action = 'delete_upload'
         audit_log.table_name = 'transactions'
         audit_log.record_id = upload_id
-        audit_log.changes = f'업로드 기록 삭제: {deleted_count}건의 거래 삭제'
+        audit_log.new_values = f'업로드 기록 삭제: {deleted_count}건의 거래 삭제'
         audit_log.created_at = datetime.now()
         
         db.session.add(audit_log)

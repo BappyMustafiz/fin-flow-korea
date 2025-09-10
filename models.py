@@ -136,6 +136,7 @@ class Transaction(db.Model):
     category_id = db.Column(db.Integer, db.ForeignKey('category.id'))
     department_id = db.Column(db.Integer, db.ForeignKey('department.id'))
     vendor_id = db.Column(db.Integer, db.ForeignKey('vendor.id'))
+    contract_id = db.Column(db.Integer, db.ForeignKey('contract.id'))  # 계약 연결
     classification_status = db.Column(db.String(20), default='pending')  # pending, classified, manual
     
     # Split transaction fields
@@ -151,6 +152,7 @@ class Transaction(db.Model):
     category = db.relationship('Category', backref='transactions')
     department = db.relationship('Department', backref='transactions')
     vendor = db.relationship('Vendor', backref='transactions')
+    contract = db.relationship('Contract', backref='transactions')
 
 class MappingRule(db.Model):
     """거래 자동 분류 규칙"""
@@ -188,11 +190,66 @@ class Contract(db.Model):
     end_date = db.Column(db.Date, nullable=False)
     status = db.Column(db.String(20), default='active')  # active, expired, terminated
     description = db.Column(db.Text)
+    
+    # 자동 거래 생성 관련 필드
+    auto_generate_transactions = db.Column(db.Boolean, default=False)
+    payment_cycle = db.Column(db.String(20), default='monthly')  # daily, weekly, monthly, quarterly, yearly, one_time
+    category_id = db.Column(db.Integer, db.ForeignKey('category.id'))
+    
+    # 상세 스케줄링 설정
+    transaction_count = db.Column(db.Integer)  # 총 거래 횟수 (None이면 계약기간 동안 계속)
+    first_transaction_date = db.Column(db.Date)  # 첫 거래 날짜
+    payment_day = db.Column(db.Integer)  # 매월 결제일 (1-31)
+    payment_weekday = db.Column(db.Integer)  # 매주 결제 요일 (0=월요일, 6=일요일)
+    interval_count = db.Column(db.Integer, default=1)  # 간격 (예: 2주마다, 3개월마다)
+    
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     # Relationships
     vendor = db.relationship('Vendor', backref='contracts')
     department = db.relationship('Department', backref='contracts')
+    category = db.relationship('Category', backref='contracts')
+    
+    @property
+    def is_expired(self):
+        """계약이 만료되었는지 확인"""
+        from datetime import date
+        return self.end_date < date.today()
+    
+    def update_status_if_expired(self):
+        """만료된 경우 상태를 자동으로 업데이트"""
+        if self.is_expired and self.status == 'active':
+            self.status = 'expired'
+            return True
+        return False
+    
+    def generate_transaction(self, date=None):
+        """계약에 기반한 거래 생성"""
+        from datetime import date as dt
+        if not self.auto_generate_transactions or self.status != 'active':
+            return None
+            
+        transaction_date = date or dt.today()
+        
+        # 결제 주기에 따른 금액 계산
+        amount = self.contract_amount
+        if self.payment_cycle == 'quarterly':
+            amount = self.contract_amount * 3
+        elif self.payment_cycle == 'yearly':
+            amount = self.contract_amount * 12
+            
+        transaction = Transaction(
+            date=transaction_date,
+            amount=-amount,  # 지출은 음수
+            description=f"{self.name} ({self.payment_cycle})",
+            counterparty=self.vendor.name if self.vendor else "미지정",
+            category_id=self.category_id,
+            department_id=self.department_id,
+            classification_status='classified',
+            contract_id=self.id
+        )
+        
+        return transaction
 
 class AuditLog(db.Model):
     """감사 로그"""

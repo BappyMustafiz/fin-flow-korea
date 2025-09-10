@@ -34,7 +34,7 @@
         <div class="card text-center">
             <div class="card-body">
                 <i data-feather="pause" class="text-warning mb-2" style="width: 48px; height: 48px;"></i>
-                <h4>{{ rules | selectattr('is_active', 'equalto', False) | list | length }}</h4>
+                <h4>{{ rules | selectattr('is_active', 'equalto', False) | list | length or 0 }}</h4>
                 <p class="text-muted mb-0">비활성 규칙</p>
             </div>
         </div>
@@ -43,7 +43,7 @@
         <div class="card text-center">
             <div class="card-body">
                 <i data-feather="zap" class="text-info mb-2" style="width: 48px; height: 48px;"></i>
-                <h4>{{ rules | selectattr('priority', 'greaterthan', 5) | list | length }}</h4>
+                <h4>{{ rules | selectattr('priority', 'greaterthan', 7) | list | length }}</h4>
                 <p class="text-muted mb-0">고우선순위</p>
             </div>
         </div>
@@ -137,18 +137,21 @@
                                     {% if rule.is_active %}
                                         <span class="badge bg-success">활성</span>
                                     {% else %}
-                                        <span class="badge bg-secondary">비활성</span>
+                                        <span class="badge bg-warning">비활성</span>
                                     {% endif %}
                                 </td>
                                 <td>
                                     <div class="btn-group btn-group-sm">
-                                        <a href="{{ url_for('apply_rule', rule_id=rule.id) }}" 
-                                           class="btn btn-outline-success" 
-                                           title="규칙 적용"
-                                           onclick="return confirm('이 규칙을 적용하시겠습니까?')">
-                                            <i data-feather="play"></i>
-                                        </a>
+                                        <form method="POST" action="{{ url_for('toggle_rule', rule_id=rule.id) }}" style="display: inline;">
+                                            <button type="submit" 
+                                                    class="btn {% if rule.is_active %}btn-outline-success{% else %}btn-outline-warning{% endif %}" 
+                                                    style="border-top-right-radius: 0; border-bottom-right-radius: 0;"
+                                                    title="{% if rule.is_active %}활성 - 클릭하여 비활성화{% else %}비활성 - 클릭하여 활성화{% endif %}">
+                                                <i data-feather="{% if rule.is_active %}play{% else %}pause{% endif %}"></i>
+                                            </button>
+                                        </form>
                                         <button class="btn btn-outline-primary" 
+                                                style="border-top-left-radius: 0; border-bottom-left-radius: 0;"
                                                 onclick="editRule({{ rule.id }})" 
                                                 title="편집">
                                             <i data-feather="edit"></i>
@@ -292,6 +295,120 @@
     </div>
 </div>
 
+<!-- Edit Rule Modal -->
+<div class="modal fade" id="editRuleModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">분류 규칙 수정</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" id="editRuleForm">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="mb-3">
+                                <label for="editRuleName" class="form-label">규칙명</label>
+                                <input type="text" class="form-control" id="editRuleName" name="name" required>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="editRulePriority" class="form-label">우선순위</label>
+                                <input type="number" class="form-control" id="editRulePriority" name="priority" min="0" max="10" value="5">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="editConditionType" class="form-label">조건 유형</label>
+                                <select class="form-select" id="editConditionType" name="condition_type" required>
+                                    <option value="">선택하세요</option>
+                                    <option value="contains">포함</option>
+                                    <option value="equals">일치</option>
+                                    <option value="regex">정규식</option>
+                                    <option value="amount_range">금액 범위</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="editConditionField" class="form-label">조건 필드</label>
+                                <select class="form-select" id="editConditionField" name="condition_field" required>
+                                    <option value="">선택하세요</option>
+                                    <option value="description">거래 내역</option>
+                                    <option value="counterparty">거래처</option>
+                                    <option value="amount">금액</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="editConditionValue" class="form-label">조건 값</label>
+                                <input type="text" class="form-control" id="editConditionValue" name="condition_value" required>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <h6 class="mt-3 mb-2">분류 대상</h6>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="editTargetCategory" class="form-label">분류</label>
+                                <select class="form-select" id="editTargetCategory" name="target_category_id">
+                                    <option value="">선택하세요</option>
+                                    {% for category in categories %}
+                                    <option value="{{ category.id }}">{{ category.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="editTargetDepartment" class="form-label">부서</label>
+                                <select class="form-select" id="editTargetDepartment" name="target_department_id">
+                                    <option value="">선택하세요</option>
+                                    {% for department in departments %}
+                                    <option value="{{ department.id }}">{{ department.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="editTargetVendor" class="form-label">업체</label>
+                                <select class="form-select" id="editTargetVendor" name="target_vendor_id">
+                                    <option value="">선택하세요</option>
+                                    {% for vendor in vendors %}
+                                    <option value="{{ vendor.id }}">{{ vendor.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="editRuleActive" name="is_active" checked>
+                            <label class="form-check-label" for="editRuleActive">
+                                규칙 활성화
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i data-feather="save" class="me-2"></i>수정하기
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <!-- Rule Test Modal -->
 <div class="modal fade" id="ruleTestModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
@@ -368,9 +485,40 @@ function applyAllRules() {
 }
 
 function editRule(ruleId) {
-    // 규칙 편집 (실제로는 모달이나 페이지로 이동)
     console.log('Editing rule:', ruleId);
-    alert('규칙 편집 기능은 곧 추가될 예정입니다.');
+    
+    // 규칙 데이터를 위한 API 호출 (실제로는 페이지 데이터에서 찾음)
+    const rules = {{ rules_dict|tojson }};
+    const rule = rules.find(r => r.id === ruleId);
+    
+    if (!rule) {
+        alert('규칙을 찾을 수 없습니다.');
+        return;
+    }
+    
+    // 폼 액션 설정
+    document.getElementById('editRuleForm').action = `/rule/${ruleId}/edit`;
+    
+    // 기본 정보 입력
+    document.getElementById('editRuleName').value = rule.name || '';
+    document.getElementById('editRulePriority').value = rule.priority || 5;
+    
+    // 조건 정보 입력
+    document.getElementById('editConditionType').value = rule.condition_type || '';
+    document.getElementById('editConditionField').value = rule.condition_field || '';
+    document.getElementById('editConditionValue').value = rule.condition_value || '';
+    
+    // 분류 대상 정보 입력
+    document.getElementById('editTargetCategory').value = rule.target_category_id || '';
+    document.getElementById('editTargetDepartment').value = rule.target_department_id || '';
+    document.getElementById('editTargetVendor').value = rule.target_vendor_id || '';
+    
+    // 활성화 상태 설정
+    document.getElementById('editRuleActive').checked = rule.is_active !== false;
+    
+    // 모달 표시
+    const modal = new bootstrap.Modal(document.getElementById('editRuleModal'));
+    modal.show();
 }
 
 function testRule(ruleId) {
@@ -388,50 +536,77 @@ function testRule(ruleId) {
     
     modal.show();
     
-    // 시뮬레이션된 테스트 결과
-    setTimeout(() => {
-        document.getElementById('ruleTestContent').innerHTML = `
-            <div class="alert alert-success">
-                <h6><i data-feather="check-circle" class="me-2"></i>테스트 완료</h6>
-                <p class="mb-0">이 규칙이 적용될 거래: <strong>15건</strong></p>
-            </div>
+    // 실제 API 호출
+    fetch(`/rule/${ruleId}/test`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                document.getElementById('ruleTestContent').innerHTML = `
+                    <div class="alert alert-danger">
+                        <h6><i data-feather="alert-circle" class="me-2"></i>테스트 오류</h6>
+                        <p class="mb-0">${data.error}</p>
+                    </div>
+                `;
+            } else {
+                let targetInfo = '';
+                if (data.transactions.length > 0) {
+                    const sample = data.transactions[0];
+                    if (sample.target_category) targetInfo += `카테고리: ${sample.target_category} `;
+                    if (sample.target_department) targetInfo += `부서: ${sample.target_department} `;
+                    if (sample.target_vendor) targetInfo += `거래처: ${sample.target_vendor}`;
+                }
+                
+                document.getElementById('ruleTestContent').innerHTML = `
+                    <div class="alert ${data.matched_count > 0 ? 'alert-success' : 'alert-info'}">
+                        <h6><i data-feather="${data.matched_count > 0 ? 'check-circle' : 'info'}" class="me-2"></i>테스트 완료</h6>
+                        <p class="mb-1">규칙명: <strong>${data.rule_name}</strong></p>
+                        <p class="mb-1">조건: ${data.condition_info.field}이(가) "${data.condition_info.value}"을(를) ${data.condition_info.type === 'contains' ? '포함' : data.condition_info.type === 'equals' ? '일치' : data.condition_info.type}</p>
+                        <p class="mb-0">매칭된 거래: <strong>${data.matched_count}건</strong></p>
+                        ${targetInfo ? `<p class="mb-0 small text-muted">분류 대상: ${targetInfo}</p>` : ''}
+                    </div>
+                    
+                    ${data.transactions.length > 0 ? `
+                        <h6>매칭된 거래 예시 (최대 10건)</h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>거래일</th>
+                                        <th>내역</th>
+                                        <th>거래처</th>
+                                        <th>금액</th>
+                                        <th>현재 분류</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${data.transactions.map(t => `
+                                        <tr>
+                                            <td>${t.date}</td>
+                                            <td class="text-truncate" style="max-width: 150px;" title="${t.description}">${t.description}</td>
+                                            <td>${t.counterparty}</td>
+                                            <td class="${t.amount < 0 ? 'text-danger' : 'text-success'}">${t.amount.toLocaleString()}원</td>
+                                            <td><span class="badge ${t.current_category === '미분류' ? 'bg-secondary' : 'bg-primary'}">${t.current_category}</span></td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    ` : '<p class="text-muted">매칭된 거래가 없습니다.</p>'}
+                `;
+            }
             
-            <h6>예상 분류 결과</h6>
-            <div class="table-responsive">
-                <table class="table table-sm">
-                    <thead>
-                        <tr>
-                            <th>거래일</th>
-                            <th>거래처</th>
-                            <th>금액</th>
-                            <th>예상 분류</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>2024-01-15</td>
-                            <td>스타벅스 강남점</td>
-                            <td>-5,500원</td>
-                            <td><span class="badge bg-primary">식비</span></td>
-                        </tr>
-                        <tr>
-                            <td>2024-01-14</td>
-                            <td>스타벅스 역삼점</td>
-                            <td>-4,800원</td>
-                            <td><span class="badge bg-primary">식비</span></td>
-                        </tr>
-                        <tr>
-                            <td>2024-01-12</td>
-                            <td>스타벅스 신사점</td>
-                            <td>-6,200원</td>
-                            <td><span class="badge bg-primary">식비</span></td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        `;
-        feather.replace();
-    }, 2000);
+            // 다시 아이콘 초기화
+            feather.replace();
+        })
+        .catch(error => {
+            document.getElementById('ruleTestContent').innerHTML = `
+                <div class="alert alert-danger">
+                    <h6><i data-feather="alert-circle" class="me-2"></i>테스트 실패</h6>
+                    <p class="mb-0">테스트 중 오류가 발생했습니다: ${error.message}</p>
+                </div>
+            `;
+            feather.replace();
+        });
 }
 
 function deleteRule(ruleId) {

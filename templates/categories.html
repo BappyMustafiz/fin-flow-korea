@@ -6,73 +6,49 @@
 <div class="row">
     <div class="col-12">
         <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2><i data-feather="tag" class="me-2"></i>분류 관리</h2>
+            <h1><i data-feather="tag" class="me-2"></i>분류 관리</h1>
             <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addCategoryModal">
-                <i data-feather="plus" class="me-2"></i>새 분류 추가
+                <i data-feather="plus" class="me-1"></i>분류 추가
             </button>
         </div>
     </div>
 </div>
 
-<!-- 분류 통계 카드 -->
+<!-- 통계 카드 -->
 <div class="row mb-4">
     <div class="col-md-3">
-        <div class="card bg-primary text-white">
+        <div class="card text-center">
             <div class="card-body">
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <h5 class="card-title">전체 분류</h5>
-                        <h3 class="mb-0">{{ categories|length }}</h3>
-                    </div>
-                    <div class="align-self-center">
-                        <i data-feather="tag" style="width: 2rem; height: 2rem;"></i>
-                    </div>
-                </div>
+                <i data-feather="tag" class="text-primary mb-2" style="width: 48px; height: 48px;"></i>
+                <h4 class="text-primary">{{ categories|length }}</h4>
+                <p class="text-muted mb-0">총 분류</p>
             </div>
         </div>
     </div>
     <div class="col-md-3">
-        <div class="card bg-success text-white">
+        <div class="card text-center">
             <div class="card-body">
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <h5 class="card-title">사용 중인 분류</h5>
-                        <h3 class="mb-0">0</h3>
-                    </div>
-                    <div class="align-self-center">
-                        <i data-feather="check-circle" style="width: 2rem; height: 2rem;"></i>
-                    </div>
-                </div>
+                <i data-feather="check-circle" class="text-success mb-2" style="width: 48px; height: 48px;"></i>
+                <h4 class="text-success">{{ categories|selectattr('vendors')|list|length }}</h4>
+                <p class="text-muted mb-0">사용 중인 분류</p>
             </div>
         </div>
     </div>
     <div class="col-md-3">
-        <div class="card bg-info text-white">
+        <div class="card text-center">
             <div class="card-body">
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <h5 class="card-title">연결된 업체 수</h5>
-                        <h3 class="mb-0">0</h3>
-                    </div>
-                    <div class="align-self-center">
-                        <i data-feather="users" style="width: 2rem; height: 2rem;"></i>
-                    </div>
-                </div>
+                <i data-feather="users" class="text-info mb-2" style="width: 48px; height: 48px;"></i>
+                <h4 class="text-info">{{ categories|map(attribute='vendors')|map('length')|sum }}</h4>
+                <p class="text-muted mb-0">연결된 업체</p>
             </div>
         </div>
     </div>
     <div class="col-md-3">
-        <div class="card bg-warning text-white">
+        <div class="card text-center">
             <div class="card-body">
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <h5 class="card-title">미사용 분류</h5>
-                        <h3 class="mb-0">{{ categories|rejectattr('vendors')|list|length }}</h3>
-                    </div>
-                    <div class="align-self-center">
-                        <i data-feather="alert-circle" style="width: 2rem; height: 2rem;"></i>
-                    </div>
-                </div>
+                <i data-feather="alert-circle" class="text-warning mb-2" style="width: 48px; height: 48px;"></i>
+                <h4 class="text-warning">{{ categories|rejectattr('vendors')|list|length }}</h4>
+                <p class="text-muted mb-0">미사용 분류</p>
             </div>
         </div>
     </div>
@@ -117,30 +93,31 @@
                         </td>
                         <td>{{ category.created_at.strftime('%Y-%m-%d') if category.created_at else '-' }}</td>
                         <td>
-                            <div class="btn-group" role="group">
-                                <!-- 편집 버튼 -->
-                                <button type="button" class="btn btn-sm btn-outline-primary" 
-                                        title="편집"
-                                        onclick="editCategory({{ category.id }}, '{{ category.code }}', '{{ category.name }}', '{{ category.description or '' }}')">
-                                    <i data-feather="edit"></i>
-                                </button>
-                                
-                                <!-- 삭제 버튼 -->
-                                <button type="button" class="btn btn-sm btn-outline-danger" 
-                                        title="삭제"
-                                        onclick="deleteCategory({{ category.id }}, '{{ category.name }}')">
-                                    <i data-feather="trash-2"></i>
+                            <button class="btn btn-sm btn-outline-primary me-1" 
+                                    onclick="editCategory({{ category.id }}, '{{ category.name }}', '{{ category.description or '' }}')">
+                                <i data-feather="edit-2"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" 
+                                    onclick="deleteCategory({{ category.id }}, '{{ category.name }}')">
+                                <i data-feather="trash-2"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    {% if categories|length == 0 %}
+                    <tr>
+                        <td colspan="6">
+                            <div class="text-center py-5">
+                                <i data-feather="tag" style="width: 64px; height: 64px;" class="text-muted mb-3"></i>
+                                <h5 class="text-muted">등록된 분류가 없습니다</h5>
+                                <p class="text-muted">첫 번째 분류를 추가해보세요.</p>
+                                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addCategoryModal">
+                                    <i data-feather="plus" class="me-1"></i>분류 추가
                                 </button>
                             </div>
                         </td>
                     </tr>
-                    {% else %}
-                    <tr>
-                        <td colspan="6" class="text-center text-muted py-4">
-                            등록된 분류가 없습니다.
-                        </td>
-                    </tr>
-                    {% endfor %}
+                    {% endif %}
                 </tbody>
             </table>
         </div>
@@ -157,11 +134,6 @@
             </div>
             <form method="POST" action="{{ url_for('add_category') }}">
                 <div class="modal-body">
-                    <div class="mb-3">
-                        <label for="categoryCode" class="form-label">분류 코드 *</label>
-                        <input type="text" class="form-control" id="categoryCode" name="code" required
-                               placeholder="예: 001, OFFICE, etc.">
-                    </div>
                     <div class="mb-3">
                         <label for="categoryName" class="form-label">분류명 *</label>
                         <input type="text" class="form-control" id="categoryName" name="name" required
@@ -194,10 +166,6 @@
             </div>
             <form method="POST" id="editForm">
                 <div class="modal-body">
-                    <div class="mb-3">
-                        <label for="editCategoryCode" class="form-label">분류 코드 *</label>
-                        <input type="text" class="form-control" id="editCategoryCode" name="code" required>
-                    </div>
                     <div class="mb-3">
                         <label for="editCategoryName" class="form-label">분류명 *</label>
                         <input type="text" class="form-control" id="editCategoryName" name="name" required>
@@ -265,9 +233,8 @@ code.badge {
 {% block scripts %}
 <script>
 // 분류 편집 함수
-function editCategory(id, code, name, description) {
+function editCategory(id, name, description) {
     document.getElementById('editForm').action = '/categories/' + id + '/edit';
-    document.getElementById('editCategoryCode').value = code;
     document.getElementById('editCategoryName').value = name;
     document.getElementById('editCategoryDescription').value = description;
     
