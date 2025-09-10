@@ -571,12 +571,12 @@ function deleteCategoryBudget(id, categoryName) {
 // 연도/월 변경 함수
 function changeMonth(month) {
     const year = document.querySelector('select[onchange="changeYear(this.value)"]').value;
-    window.location.href = `/budgets?year=${year}&month=${month}`;
+    window.location.href = `/budgets?year=${year}&month=${month}&tab=category`;
 }
 
 function changeYear(year) {
     const month = document.querySelector('select[onchange="changeMonth(this.value)"]').value;
-    window.location.href = `/budgets?year=${year}&month=${month}`;
+    window.location.href = `/budgets?year=${year}&month=${month}&tab=category`;
 }
 
 // 페이지 로드 시 차트 생성
@@ -586,6 +586,17 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // 통화 입력 필드 초기화
     initializeCurrencyInputs();
+    
+    // URL 파라미터에 따라 탭 활성화
+    const urlParams = new URLSearchParams(window.location.search);
+    const tab = urlParams.get('tab');
+    if (tab === 'category') {
+        // 분류별 예산 탭 활성화
+        document.getElementById('department-tab').classList.remove('active');
+        document.getElementById('category-tab').classList.add('active');
+        document.getElementById('department-content').classList.remove('show', 'active');
+        document.getElementById('category-content').classList.add('show', 'active');
+    }
     
     // 모든 부서의 표시 초기화
     {% for department in departments %}
