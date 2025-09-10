@@ -574,7 +574,7 @@ function updateOverviewStats() {
     
     if (activeTab === 'category-tab') {
         // 분류별 예산 통계
-        const categoryBudgets = {{ category_budgets | tojson }};
+        const categoryBudgets = {{ category_budgets_dict | tojson }};
         const count = categoryBudgets.length;
         const total = categoryBudgets.reduce((sum, budget) => sum + parseFloat(budget.budget_amount || 0), 0);
         const average = count > 0 ? total / count : 0;

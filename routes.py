@@ -2939,10 +2939,22 @@ def budgets():
     # 활성 탭 정보
     active_tab = request.args.get('tab', 'department')
     
+    # CategoryBudget 객체를 딕셔너리로 변환 (JSON 직렬화를 위해)
+    category_budgets_dict = []
+    for budget in category_budgets:
+        category_budgets_dict.append({
+            'id': budget.id,
+            'budget_amount': float(budget.budget_amount) if budget.budget_amount else 0,
+            'category_name': budget.category.name if budget.category else '',
+            'year': budget.year,
+            'month': budget.month
+        })
+    
     return render_template('budgets.html', 
                          departments=departments,
                          categories=categories,
                          category_budgets=category_budgets,
+                         category_budgets_dict=category_budgets_dict,
                          current_year=current_year,
                          current_month=current_month,
                          active_tab=active_tab)
